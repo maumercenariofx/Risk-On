@@ -1,0 +1,46 @@
+"use client";
+// components/ArchiveList.jsx
+import Link from "next/link";
+import { useLang, T } from "./Lang";
+import { riskLabel } from "../lib/riskIndex";
+
+export default function ArchiveList({ posts }) {
+  const { lang } = useLang();
+  return (
+    <div className="space-y-6 pt-4">
+      <div className="reveal">
+        <h1 className="font-serif text-3xl font-medium">
+          <T es="Archivo" en="Archive" />
+        </h1>
+        <p className="mt-1 text-sm text-muted">
+          <T es="Todas las ediciones diarias." en="Every daily edition." />
+        </p>
+      </div>
+      <div className="space-y-3">
+        {posts.map((p, i) => {
+          const label = riskLabel(p.score || 50);
+          return (
+            <Link key={p.slug} href={`/archive/${p.slug}`}
+              className="reveal block rounded-xl border border-gold/15 bg-ink2/40 p-4 transition-colors hover:border-gold/40"
+              style={{ animationDelay: `${0.05 + i * 0.05}s` }}>
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <div className="text-xs text-muted">{p.date}</div>
+                  <div className="mt-0.5 font-serif text-lg font-medium">
+                    {lang === "en" ? p.title_en : p.title_es}
+                  </div>
+                </div>
+                <div className="flex flex-shrink-0 flex-col items-center rounded-lg border border-gold/20 px-3 py-1.5">
+                  <span className="font-mono text-lg font-medium" style={{ color: label.color }}>
+                    {p.score}
+                  </span>
+                  <span className="text-[10px] uppercase tracking-wide text-muted">Risk On</span>
+                </div>
+              </div>
+            </Link>
+          );
+        })}
+      </div>
+    </div>
+  );
+}

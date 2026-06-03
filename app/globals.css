@@ -1,0 +1,67 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-serif: 'Fraunces', Georgia, serif;
+  --font-sans: 'Geist', system-ui, -apple-system, sans-serif;
+  --font-mono: 'Geist Mono', 'SF Mono', monospace;
+}
+
+html, body {
+  background: #14141A;
+  color: #F5F2EC;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  scroll-behavior: smooth;
+}
+
+/* Reveal escalonado tipo Alan */
+@keyframes reveal {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.reveal {
+  opacity: 0;
+  animation: reveal 0.7s cubic-bezier(0.2, 0.7, 0.3, 1) forwards;
+}
+
+/* Tarjeta volteable */
+.flip { perspective: 1400px; }
+.flip-inner {
+  position: relative; width: 100%; height: 100%;
+  transition: transform 0.8s cubic-bezier(0.4, 0.2, 0.2, 1);
+  transform-style: preserve-3d;
+}
+.flip:hover .flip-inner { transform: rotateY(180deg); }
+.flip-face {
+  position: absolute; inset: 0;
+  backface-visibility: hidden; -webkit-backface-visibility: hidden;
+  border-radius: 16px; overflow: hidden;
+}
+.flip-back { transform: rotateY(180deg); }
+
+/* Ticker animado */
+@keyframes ticker {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+.ticker-track {
+  display: inline-flex; gap: 34px; white-space: nowrap;
+  animation: ticker 30s linear infinite;
+}
+.ticker-wrap:hover .ticker-track { animation-play-state: paused; }
+
+/* Aguja del medidor */
+.needle {
+  transition: transform 1.4s cubic-bezier(0.34, 1.4, 0.5, 1);
+  transform-origin: 140px 150px;
+}
+
+/* Glosario hover */
+.term {
+  border-bottom: 1.5px dotted #C8A765;
+  cursor: help; color: #C8A765;
+}
+
+a { color: inherit; }
