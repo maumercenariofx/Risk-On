@@ -41,7 +41,7 @@ export default function MarketsClient() {
 
   useEffect(() => {
     let cancelled = false;
-    import("https://esm.sh/chart.js@4.4.1/auto").then((mod) => {
+    import("chart.js/auto").then((mod) => {
       if (cancelled) return;
       const Chart = mod.default;
       if (chartRef.current) chartRef.current.destroy();
