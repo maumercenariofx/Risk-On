@@ -40,7 +40,7 @@ export default function Ticker() {
     ));
 
   return (
-    <div className="ticker-wrap overflow-hidden border-y border-gold/15 bg-ink2/40 py-2.5">
+    <div className="ticker-wrap overflow-hidden border-y border-edge bg-ink2/40 py-2.5">
       <div className="ticker-track">
         {row("a")}
         {row("b")}

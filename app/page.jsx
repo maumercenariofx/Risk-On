@@ -11,11 +11,11 @@ export default function Home() {
   return (
     <div className="space-y-8">
       <section className="reveal pt-4 text-center">
-        <h1 className="font-serif text-5xl font-medium tracking-tight sm:text-6xl">
-          Risk<span className="text-gold"> On</span>
+        <h1 className="font-serif text-5xl font-medium tracking-tight text-bone sm:text-6xl">
+          Risk On
         </h1>
-        <p className="mt-2 font-mono text-xs uppercase tracking-[2px] text-gold">
-          Take risks or stay average
+        <p className="mt-2 font-mono text-xs uppercase tracking-[3px] text-muted">
+          [ take risks or stay average ]
         </p>
       </section>
 

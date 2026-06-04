@@ -7,16 +7,14 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        ink: "#14141A",
-        ink2: "#1C1B24",
-        ink3: "#23202E",
-        gold: "#C8A765",
-        goldsoft: "#E0CB9A",
-        bone: "#F5F2EC",
-        muted: "#9A97A6",
+        ink: "#0A0A0B",
+        ink2: "#111113",
+        ink3: "#1A1A1C",
+        bone: "#F5F5F2",
+        muted: "#8A8A8E",
+        edge: "#1E1E22",
         riskoff: "#A32D2D",
-        riskon: "#0F6E56",
-        caution: "#BA7517",
+        riskon: "#0F8A5F",
       },
       fontFamily: {
         serif: ["var(--font-serif)", "Georgia", "serif"],

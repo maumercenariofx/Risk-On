@@ -1,6 +1,6 @@
 "use client";
 // components/RiskGauge.jsx
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useLang, T } from "./Lang";
 import { computeRiskIndex, riskLabel, componentMeta } from "../lib/riskIndex";
 
@@ -20,14 +20,22 @@ export default function RiskGauge() {
       .catch(() => setData({ vix: 13.4, move: 98, dxy: 104.3, mxnVol: 9.1 }));
   }, []);
 
-  const result = data
-    ? computeRiskIndex({ vix: data.vix, move: data.move, dxy: data.dxy, mxnVol: data.mxnVol })
-    : null;
+  const result = useMemo(
+    () =>
+      data
+        ? computeRiskIndex({ vix: data.vix, move: data.move, dxy: data.dxy, mxnVol: data.mxnVol })
+        : null,
+    [data]
+  );
   const score = result?.score ?? 0;
   const label = riskLabel(score);
-  const meta = data
-    ? componentMeta({ vix: data.vix, move: data.move, dxy: data.dxy, mxnVol: data.mxnVol })
-    : null;
+  const meta = useMemo(
+    () =>
+      data
+        ? componentMeta({ vix: data.vix, move: data.move, dxy: data.dxy, mxnVol: data.mxnVol })
+        : null,
+    [data]
+  );
 
   useEffect(() => {
     if (!result) return;
@@ -63,8 +71,8 @@ export default function RiskGauge() {
         onMouseEnter={() => !animatingRef.current && setHover(true)}
         onMouseLeave={() => setHover(false)}
         style={{
-          background: "#0B0B0C",
-          border: `1px solid ${hover ? "#3A3A3D" : "#1E1E20"}`,
+          background: "#0A0A0B",
+          border: `1px solid ${hover ? "#3A3A3E" : "#1E1E22"}`,
           borderRadius: 16,
           padding: "30px 24px",
           textAlign: "center",
@@ -78,7 +86,7 @@ export default function RiskGauge() {
 
         <svg viewBox="0 0 320 200" width="320" style={{ maxWidth: "100%" }} role="img"
           aria-label={`Risk On index at ${score} of 100`}>
-          <path d="M40 175 A 120 120 0 0 1 280 175" fill="none" stroke="#1C1C1E" strokeWidth="22" strokeLinecap="round" />
+          <path d="M40 175 A 120 120 0 0 1 280 175" fill="none" stroke="#1A1A1C" strokeWidth="22" strokeLinecap="round" />
           <path d="M40 175 A 120 120 0 0 1 70 92" fill="none" stroke="#A32D2D" strokeWidth="18" strokeLinecap="round" opacity="0.9" />
           <path d="M74 87 A 120 120 0 0 1 122 50" fill="none" stroke="#B04A28" strokeWidth="18" strokeLinecap="round" opacity="0.9" />
           <path d="M128 47 A 120 120 0 0 1 192 47" fill="none" stroke="#9A8A3A" strokeWidth="18" strokeLinecap="round" opacity="0.9" />
@@ -87,7 +95,7 @@ export default function RiskGauge() {
           <g style={{ transform: `rotate(${angle}deg)`, transformOrigin: "160px 175px", transition: "transform 1.4s cubic-bezier(.34,1.3,.5,1)" }}>
             <line x1="160" y1="175" x2="160" y2="64" stroke="#F5F5F2" strokeWidth="3" strokeLinecap="round" />
             <circle cx="160" cy="175" r="9" fill="#F5F5F2" />
-            <circle cx="160" cy="175" r="4" fill="#0B0B0C" />
+            <circle cx="160" cy="175" r="4" fill="#0A0A0B" />
           </g>
         </svg>
 
@@ -125,8 +133,8 @@ export default function RiskGauge() {
             {compKeys.map((k) => (
               <button key={k} onClick={() => setSel(k)}
                 style={{
-                  background: "#0B0B0C", textAlign: "left", cursor: "pointer", padding: "11px 12px",
-                  borderRadius: 10, border: `1px solid ${sel === k ? "#3A3A3D" : "#1E1E20"}`,
+                  background: "#0A0A0B", textAlign: "left", cursor: "pointer", padding: "11px 12px",
+                  borderRadius: 10, border: `1px solid ${sel === k ? "#3A3A3E" : "#1E1E22"}`,
                   color: "#F5F5F2", transition: "border-color .2s",
                 }}>
                 <div style={{ fontSize: 11, color: "#8A8A8E", letterSpacing: 1 }}>
@@ -137,7 +145,7 @@ export default function RiskGauge() {
               </button>
             ))}
           </div>
-          <div style={{ marginTop: 10, background: "#0B0B0C", border: "1px solid #1E1E20", borderRadius: 10, padding: "12px 14px", fontSize: 13, lineHeight: 1.7, color: "#8A8A8E" }}>
+          <div style={{ marginTop: 10, background: "#0A0A0B", border: "1px solid #1E1E22", borderRadius: 10, padding: "12px 14px", fontSize: 13, lineHeight: 1.7, color: "#8A8A8E" }}>
             <T es={meta[sel].detail.es} en={meta[sel].detail.en} />
           </div>
         </>

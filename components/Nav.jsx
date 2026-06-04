@@ -13,10 +13,10 @@ export default function Nav() {
     { href: "/about", es: "Sobre mí", en: "About" },
   ];
   return (
-    <header className="sticky top-0 z-50 border-b border-gold/15 bg-ink/85 backdrop-blur">
+    <header className="sticky top-0 z-50 border-b border-edge bg-ink/90 backdrop-blur">
       <nav className="mx-auto flex max-w-5xl items-center justify-between px-5 py-3">
-        <Link href="/" className="font-serif text-2xl font-medium tracking-tight">
-          Risk<span className="text-gold"> On</span>
+        <Link href="/" className="font-serif text-2xl font-medium tracking-tight text-bone">
+          Risk On
         </Link>
         <div className="hidden items-center gap-6 md:flex">
           {links.map((l) => (
@@ -36,8 +36,8 @@ export default function Nav() {
               onClick={() => setLang(l)}
               className={`rounded-md border px-2.5 py-1 text-xs font-medium transition-colors ${
                 lang === l
-                  ? "border-gold bg-gold text-ink"
-                  : "border-gold/30 text-muted hover:text-bone"
+                  ? "border-bone/50 bg-white/10 text-bone"
+                  : "border-edge text-muted hover:text-bone"
               }`}
             >
               {l.toUpperCase()}

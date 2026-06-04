@@ -34,7 +34,7 @@ export default function LearnPage() {
   return (
     <div className="space-y-6 pt-4">
       <div className="reveal">
-        <h1 className="font-serif text-3xl font-medium">
+        <h1 className="font-serif text-3xl font-medium text-bone">
           <T es="Aprende" en="Learn" />
         </h1>
         <p className="mt-1 text-sm text-muted">
@@ -44,9 +44,9 @@ export default function LearnPage() {
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
         {TERMS.map((t, i) => (
-          <div key={t.term} className="reveal rounded-xl border border-gold/15 bg-ink2/40 p-4"
+          <div key={t.term} className="reveal rounded-xl border border-edge bg-ink2/40 p-4"
                style={{ animationDelay: `${0.05 + i * 0.05}s` }}>
-            <div className="mb-1.5 font-medium text-gold">{t.term}</div>
+            <div className="mb-1.5 font-medium text-bone">{t.term}</div>
             <p className="text-[13.5px] leading-relaxed text-bone/80">
               <T es={t.es} en={t.en} />
             </p>

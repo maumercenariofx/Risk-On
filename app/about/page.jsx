@@ -10,12 +10,12 @@ const LINKEDIN = "https://www.linkedin.com/in/mauricio-mercenario-nieto-25a4b520
 function CTA({ href, icon, title, sub }) {
   return (
     <a href={href} target="_blank" rel="noopener noreferrer"
-       className="group flex items-center gap-3 rounded-xl border border-gold/20 bg-ink2/40 p-4 transition-all hover:translate-x-1 hover:border-gold/50">
-      <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-md bg-gold/10 text-gold text-lg">
+       className="group flex items-center gap-3 rounded-xl border border-edge bg-ink2/40 p-4 transition-all hover:translate-x-1 hover:border-[#3A3A3E]">
+      <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-md bg-white/5 text-muted text-lg">
         {icon}
       </span>
       <span className="flex-1">
-        <span className="block text-[15px] font-medium">{title}</span>
+        <span className="block text-[15px] font-medium text-bone">{title}</span>
         <span className="block text-xs text-muted">{sub}</span>
       </span>
       <span className="text-muted transition-transform group-hover:translate-x-1">→</span>
@@ -30,7 +30,7 @@ export default function AboutPage() {
       <ProfileCard />
 
       <section className="reveal" style={{ animationDelay: "0.15s" }}>
-        <h2 className="font-serif text-2xl font-medium leading-tight">
+        <h2 className="font-serif text-2xl font-medium leading-tight text-bone">
           <T es="¿Dudas de mercado? Platiquemos." en="Questions about the market? Let's talk." />
         </h2>
         <p className="mt-1.5 text-sm leading-relaxed text-muted">

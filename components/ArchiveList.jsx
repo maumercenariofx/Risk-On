@@ -9,7 +9,7 @@ export default function ArchiveList({ posts }) {
   return (
     <div className="space-y-6 pt-4">
       <div className="reveal">
-        <h1 className="font-serif text-3xl font-medium">
+        <h1 className="font-serif text-3xl font-medium text-bone">
           <T es="Archivo" en="Archive" />
         </h1>
         <p className="mt-1 text-sm text-muted">
@@ -21,16 +21,16 @@ export default function ArchiveList({ posts }) {
           const label = riskLabel(p.score || 50);
           return (
             <Link key={p.slug} href={`/archive/${p.slug}`}
-              className="reveal block rounded-xl border border-gold/15 bg-ink2/40 p-4 transition-colors hover:border-gold/40"
+              className="reveal block rounded-xl border border-edge bg-ink2/40 p-4 transition-colors hover:border-[#3A3A3E]"
               style={{ animationDelay: `${0.05 + i * 0.05}s` }}>
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <div className="text-xs text-muted">{p.date}</div>
-                  <div className="mt-0.5 font-serif text-lg font-medium">
+                  <div className="mt-0.5 font-serif text-lg font-medium text-bone">
                     {lang === "en" ? p.title_en : p.title_es}
                   </div>
                 </div>
-                <div className="flex flex-shrink-0 flex-col items-center rounded-lg border border-gold/20 px-3 py-1.5">
+                <div className="flex flex-shrink-0 flex-col items-center rounded-lg border border-edge px-3 py-1.5">
                   <span className="font-mono text-lg font-medium" style={{ color: label.color }}>
                     {p.score}
                   </span>

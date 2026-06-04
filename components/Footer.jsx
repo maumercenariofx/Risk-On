@@ -4,10 +4,10 @@ import { T } from "./Lang";
 
 export default function Footer() {
   return (
-    <footer className="border-t border-gold/15 bg-ink2/60">
+    <footer className="border-t border-edge bg-ink2/60">
       <div className="mx-auto max-w-5xl px-5 py-8">
-        <div className="mb-4 font-serif text-xl font-medium">
-          Risk<span className="text-gold"> On</span>
+        <div className="mb-4 font-serif text-xl font-medium text-bone">
+          Risk On
         </div>
         <p className="max-w-2xl text-xs leading-relaxed text-muted">
           <T

@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useLang, T } from "./Lang";
 
-// Genera una serie sintetica de demostracion (en produccion: historico real de la API)
 function genSeries(n, start, end, lo, hi) {
   const a = [];
   let v = start;
@@ -51,10 +50,10 @@ export default function MarketsClient() {
         data: {
           labels: data.map((_, i) => i),
           datasets: [{
-            data, borderColor: "#C8A765",
-            backgroundColor: "rgba(200,167,101,0.08)", fill: true,
+            data, borderColor: "#F5F5F2",
+            backgroundColor: "rgba(245,245,242,0.05)", fill: true,
             tension: 0.3, pointRadius: 0, pointHoverRadius: 5,
-            pointHoverBackgroundColor: "#C8A765", borderWidth: 2,
+            pointHoverBackgroundColor: "#F5F5F2", borderWidth: 1.5,
           }],
         },
         options: {
@@ -66,8 +65,8 @@ export default function MarketsClient() {
           },
           scales: {
             x: { display: false },
-            y: { ticks: { color: "#9A97A6", font: { size: 11 }, callback: (v) => "$" + v.toFixed(2) },
-                 grid: { color: "rgba(255,255,255,0.06)" } },
+            y: { ticks: { color: "#8A8A8E", font: { size: 11 }, callback: (v) => "$" + v.toFixed(2) },
+                 grid: { color: "rgba(255,255,255,0.04)" } },
           },
         },
       });
@@ -78,7 +77,7 @@ export default function MarketsClient() {
   return (
     <div className="space-y-6 pt-4">
       <div className="reveal">
-        <h1 className="font-serif text-3xl font-medium">
+        <h1 className="font-serif text-3xl font-medium text-bone">
           <T es="Mercados" en="Markets" />
         </h1>
         <p className="mt-1 text-sm text-muted">
@@ -86,17 +85,17 @@ export default function MarketsClient() {
         </p>
       </div>
 
-      <div className="reveal rounded-2xl border border-gold/20 bg-ink2/40 p-5" style={{ animationDelay: "0.1s" }}>
+      <div className="reveal rounded-2xl border border-edge bg-ink2/40 p-5" style={{ animationDelay: "0.1s" }}>
         <div className="mb-3 flex items-center justify-between">
           <div>
             <div className="text-xs text-muted">USD/MXN</div>
-            <div className="font-mono text-2xl font-medium">${last.toFixed(3)}</div>
+            <div className="font-mono text-2xl font-medium text-bone">${last.toFixed(3)}</div>
           </div>
           <div className="flex gap-1.5">
             {[30, 90, 365].map((r) => (
               <button key={r} onClick={() => setRange(r)}
-                className={`rounded-md border px-2.5 py-1 text-xs font-medium ${
-                  range === r ? "border-gold bg-gold text-ink" : "border-gold/30 text-muted"
+                className={`rounded-md border px-2.5 py-1 text-xs font-medium transition-colors ${
+                  range === r ? "border-bone/50 bg-white/10 text-bone" : "border-edge text-muted hover:text-bone"
                 }`}>
                 {r === 365 ? "1Y" : r + "D"}
               </button>

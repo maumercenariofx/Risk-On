@@ -9,16 +9,16 @@ export default function ProfileCard() {
     <div className="flip reveal" style={{ height: 280, animationDelay: "0.05s" }}>
       <div className="flip-inner">
         {/* Cara frontal */}
-        <div className="flip-face flex flex-col justify-between border border-gold/25 bg-gradient-to-br from-ink via-ink2 to-ink3 p-6">
+        <div className="flip-face flex flex-col justify-between border border-edge bg-gradient-to-br from-ink via-ink2 to-ink3 p-6">
           <div className="flex items-center gap-4">
-            <div className="flex h-[62px] w-[62px] flex-shrink-0 items-center justify-center rounded-full border-[1.5px] border-gold bg-ink3 font-medium tracking-wide text-gold">
+            <div className="flex h-[62px] w-[62px] flex-shrink-0 items-center justify-center rounded-full border-[1.5px] border-[#3A3A3E] bg-ink3 font-medium tracking-wide text-bone">
               MM
             </div>
             <div>
               <div className="text-xl font-medium tracking-tight text-bone">
                 Mauricio Mercenario Nieto
               </div>
-              <div className="text-sm font-medium tracking-wide text-gold">
+              <div className="text-sm font-medium tracking-wide text-muted">
                 <T
                   es="Especialista FX · Transaccional, Mercados Globales"
                   en="FX Specialist · Global Markets Trading"
@@ -34,7 +34,7 @@ export default function ProfileCard() {
           </p>
           <div className="flex flex-wrap gap-1.5">
             {TAGS_FRONT.map((tag) => (
-              <span key={tag} className="rounded-md border border-gold/40 bg-gold/10 px-2.5 py-1 text-[11px] font-medium text-gold">
+              <span key={tag} className="rounded-md border border-edge bg-white/5 px-2.5 py-1 text-[11px] font-medium text-muted">
                 {tag}
               </span>
             ))}
@@ -45,8 +45,8 @@ export default function ProfileCard() {
         </div>
 
         {/* Cara trasera */}
-        <div className="flip-face flip-back flex flex-col justify-center gap-3 border border-gold/25 bg-gradient-to-br from-ink2 to-ink p-6">
-          <div className="text-[11px] font-medium uppercase tracking-[1.5px] text-gold">
+        <div className="flip-face flip-back flex flex-col justify-center gap-3 border border-edge bg-gradient-to-br from-ink2 to-ink p-6">
+          <div className="text-[11px] font-medium uppercase tracking-[1.5px] text-muted">
             <T es="Trayectoria" en="Track record" />
           </div>
           <p className="text-[12.5px] leading-relaxed text-bone/80">
@@ -64,13 +64,13 @@ export default function ProfileCard() {
             />
           </p>
           <div className="flex flex-wrap gap-1.5">
-            <span className="rounded-md border border-gold/40 bg-gold/10 px-2.5 py-1 text-[11px] font-medium text-gold">
+            <span className="rounded-md border border-edge bg-white/5 px-2.5 py-1 text-[11px] font-medium text-muted">
               <T es="Pricing & ejecución" en="Pricing & execution" />
             </span>
-            <span className="rounded-md border border-gold/40 bg-gold/10 px-2.5 py-1 text-[11px] font-medium text-gold">
+            <span className="rounded-md border border-edge bg-white/5 px-2.5 py-1 text-[11px] font-medium text-muted">
               Lic. Finanzas · Tec
             </span>
-            <span className="rounded-md border border-gold/40 bg-gold/10 px-2.5 py-1 text-[11px] font-medium text-gold">
+            <span className="rounded-md border border-edge bg-white/5 px-2.5 py-1 text-[11px] font-medium text-muted">
               CFA L1
             </span>
           </div>
