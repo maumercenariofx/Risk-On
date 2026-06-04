@@ -4,14 +4,33 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useLang, T } from "./Lang";
 import { computeRiskIndex, riskLabel, componentMeta } from "../lib/riskIndex";
 
+// Arc geometry
+const CX = 160;
+const CY = 175;
+const R  = 110;
+const ARC_LEN = Math.PI * R; // semicircle ≈ 345.6
+const ARC_PATH = `M ${CX - R} ${CY} A ${R} ${R} 0 0 1 ${CX + R} ${CY}`;
+
+// Point on the arc for a given score value (0-100)
+function ptOnArc(val) {
+  const rad = (Math.PI / 180) * (180 - val * 1.8);
+  return { x: CX + R * Math.cos(rad), y: CY - R * Math.sin(rad) };
+}
+
+// Three-state accent color
+function accent(score) {
+  if (score >= 58) return "#3FA77E";
+  if (score < 42)  return "#A32D2D";
+  return "#8A8A8E";
+}
+
 export default function RiskGauge() {
   const { lang } = useLang();
-  const [data, setData] = useState(null);
-  const [angle, setAngle] = useState(-90);
+  const [data, setData]       = useState(null);
   const [display, setDisplay] = useState(0);
-  const [sel, setSel] = useState("vix");
-  const [hover, setHover] = useState(false);
-  const animatingRef = useRef(true);
+  const [sel, setSel]         = useState("vix");
+  const [hover, setHover]     = useState(false);
+  const animatingRef          = useRef(true);
 
   useEffect(() => {
     fetch("/api/market")
@@ -21,132 +40,197 @@ export default function RiskGauge() {
   }, []);
 
   const result = useMemo(
-    () =>
-      data
-        ? computeRiskIndex({ vix: data.vix, move: data.move, dxy: data.dxy, mxnVol: data.mxnVol })
-        : null,
+    () => data
+      ? computeRiskIndex({ vix: data.vix, move: data.move, dxy: data.dxy, mxnVol: data.mxnVol })
+      : null,
     [data]
   );
   const score = result?.score ?? 0;
   const label = riskLabel(score);
-  const meta = useMemo(
-    () =>
-      data
-        ? componentMeta({ vix: data.vix, move: data.move, dxy: data.dxy, mxnVol: data.mxnVol })
-        : null,
+  const meta  = useMemo(
+    () => data
+      ? componentMeta({ vix: data.vix, move: data.move, dxy: data.dxy, mxnVol: data.mxnVol })
+      : null,
     [data]
   );
 
+  // Count animation (same fix: result is memoized so effect doesn't re-fire on each tick)
   useEffect(() => {
     if (!result) return;
-    const target = -90 + score * 1.8;
-    const tA = setTimeout(() => setAngle(target), 400);
     let n = 0;
     const iv = setInterval(() => {
       n += 2;
-      if (n >= score) {
-        n = score;
-        clearInterval(iv);
-        animatingRef.current = false;
-      }
+      if (n >= score) { n = score; clearInterval(iv); animatingRef.current = false; }
       setDisplay(n);
     }, 22);
-    return () => {
-      clearTimeout(tA);
-      clearInterval(iv);
-    };
+    return () => clearInterval(iv);
   }, [result, score]);
 
-  const compKeys = ["vix", "move", "dxy", "mxn"];
-  const compColor = (k) => {
-    const c = result?.components[k] ?? 50;
-    if (c >= 60) return "#0F8A5F";
-    if (c >= 40) return "#9A8A3A";
-    return "#A32D2D";
-  };
+  const accentColor  = accent(score);
+  const dashOffset   = ARC_LEN * (1 - display / 100);
+  const dot          = ptOnArc(display);
+  const compKeys     = ["vix", "move", "dxy", "mxn"];
 
   return (
     <section className="reveal" style={{ animationDelay: "0.05s" }}>
+
+      {/* ── Gauge card ── */}
       <div
         className="tron-glow"
         onMouseEnter={() => !animatingRef.current && setHover(true)}
         onMouseLeave={() => setHover(false)}
         style={{
-          background: "#0A0A0B",
-          border: `1px solid ${hover ? "#3A3A3E" : "#1E1E22"}`,
+          background: "#0B0B0C",
+          border: `1px solid ${hover ? "#3A3A3E" : "#1E1E20"}`,
           borderRadius: 16,
-          padding: "30px 24px",
+          padding: "28px 24px 22px",
           textAlign: "center",
           cursor: "pointer",
           transition: "border-color .3s",
         }}
       >
-        <div style={{ fontSize: 10, letterSpacing: 3, color: "#5A5A60", textTransform: "uppercase", marginBottom: 4 }}>
+        {/* Eyebrow */}
+        <div style={{ fontSize: 10, letterSpacing: 3, color: "#4A4A50", textTransform: "uppercase", marginBottom: 10 }}>
           &mdash; <T es="El indice Risk On de hoy" en="Today's Risk On index" />
         </div>
 
-        <svg viewBox="0 0 320 200" width="320" style={{ maxWidth: "100%" }} role="img"
-          aria-label={`Risk On index at ${score} of 100`}>
-          <path d="M40 175 A 120 120 0 0 1 280 175" fill="none" stroke="#1A1A1C" strokeWidth="22" strokeLinecap="round" />
-          <path d="M40 175 A 120 120 0 0 1 70 92" fill="none" stroke="#A32D2D" strokeWidth="18" strokeLinecap="round" opacity="0.9" />
-          <path d="M74 87 A 120 120 0 0 1 122 50" fill="none" stroke="#B04A28" strokeWidth="18" strokeLinecap="round" opacity="0.9" />
-          <path d="M128 47 A 120 120 0 0 1 192 47" fill="none" stroke="#9A8A3A" strokeWidth="18" strokeLinecap="round" opacity="0.9" />
-          <path d="M198 50 A 120 120 0 0 1 246 87" fill="none" stroke="#5E8A2E" strokeWidth="18" strokeLinecap="round" opacity="0.9" />
-          <path d="M250 92 A 120 120 0 0 1 280 175" fill="none" stroke="#0F8A5F" strokeWidth="18" strokeLinecap="round" opacity="0.9" />
-          <g style={{ transform: `rotate(${angle}deg)`, transformOrigin: "160px 175px", transition: "transform 1.4s cubic-bezier(.34,1.3,.5,1)" }}>
-            <line x1="160" y1="175" x2="160" y2="64" stroke="#F5F5F2" strokeWidth="3" strokeLinecap="round" />
-            <circle cx="160" cy="175" r="9" fill="#F5F5F2" />
-            <circle cx="160" cy="175" r="4" fill="#0A0A0B" />
-          </g>
+        {/* SVG arc */}
+        <svg
+          viewBox="0 0 320 185"
+          width="320"
+          style={{ maxWidth: "100%", display: "block", margin: "0 auto", overflow: "visible" }}
+          role="img"
+          aria-label={`Risk On index: ${score}/100`}
+        >
+          {/* Background track */}
+          <path d={ARC_PATH} fill="none" stroke="#222226" strokeWidth="2" strokeLinecap="round" />
+
+          {/* Progress glow (wide, faint) */}
+          <path
+            d={ARC_PATH} fill="none" stroke="#E8E6E0"
+            strokeWidth="10" strokeLinecap="round" opacity="0.05"
+            strokeDasharray={`${ARC_LEN} ${ARC_LEN}`}
+            strokeDashoffset={dashOffset}
+          />
+
+          {/* Progress fill (thin, crisp) */}
+          <path
+            d={ARC_PATH} fill="none" stroke="#E8E6E0"
+            strokeWidth="2" strokeLinecap="round"
+            strokeDasharray={`${ARC_LEN} ${ARC_LEN}`}
+            strokeDashoffset={dashOffset}
+          />
+
+          {/* Dot halo */}
+          <circle cx={dot.x} cy={dot.y} r="9" fill={accentColor} opacity="0.15"
+            style={{ transition: "fill .6s" }} />
+          {/* Dot */}
+          <circle cx={dot.x} cy={dot.y} r="4" fill={accentColor}
+            style={{ transition: "fill .6s" }} />
         </svg>
 
-        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "center", gap: 6, marginTop: -4 }}>
+        {/* Score number */}
+        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "center", gap: 5, marginTop: 6 }}>
           <span style={{
             fontFamily: "var(--font-mono)", fontWeight: 500, lineHeight: 1,
-            fontSize: hover ? 84 : 54,
+            fontSize: hover ? 78 : 48,
             color: hover ? "#FFFFFF" : "#F5F5F2",
             transition: "font-size .35s cubic-bezier(.34,1.3,.5,1), color .35s",
           }}>{display}</span>
-          <span style={{ fontSize: 18, color: "#5A5A60", opacity: hover ? 0 : 1, transition: "opacity .3s" }}>/100</span>
+          <span style={{
+            fontFamily: "var(--font-mono)", fontSize: 13, color: "#2E2E32",
+            opacity: hover ? 0 : 1, transition: "opacity .3s",
+          }}>/100</span>
         </div>
 
-        <div style={{ marginTop: 12 }}>
+        {/* Status label */}
+        <div style={{ marginTop: 9 }}>
           <span style={{
-            fontSize: 12, textTransform: "uppercase", fontWeight: 500, color: label.color,
-            letterSpacing: hover ? 3.5 : 2, transition: "letter-spacing .3s",
+            fontSize: 10, textTransform: "uppercase", fontWeight: 500,
+            color: accentColor,
+            letterSpacing: hover ? 3.5 : 2,
+            transition: "letter-spacing .3s, color .6s",
           }}>
             <T es={label.es} en={label.en} />
           </span>
         </div>
 
-        <div style={{ marginTop: 14, display: "flex", justifyContent: "space-between", maxWidth: 300, marginLeft: "auto", marginRight: "auto", fontSize: 10, textTransform: "uppercase", letterSpacing: 2 }}>
-          <span style={{ color: "#A32D2D" }}>Risk-off</span>
-          <span style={{ color: "#0F8A5F" }}>Risk-on</span>
+        {/* End labels */}
+        <div style={{
+          marginTop: 10, display: "flex", justifyContent: "space-between",
+          maxWidth: 244, marginLeft: "auto", marginRight: "auto",
+          fontSize: 9, textTransform: "uppercase", letterSpacing: 1.5, color: "#2E2E32",
+        }}>
+          <span>0 — risk-off</span>
+          <span>risk-on — 100</span>
         </div>
       </div>
 
+      {/* ── Component cards ── */}
       {meta && (
         <>
-          <div style={{ fontSize: 10, letterSpacing: 3, textTransform: "uppercase", color: "#5A5A60", margin: "20px 0 10px" }}>
+          <div style={{ fontSize: 10, letterSpacing: 3, textTransform: "uppercase", color: "#4A4A50", margin: "20px 0 10px" }}>
             &mdash; <T es="Que lo mueve hoy" en="What's driving it today" />
           </div>
+
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 10 }}>
-            {compKeys.map((k) => (
-              <button key={k} onClick={() => setSel(k)}
-                style={{
-                  background: "#0A0A0B", textAlign: "left", cursor: "pointer", padding: "11px 12px",
-                  borderRadius: 10, border: `1px solid ${sel === k ? "#3A3A3E" : "#1E1E22"}`,
-                  color: "#F5F5F2", transition: "border-color .2s",
-                }}>
-                <div style={{ fontSize: 11, color: "#8A8A8E", letterSpacing: 1 }}>
-                  {meta[k].label} <span style={{ fontSize: 10 }}><T es={meta[k].sub.es} en={meta[k].sub.en} /></span>
-                </div>
-                <div style={{ fontFamily: "var(--font-mono)", fontSize: 20, fontWeight: 500, marginTop: 2 }}>{meta[k].value}</div>
-                <div style={{ fontSize: 11, fontWeight: 500, color: compColor(k) }}>{Math.round(result.components[k])}/100</div>
-              </button>
-            ))}
+            {compKeys.map((k) => {
+              const compScore = Math.round(result.components[k]);
+              const ca = accent(compScore);
+              return (
+                <button
+                  key={k}
+                  onClick={() => setSel(k)}
+                  style={{
+                    background: "#0B0B0C", textAlign: "left", cursor: "pointer",
+                    padding: "12px 13px", borderRadius: 10,
+                    border: `1px solid ${sel === k ? "#3A3A3E" : "#1E1E20"}`,
+                    color: "#F5F5F2", transition: "border-color .2s",
+                  }}
+                >
+                  {/* Label */}
+                  <div style={{ fontSize: 10, color: "#4A4A50", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 5 }}>
+                    {meta[k].label}
+                    {meta[k].sub.es && (
+                      <span style={{ opacity: 0.65 }}>
+                        {" "}·{" "}<T es={meta[k].sub.es} en={meta[k].sub.en} />
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Value */}
+                  <div style={{
+                    fontFamily: "var(--font-mono)", fontSize: 22, fontWeight: 500,
+                    lineHeight: 1, color: "#F5F5F2", marginBottom: 8,
+                  }}>
+                    {meta[k].value}
+                  </div>
+
+                  {/* Mini progress bar */}
+                  <div style={{ height: 1.5, background: "#1E1E20", borderRadius: 1, marginBottom: 5 }}>
+                    <div style={{
+                      height: "100%", borderRadius: 1,
+                      width: `${compScore}%`,
+                      background: ca,
+                      transition: "width 1.2s ease-out",
+                    }} />
+                  </div>
+
+                  {/* Score */}
+                  <div style={{ fontSize: 10, fontFamily: "var(--font-mono)", color: ca, letterSpacing: 0.5 }}>
+                    {compScore}/100
+                  </div>
+                </button>
+              );
+            })}
           </div>
-          <div style={{ marginTop: 10, background: "#0A0A0B", border: "1px solid #1E1E22", borderRadius: 10, padding: "12px 14px", fontSize: 13, lineHeight: 1.7, color: "#8A8A8E" }}>
+
+          {/* Detail text */}
+          <div style={{
+            marginTop: 10, background: "#0B0B0C", border: "1px solid #1E1E20",
+            borderRadius: 10, padding: "12px 14px", fontSize: 13,
+            lineHeight: 1.7, color: "#8A8A8E",
+          }}>
             <T es={meta[sel].detail.es} en={meta[sel].detail.en} />
           </div>
         </>
