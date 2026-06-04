@@ -68,6 +68,7 @@ export default function RiskGauge() {
   return (
     <section className="reveal" style={{ animationDelay: "0.05s" }}>
       <div
+        className="tron-glow"
         onMouseEnter={() => !animatingRef.current && setHover(true)}
         onMouseLeave={() => setHover(false)}
         style={{

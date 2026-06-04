@@ -8,6 +8,8 @@
   --font-mono: 'Geist Mono', 'SF Mono', monospace;
 }
 
+html { overflow-x: hidden; }
+
 html, body {
   background: #0A0A0B;
   color: #F5F5F2;
@@ -15,6 +17,49 @@ html, body {
   -webkit-font-smoothing: antialiased;
   scroll-behavior: smooth;
 }
+
+/* ── Rejilla Tron de fondo ── */
+body {
+  background-image:
+    linear-gradient(rgba(245,245,242,0.022) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(245,245,242,0.022) 1px, transparent 1px);
+  background-size: 80px 80px;
+  background-attachment: fixed;
+}
+
+/* Acento neon estático en la cima */
+body::before {
+  content: '';
+  position: fixed; top: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent 5%, rgba(245,245,242,0.18) 50%, transparent 95%);
+  pointer-events: none;
+  z-index: 100;
+}
+
+/* Glow suave en tarjetas clave */
+@keyframes tron-pulse {
+  0%, 100% { box-shadow: 0 0 0 1px rgba(245,245,242,0.04), 0 0 18px rgba(245,245,242,0.02); }
+  50%       { box-shadow: 0 0 0 1px rgba(245,245,242,0.08), 0 0 28px rgba(245,245,242,0.04); }
+}
+.tron-glow {
+  position: relative;
+  animation: tron-pulse 7s ease-in-out infinite;
+}
+
+/* Brackets de esquina para elementos sin border-radius */
+.tron-corner { position: relative; }
+.tron-corner::before,
+.tron-corner::after {
+  content: '';
+  position: absolute;
+  width: 14px; height: 14px;
+  border-color: rgba(245,245,242,0.18);
+  border-style: solid;
+  pointer-events: none;
+  z-index: 1;
+}
+.tron-corner::before { top: -1px; left: -1px; border-width: 1px 0 0 1px; }
+.tron-corner::after  { bottom: -1px; right: -1px; border-width: 0 1px 1px 0; }
 
 /* Reveal escalonado tipo Alan */
 @keyframes reveal {
@@ -41,16 +86,16 @@ html, body {
 }
 .flip-back { transform: rotateY(180deg); }
 
-/* Ticker animado */
-@keyframes ticker {
+/* Ticker diagonal */
+@keyframes ticker-scroll {
   from { transform: translateX(0); }
   to   { transform: translateX(-50%); }
 }
 .ticker-track {
-  display: inline-flex; gap: 34px; white-space: nowrap;
-  animation: ticker 30s linear infinite;
+  display: inline-flex; gap: 52px; white-space: nowrap;
+  animation: ticker-scroll 55s linear infinite;
 }
-.ticker-wrap:hover .ticker-track { animation-play-state: paused; }
+.ticker-band:hover .ticker-track { animation-play-state: paused; }
 
 /* Aguja del medidor */
 .needle {
