@@ -2,10 +2,14 @@
 import Ticker from "../components/Ticker";
 import RiskGauge from "../components/RiskGauge";
 import DailyRead from "../components/DailyRead";
+import DailyWatch from "../components/DailyWatch";
+import CountdownTimers from "../components/CountdownTimers";
+import RatesSection from "../components/RatesSection";
+import EconCalendar from "../components/EconCalendar";
 import { getAllPostsMeta } from "../lib/posts";
 
 export default function Home() {
-  const posts = getAllPostsMeta();
+  const posts  = getAllPostsMeta();
   const latest = posts[0] || null;
 
   return (
@@ -27,7 +31,12 @@ export default function Home() {
 
       <RiskGauge />
 
-      {latest && <DailyRead post={latest} />}
+      {latest && <DailyRead  post={latest} />}
+      {latest && <DailyWatch post={latest} />}
+
+      <CountdownTimers />
+      <RatesSection />
+      <EconCalendar />
     </div>
   );
 }

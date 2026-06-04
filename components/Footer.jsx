@@ -9,10 +9,13 @@ export default function Footer() {
         <div className="mb-4 font-serif text-xl font-medium text-bone">
           Risk On
         </div>
+        <div className="mb-3 text-xs text-muted">
+          <T es="FX y mercados explicados para todos" en="FX and markets explained for everyone" />
+        </div>
         <p className="max-w-2xl text-xs leading-relaxed text-muted">
           <T
-            es="Sitio personal de Mauricio Mercenario, con fines informativos y educativos. Las opiniones son propias y no representan a ninguna institución ni constituyen asesoría de inversión, oferta o recomendación de compra o venta de instrumentos financieros. Los datos de mercado pueden tener retraso. Operar con divisas y derivados implica riesgo de pérdida."
-            en="Personal site by Mauricio Mercenario, for informational and educational purposes. Opinions are my own and represent no institution, nor do they constitute investment advice, an offer, or a recommendation to buy or sell financial instruments. Market data may be delayed. Trading FX and derivatives involves risk of loss."
+            es="Contenido informativo y educativo. Opiniones propias, no constituyen asesoría de inversión ni recomendación de operar. Datos de mercado con posible retraso. Operar con divisas y derivados implica riesgo."
+            en="Informational and educational content. Personal opinions, not investment advice or a recommendation to trade. Market data may be delayed. Trading FX and derivatives involves risk."
           />
         </p>
         <div className="mt-5 text-xs text-muted/70">

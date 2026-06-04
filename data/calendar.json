@@ -1,0 +1,51 @@
+[
+  {
+    "date": "2026-06-03",
+    "time": "09:00",
+    "event_es": "ISM Servicios (EE.UU.)",
+    "event_en": "ISM Services PMI (US)",
+    "impact": "high"
+  },
+  {
+    "date": "2026-06-04",
+    "time": "07:15",
+    "event_es": "Empleo ADP (EE.UU.)",
+    "event_en": "ADP Employment (US)",
+    "impact": "medium"
+  },
+  {
+    "date": "2026-06-05",
+    "time": "07:30",
+    "event_es": "Balanza comercial (EE.UU.)",
+    "event_en": "Trade Balance (US)",
+    "impact": "low"
+  },
+  {
+    "date": "2026-06-05",
+    "time": "13:00",
+    "event_es": "Minutas Fed (FOMC)",
+    "event_en": "Fed Minutes (FOMC)",
+    "impact": "high"
+  },
+  {
+    "date": "2026-06-06",
+    "time": "07:30",
+    "event_es": "Solicitudes de desempleo (EE.UU.)",
+    "event_en": "Jobless Claims (US)",
+    "impact": "medium"
+  },
+  {
+    "date": "2026-06-07",
+    "time": "07:30",
+    "event_es": "Nóminas No-Agrícolas / NFP (EE.UU.)",
+    "event_en": "Nonfarm Payrolls / NFP (US)",
+    "impact": "high"
+  },
+  {
+    "date": "2026-06-07",
+    "time": "07:30",
+    "event_es": "Tasa de desempleo (EE.UU.)",
+    "event_en": "Unemployment Rate (US)",
+    "impact": "high"
+  }
+]
