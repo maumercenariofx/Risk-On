@@ -31,7 +31,7 @@ export default function AboutPage() {
 
       <section className="reveal" style={{ animationDelay: "0.15s" }}>
         <h2 className="font-serif text-2xl font-medium leading-tight text-bone">
-          <T es="¿Dudas de mercado? Platiquemos." en="Questions about the market? Let's talk." />
+          <T es="Contacto" en="Contact" />
         </h2>
         <p className="mt-1.5 text-sm leading-relaxed text-muted">
           <T es="Agenda una llamada sin compromiso para resolver dudas sobre FX, derivados o cómo leer el riesgo del mercado."

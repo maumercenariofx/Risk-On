@@ -25,7 +25,15 @@ export default function EconCalendar() {
       <div style={{ fontSize: 10, letterSpacing: 3, textTransform: "uppercase", color: "#4A4A50", marginBottom: 12 }}>
         &mdash; <T es="Calendario económico semanal" en="Weekly economic calendar" />
       </div>
-      <div style={{ background: "#0B0B0C", border: "1px solid #1E1E20", borderRadius: 12, overflow: "hidden" }}>
+      <div
+        className="card-glass"
+        style={{
+          background: "rgba(11,11,12,0.85)",
+          border: "1px solid #1E1E20",
+          borderRadius: 12,
+          overflow: "hidden",
+        }}
+      >
         {events.map((ev, i) => {
           const imp = IMPACT[ev.impact] || IMPACT.low;
           const isToday = ev.date === today;
@@ -41,8 +49,7 @@ export default function EconCalendar() {
             >
               <div style={{
                 minWidth: 86, fontFamily: "var(--font-mono)", fontSize: 10,
-                color: isToday ? "#C8C8C4" : "#4A4A50",
-                letterSpacing: 0.5,
+                color: isToday ? "#C8C8C4" : "#4A4A50", letterSpacing: 0.5,
               }}>
                 {dayLabel(ev.date, lang)}
               </div>
@@ -54,10 +61,7 @@ export default function EconCalendar() {
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 5, flexShrink: 0 }}>
                 <div style={{ width: 4, height: 4, borderRadius: "50%", background: imp.color }} />
-                <span style={{
-                  fontFamily: "var(--font-mono)", fontSize: 8,
-                  letterSpacing: 1.5, color: imp.color,
-                }}>
+                <span style={{ fontFamily: "var(--font-mono)", fontSize: 8, letterSpacing: 1.5, color: imp.color }}>
                   {lang === "en" ? imp.label_en : imp.label_es}
                 </span>
               </div>

@@ -1,13 +1,12 @@
 "use client";
 import { useEffect, useRef } from "react";
 
-const CELL = 34;
-const TRAIL_COLOR  = "rgba(120,160,255,";
-const CURSOR_COLOR = "rgba(100,180,255,";
+// CELL matches globals.css background-size: 80px 80px
+const CELL  = 80;
+const COLOR = "rgba(140,180,255,";
 
 export default function TronCanvas() {
   const canvasRef = useRef(null);
-  const mouseRef  = useRef({ x: -9999, y: -9999 });
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -15,8 +14,8 @@ export default function TronCanvas() {
     const ctx = canvas.getContext("2d");
 
     let animId;
-    let trails      = [];
-    let nextSpawn   = 0;
+    let trails    = [];
+    let nextSpawn = 0;
 
     const resize = () => {
       canvas.width  = window.innerWidth;
@@ -25,118 +24,109 @@ export default function TronCanvas() {
     resize();
     window.addEventListener("resize", resize);
 
-    const onMove = (e) => { mouseRef.current = { x: e.clientX, y: e.clientY }; };
-    window.addEventListener("mousemove", onMove, { passive: true });
-
     function spawnTrail(now) {
-      const cols = Math.ceil(canvas.width  / CELL) + 2;
-      const rows = Math.ceil(canvas.height / CELL) + 2;
-      const horiz = Math.random() > 0.5;
-      const len   = 4 + Math.floor(Math.random() * 7);
+      const cols   = Math.ceil(canvas.width  / CELL) + 1;
+      const rows   = Math.ceil(canvas.height / CELL) + 1;
+      const horiz  = Math.random() > 0.5;
+      const len    = 4 + Math.floor(Math.random() * 5); // 4-8 cells
 
       let col, row, dc = 0, dr = 0;
       if (horiz) {
         const fromLeft = Math.random() > 0.5;
-        col = fromLeft ? -1 : cols;
+        col = fromLeft ? 0 : cols;
         row = Math.floor(Math.random() * rows);
         dc  = fromLeft ? 1 : -1;
       } else {
         const fromTop = Math.random() > 0.5;
         col = Math.floor(Math.random() * cols);
-        row = fromTop ? -1 : rows;
+        row = fromTop ? 0 : rows;
         dr  = fromTop ? 1 : -1;
       }
 
       trails.push({
-        col, row, dc, dr,
-        len,
-        step:        0,
-        lastStep:    now,
-        stepMs:      45 + Math.floor(Math.random() * 35),
-        maxAlpha:    0.32 + Math.random() * 0.18,
-        cells:       [],
+        col, row, dc, dr, len,
+        step:     0,
+        lastStep: now,
+        stepMs:   55 + Math.floor(Math.random() * 45),
+        maxAlpha: 0.60 + Math.random() * 0.25,
+        cells:    [],
       });
     }
 
     function draw(now) {
       animId = requestAnimationFrame(draw);
-
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // ── Cursor glow ─────────────────────────────────────────────────────────
-      const mx = mouseRef.current.x;
-      const my = mouseRef.current.y;
-      const cx = Math.floor(mx / CELL);
-      const cy = Math.floor(my / CELL);
-      if (mx > 0) {
-        for (let dy = -2; dy <= 2; dy++) {
-          for (let dx = -2; dx <= 2; dx++) {
-            const dist = Math.sqrt(dx * dx + dy * dy);
-            if (dist > 2.4) continue;
-            const alpha = (1 - dist / 2.4) * 0.10;
-            const px = (cx + dx) * CELL;
-            const py = (cy + dy) * CELL;
-            ctx.save();
-            ctx.shadowColor = CURSOR_COLOR + (alpha * 3) + ")";
-            ctx.shadowBlur  = 14;
-            ctx.fillStyle   = CURSOR_COLOR + alpha + ")";
-            ctx.fillRect(px, py, CELL, CELL);
-            ctx.restore();
-          }
-        }
-      }
-
-      // ── Spawn ────────────────────────────────────────────────────────────────
       if (now >= nextSpawn) {
         spawnTrail(now);
-        nextSpawn = now + 800 + Math.random() * 1200;
+        nextSpawn = now + 900 + Math.random() * 900;
       }
 
-      // ── Update & draw trails ────────────────────────────────────────────────
-      const FADE_IN  = 80;
-      const FADE_OUT = 500;
-      const alive    = [];
+      const FADE_IN   = 55;
+      const FADE_LIFE = 1100;
+      const alive     = [];
 
       for (const t of trails) {
-        // Advance head
+        // Advance head one cell per stepMs
         if (t.step < t.len && now - t.lastStep >= t.stepMs) {
           t.cells.push({ col: t.col, row: t.row, born: now });
-          t.col      += t.dc;
-          t.row      += t.dr;
+          t.col     += t.dc;
+          t.row     += t.dr;
           t.step++;
-          t.lastStep  = now;
+          t.lastStep = now;
         }
 
-        // Draw cells
         let anyVisible = false;
         for (const c of t.cells) {
-          const age      = now - c.born;
-          const fadeIn   = Math.min(1, age / FADE_IN);
-          const fadeOut  = Math.max(0, 1 - Math.max(0, age - FADE_OUT * 0.4) / (FADE_OUT * 0.6));
-          const alpha    = fadeIn * fadeOut * t.maxAlpha;
-          if (alpha < 0.004) continue;
+          const age     = now - c.born;
+          const fadeIn  = Math.min(1, age / FADE_IN);
+          const fadeOut = Math.max(0, 1 - Math.max(0, age - FADE_LIFE * 0.52) / (FADE_LIFE * 0.48));
+          const alpha   = fadeIn * fadeOut * t.maxAlpha;
+          if (alpha < 0.005) continue;
           anyVisible = true;
 
+          // Endpoints of this grid-line segment
+          const x1 = c.col * CELL;
+          const y1 = c.row * CELL;
+          const x2 = t.dc !== 0 ? (c.col + 1) * CELL : x1;
+          const y2 = t.dr !== 0 ? (c.row + 1) * CELL : y1;
+
+          // Wide outer glow
           ctx.save();
-          ctx.shadowColor = TRAIL_COLOR + (alpha * 2.5) + ")";
-          ctx.shadowBlur  = 10;
-          ctx.fillStyle   = TRAIL_COLOR + alpha + ")";
-          ctx.fillRect(c.col * CELL, c.row * CELL, CELL, CELL);
+          ctx.beginPath();
+          ctx.moveTo(x1, y1);
+          ctx.lineTo(x2, y2);
+          ctx.strokeStyle = COLOR + alpha * 0.5 + ")";
+          ctx.lineWidth   = 4;
+          ctx.lineCap     = "round";
+          ctx.shadowColor = COLOR + Math.min(1, alpha * 6) + ")";
+          ctx.shadowBlur  = 22;
+          ctx.stroke();
+          ctx.restore();
+
+          // Crisp bright core
+          ctx.save();
+          ctx.beginPath();
+          ctx.moveTo(x1, y1);
+          ctx.lineTo(x2, y2);
+          ctx.strokeStyle = COLOR + alpha + ")";
+          ctx.lineWidth   = 1.5;
+          ctx.lineCap     = "round";
+          ctx.shadowColor = COLOR + Math.min(1, alpha * 4) + ")";
+          ctx.shadowBlur  = 8;
+          ctx.stroke();
           ctx.restore();
         }
 
-        // Keep trail if still advancing or any cell still visible
         if (t.step < t.len || anyVisible) alive.push(t);
       }
       trails = alive;
     }
 
     animId = requestAnimationFrame(draw);
-
     return () => {
       cancelAnimationFrame(animId);
       window.removeEventListener("resize", resize);
-      window.removeEventListener("mousemove", onMove);
     };
   }, []);
 

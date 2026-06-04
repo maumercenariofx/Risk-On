@@ -5,26 +5,25 @@ export default function DailyWatch({ post }) {
   const { lang } = useLang();
   if (!post) return null;
 
-  const bullets = lang === "en" ? post.watch_en : post.watch_es;
+  const bullets  = lang === "en" ? post.watch_en : post.watch_es;
   const hasBullets = Array.isArray(bullets) && bullets.length > 0;
-  const hasLevels = post.support || post.resistance;
+  const hasLevels  = post.support || post.resistance;
 
   if (!hasBullets && !hasLevels) return null;
 
   return (
     <section className="reveal" style={{ animationDelay: "0.3s" }}>
-
       {hasBullets && (
         <div style={{ marginBottom: hasLevels ? 16 : 0 }}>
           <div style={{ fontSize: 10, letterSpacing: 3, textTransform: "uppercase", color: "#4A4A50", marginBottom: 10 }}>
             &mdash; <T es="Qué vigilar hoy" en="What to watch today" />
           </div>
-          <div style={{ background: "#0B0B0C", border: "1px solid #1E1E20", borderRadius: 12, padding: "14px 18px" }}>
+          <div
+            className="card-glass"
+            style={{ background: "rgba(11,11,12,0.85)", border: "1px solid #1E1E20", borderRadius: 12, padding: "14px 18px" }}
+          >
             {bullets.map((b, i) => (
-              <div key={i} style={{
-                display: "flex", gap: 10,
-                marginBottom: i < bullets.length - 1 ? 9 : 0,
-              }}>
+              <div key={i} style={{ display: "flex", gap: 10, marginBottom: i < bullets.length - 1 ? 9 : 0 }}>
                 <span style={{ color: "#3A3A3E", fontFamily: "var(--font-mono)", fontSize: 11, flexShrink: 0, marginTop: 2 }}>—</span>
                 <span style={{ fontSize: 13, color: "#C0C0BC", lineHeight: 1.65 }}>{b}</span>
               </div>
@@ -38,7 +37,10 @@ export default function DailyWatch({ post }) {
           <div style={{ fontSize: 10, letterSpacing: 3, textTransform: "uppercase", color: "#4A4A50", marginBottom: 10 }}>
             &mdash; <T es="Niveles técnicos USD/MXN" en="USD/MXN technical levels" />
           </div>
-          <div style={{ background: "#0B0B0C", border: "1px solid #1E1E20", borderRadius: 12, padding: "14px 18px" }}>
+          <div
+            className="card-glass"
+            style={{ background: "rgba(11,11,12,0.85)", border: "1px solid #1E1E20", borderRadius: 12, padding: "14px 18px" }}
+          >
             <div style={{ display: "flex", gap: 28, marginBottom: 12, flexWrap: "wrap" }}>
               {post.support && (
                 <div>

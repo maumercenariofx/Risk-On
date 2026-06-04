@@ -3,7 +3,6 @@ import { useEffect, useState } from "react";
 import { T } from "./Lang";
 
 // ─── ACTUALIZA ESTAS FECHAS CUANDO SE PUBLIQUEN LOS CALENDARIOS ──────────────
-// Formato: new Date("YYYY-MM-DDTHH:MM:SS±HH:MM")
 // Fed:     reunión FOMC — hora ET (verano = -04:00, invierno = -05:00)
 // Banxico: reunión Junta de Gobierno — hora CDMX (-06:00 invierno, -05:00 verano)
 const NEXT_FED     = new Date("2026-07-29T14:00:00-04:00");
@@ -49,7 +48,7 @@ function Unit({ value, label }) {
   );
 }
 
-function Separator() {
+function Colon() {
   return (
     <div style={{
       fontFamily: "var(--font-mono)", fontSize: 16, color: "#2E2E32",
@@ -61,28 +60,28 @@ function Separator() {
 function Countdown({ target, label_es, label_en }) {
   const r = useCountdown(target);
   return (
-    <div style={{
-      background: "#0B0B0C", border: "1px solid #1E1E20", borderRadius: 12,
-      padding: "16px 18px", flex: "1 1 200px",
-    }}>
-      <div style={{
-        fontSize: 9, letterSpacing: 2.5, textTransform: "uppercase",
-        color: "#4A4A50", marginBottom: 14,
-      }}>
+    <div
+      className="card-glass"
+      style={{
+        background: "rgba(11,11,12,0.85)", border: "1px solid #1E1E20",
+        borderRadius: 12, padding: "16px 18px", flex: "1 1 200px",
+      }}
+    >
+      <div style={{ fontSize: 9, letterSpacing: 2.5, textTransform: "uppercase", color: "#4A4A50", marginBottom: 14 }}>
         <T es={label_es} en={label_en} />
       </div>
       {r?.past ? (
-        <div style={{ fontFamily: "var(--font-mono)", fontSize: 12, color: "#3A3A3E", letterSpacing: 1 }}>
+        <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "#3A3A3E", letterSpacing: 1 }}>
           <T es="Reunión en curso o finalizada" en="Meeting ongoing or concluded" />
         </div>
       ) : (
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <Unit value={r?.d} label={r?.d === 1 ? "día" : "días"} />
-          <Separator />
+          <Colon />
           <Unit value={r?.h} label="hrs" />
-          <Separator />
+          <Colon />
           <Unit value={r?.m} label="min" />
-          <Separator />
+          <Colon />
           <Unit value={r?.s} label="seg" />
         </div>
       )}
@@ -93,15 +92,12 @@ function Countdown({ target, label_es, label_en }) {
 export default function CountdownTimers() {
   return (
     <section className="reveal" style={{ animationDelay: "0.2s" }}>
-      <div style={{
-        fontSize: 10, letterSpacing: 3, textTransform: "uppercase",
-        color: "#4A4A50", marginBottom: 12,
-      }}>
+      <div style={{ fontSize: 10, letterSpacing: 3, textTransform: "uppercase", color: "#4A4A50", marginBottom: 12 }}>
         &mdash; <T es="Próximas decisiones de política monetaria" en="Next monetary policy decisions" />
       </div>
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-        <Countdown target={NEXT_FED}     label_es="Próxima Fed (FOMC)"    label_en="Next Fed (FOMC)" />
-        <Countdown target={NEXT_BANXICO} label_es="Próxima Banxico"       label_en="Next Banxico" />
+        <Countdown target={NEXT_FED}     label_es="Próxima Fed (FOMC)"  label_en="Next Fed (FOMC)"  />
+        <Countdown target={NEXT_BANXICO} label_es="Próxima Banxico"     label_en="Next Banxico"     />
       </div>
     </section>
   );

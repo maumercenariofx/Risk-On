@@ -80,7 +80,7 @@ export default function RiskGauge() {
         onMouseEnter={() => !animatingRef.current && setHover(true)}
         onMouseLeave={() => setHover(false)}
         style={{
-          background: "#0B0B0C",
+          background: "rgba(11,11,12,0.85)",
           border: `1px solid ${hover ? "#3A3A3E" : "#1E1E20"}`,
           borderRadius: 16,
           padding: "28px 24px 22px",
@@ -182,7 +182,7 @@ export default function RiskGauge() {
                   key={k}
                   onClick={() => setSel(k)}
                   style={{
-                    background: "#0B0B0C", textAlign: "left", cursor: "pointer",
+                    background: "rgba(11,11,12,0.85)", textAlign: "left", cursor: "pointer",
                     padding: "12px 13px", borderRadius: 10,
                     border: `1px solid ${sel === k ? "#3A3A3E" : "#1E1E20"}`,
                     color: "#F5F5F2", transition: "border-color .2s",
@@ -227,7 +227,7 @@ export default function RiskGauge() {
 
           {/* Detail text */}
           <div style={{
-            marginTop: 10, background: "#0B0B0C", border: "1px solid #1E1E20",
+            marginTop: 10, background: "rgba(11,11,12,0.85)", border: "1px solid #1E1E20",
             borderRadius: 10, padding: "12px 14px", fontSize: 13,
             lineHeight: 1.7, color: "#8A8A8E",
           }}>

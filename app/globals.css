@@ -44,6 +44,20 @@ body::before {
 .tron-glow {
   position: relative;
   animation: tron-pulse 7s ease-in-out infinite;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+/* Tarjetas de información — efecto glass + reacción hover al cursor */
+.card-glass {
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: box-shadow 0.35s ease, border-color 0.35s ease;
+}
+.card-glass:hover {
+  box-shadow: 0 0 0 1px rgba(140,180,255,0.08),
+              0 0 28px rgba(140,180,255,0.06),
+              0 8px 40px rgba(0,0,0,0.5);
 }
 
 /* Brackets de esquina para elementos sin border-radius */

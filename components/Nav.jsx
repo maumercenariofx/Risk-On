@@ -10,7 +10,7 @@ export default function Nav() {
     { href: "/markets", es: "Mercados", en: "Markets" },
     { href: "/learn", es: "Aprende", en: "Learn" },
     { href: "/archive", es: "Archivo", en: "Archive" },
-    { href: "/about", es: "Sobre mí", en: "About" },
+    { href: "/about", es: "Contacto", en: "Contact" },
   ];
   return (
     <header className="sticky top-0 z-50 border-b border-edge bg-ink/90 backdrop-blur">
