@@ -1,6 +1,6 @@
 "use client";
+import { useEffect, useState } from "react";
 import { useLang, T } from "./Lang";
-import calendarData from "../data/calendar.json";
 
 const IMPACT = {
   high:   { color: "#A32D2D", label_es: "ALTO",  label_en: "HIGH" },
@@ -17,13 +17,22 @@ function dayLabel(dateStr, lang) {
 
 export default function EconCalendar() {
   const { lang } = useLang();
+  const [events, setEvents] = useState(null);
+
+  useEffect(() => {
+    fetch("/api/calendar?days=14")
+      .then((r) => r.json())
+      .then(setEvents)
+      .catch(() => setEvents([]));
+  }, []);
+
   const today = new Date().toISOString().slice(0, 10);
-  const events = [...calendarData].sort((a, b) => a.date.localeCompare(b.date));
+  const sorted = (events ?? []).sort((a, b) => a.date.localeCompare(b.date));
 
   return (
     <section className="reveal" style={{ animationDelay: "0.35s" }}>
       <div style={{ fontSize: 10, letterSpacing: 3, textTransform: "uppercase", color: "#4A4A50", marginBottom: 12 }}>
-        &mdash; <T es="Calendario económico semanal" en="Weekly economic calendar" />
+        &mdash; <T es="Calendario económico — próximos 14 días" en="Economic calendar — next 14 days" />
       </div>
       <div
         className="card-glass"
@@ -32,9 +41,20 @@ export default function EconCalendar() {
           border: "1px solid #1E1E20",
           borderRadius: 12,
           overflow: "hidden",
+          minHeight: 60,
         }}
       >
-        {events.map((ev, i) => {
+        {events === null && (
+          <div style={{ padding: "20px 16px", fontSize: 12, color: "#3A3A3E" }}>
+            <T es="Cargando calendario…" en="Loading calendar…" />
+          </div>
+        )}
+        {events !== null && sorted.length === 0 && (
+          <div style={{ padding: "20px 16px", fontSize: 12, color: "#3A3A3E" }}>
+            <T es="Sin eventos de alto impacto en los próximos 14 días." en="No high-impact events in the next 14 days." />
+          </div>
+        )}
+        {sorted.map((ev, i) => {
           const imp = IMPACT[ev.impact] || IMPACT.low;
           const isToday = ev.date === today;
           return (
@@ -43,7 +63,7 @@ export default function EconCalendar() {
               style={{
                 display: "flex", alignItems: "center", gap: 14,
                 padding: "10px 16px",
-                borderBottom: i < events.length - 1 ? "1px solid #141416" : "none",
+                borderBottom: i < sorted.length - 1 ? "1px solid #141416" : "none",
                 background: isToday ? "rgba(245,245,242,0.02)" : "transparent",
               }}
             >

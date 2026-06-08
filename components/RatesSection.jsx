@@ -1,15 +1,28 @@
 "use client";
+import { useEffect, useState } from "react";
 import { T } from "./Lang";
-import { RATES } from "../data/rates";
+
+const FALLBACK = { tiie28: 6.60, banxico: 6.50, fed: 3.625, fedRange: "3.5–3.75%" };
 
 export default function RatesSection() {
-  const spread = (RATES.banxico - RATES.fed).toFixed(2);
+  const [rates, setRates] = useState(null);
+
+  useEffect(() => {
+    fetch("/api/rates")
+      .then((r) => r.json())
+      .then(setRates)
+      .catch(() => setRates(FALLBACK));
+  }, []);
+
+  const r = rates ?? FALLBACK;
+  const spread = (r.banxico - r.fed).toFixed(2);
 
   const items = [
-    { label: "TIIE 28d",                              value: RATES.tiie28.toFixed(2) + "%" },
-    { label: "Banxico",                               value: RATES.banxico.toFixed(2) + "%" },
-    { label: "Fed Funds",                             value: RATES.fed.toFixed(2)    + "%" },
-    { label_es: "Diferencial MX–US", label_en: "MX–US Spread", value: "+" + spread + "%", highlight: true },
+    { label: "TIIE 28d",  value: r.tiie28.toFixed(2) + "%" },
+    { label: "Banxico",   value: r.banxico.toFixed(2) + "%" },
+    { label: "Fed Funds", value: r.fedRange ?? (r.fed.toFixed(3) + "%") },
+    { label_es: "Diferencial MX–US", label_en: "MX–US Spread",
+      value: "+" + spread + "%", highlight: true },
   ];
 
   return (
@@ -29,7 +42,8 @@ export default function RatesSection() {
               </div>
               <div style={{
                 fontFamily: "var(--font-mono)", fontSize: 26, fontWeight: 500, lineHeight: 1,
-                color: item.highlight ? "#0F8A5F" : "#F5F5F2",
+                color: item.highlight ? "#0F8A5F" : rates ? "#F5F5F2" : "#3A3A3E",
+                transition: "color .4s",
               }}>
                 {item.value}
               </div>
