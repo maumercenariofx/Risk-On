@@ -100,6 +100,7 @@ export default function TronCanvas() {
         size: 0.05,
         map: createDotTexture(THREE),
         transparent: true,
+        opacity: 0.55,
         vertexColors: true,
         sizeAttenuation: true,
         depthWrite: false,
@@ -110,6 +111,9 @@ export default function TronCanvas() {
       const points = new THREE.Points(geometry, material);
       group.add(points);
       scene.add(group);
+      // Nudged off-center so it reads as ambient texture rather than
+      // competing with the centered text columns for attention.
+      group.position.x = 1.35;
 
       // Mouse tracked in NDC relative to the container (canvas itself has pointer-events: none)
       const mouse = { x: -10, y: -10, active: false };
@@ -213,7 +217,7 @@ export default function TronCanvas() {
 
           // Depth shading: dimmer on the far side relative to the camera
           const facing = nx * vx + ny * vy + nz * vz;
-          const bright = 0.18 + (facing * 0.5 + 0.5) * 0.82;
+          const bright = 0.06 + (facing * 0.5 + 0.5) * 0.44;
           colors[i3] = colors[i3 + 1] = colors[i3 + 2] = bright;
         }
 

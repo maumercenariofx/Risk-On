@@ -4,7 +4,7 @@ import ProfileCard from "../../components/ProfileCard";
 import { useLang, T } from "../../components/Lang";
 
 const EMAIL = "mauriciomercenariofx@gmail.com";
-const CALENDLY = "https://calendly.com/"; // <-- reemplaza con tu enlace real
+const CALENDLY = "https://calendly.com/mauriciomercenariofx/30min";
 const LINKEDIN = "https://www.linkedin.com/in/mauricio-mercenario-nieto-25a4b5204/";
 
 function CTA({ href, icon, title, sub }) {
@@ -41,7 +41,7 @@ export default function AboutPage() {
 
       <div className="reveal space-y-2.5" style={{ animationDelay: "0.25s" }}>
         <CTA href={CALENDLY} icon="📅"
-             title={lang === "en" ? "Book a call" : "Agendar una llamada"} sub="Calendly · 20 min" />
+             title={lang === "en" ? "Book a call" : "Agendar una llamada"} sub="Calendly · 30 min" />
         <CTA href={`mailto:${EMAIL}`} icon="✉️"
              title={lang === "en" ? "Send an email" : "Enviar un correo"} sub={EMAIL} />
         <CTA href={LINKEDIN} icon="in"
