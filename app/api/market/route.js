@@ -1,46 +1,41 @@
 // app/api/market/route.js
-// Fuentes: Yahoo Finance (indices, acciones, cripto, VIX, DXY)
-//          Frankfurter (divisas FX)
-//          Stooq (MOVE index, no disponible en Yahoo)
-// Cache: 20 min (s-maxage=1200)
+// Fuente: Yahoo Finance v8 chart endpoint — el mismo que ya usa /api/history.
+// La v7 quote API empezó a exigir autenticación ("crumb"/cookie) y devuelve
+// 401 Unauthorized desde servidores; v8 chart sigue siendo público y trae
+// regularMarketPrice + chartPreviousClose (de ahí derivamos el % de cambio).
+// FX: Frankfurter (gratis, sin clave).
 
 export const revalidate = 1200;
 
 const YAHOO_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
 
-async function yahooQuotes(symbols) {
+async function yahooChart(symbol) {
   try {
-    const url =
-      "https://query1.finance.yahoo.com/v7/finance/quote?symbols=" +
-      symbols.join(",") +
-      "&fields=regularMarketPrice,regularMarketChangePercent";
+    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?range=1mo&interval=1d`;
     const res = await fetch(url, {
       headers: { "User-Agent": YAHOO_UA, Accept: "application/json" },
       next: { revalidate },
     });
     if (!res.ok) throw new Error(res.status);
     const json = await res.json();
-    const map = {};
-    for (const r of json?.quoteResponse?.result ?? []) {
-      map[r.symbol] = {
-        price: r.regularMarketPrice ?? null,
-        chgPct: r.regularMarketChangePercent ?? null,
-      };
-    }
-    return map;
-  } catch {
-    return {};
-  }
-}
+    const result = json?.chart?.result?.[0];
+    if (!result) return null;
 
-async function stooqLast(symbol) {
-  try {
-    const url = `https://stooq.com/q/l/?s=${symbol}&f=sd2t2ohlcv&h&e=csv`;
-    const res = await fetch(url, { next: { revalidate } });
-    const text = await res.text();
-    const cols = text.trim().split("\n")[1]?.split(",") ?? [];
-    const close = parseFloat(cols[6]);
-    return isNaN(close) ? null : close;
+    const meta   = result.meta ?? {};
+    const closes = (result.indicators?.quote?.[0]?.close ?? []).filter((v) => v != null && !isNaN(v));
+    const price  = meta.regularMarketPrice ?? closes[closes.length - 1] ?? null;
+
+    // % de cambio diario = último cierre vs el anterior. OJO: meta.chartPreviousClose
+    // no es fiable con range != "1d" (regresa el cierre de hace ~N días, no el de ayer),
+    // así que lo derivamos de los cierres diarios — funciona con cualquier rango.
+    let chgPct = null;
+    if (closes.length >= 2) {
+      const prev = closes[closes.length - 2];
+      const last = closes[closes.length - 1];
+      if (prev) chgPct = ((last - prev) / prev) * 100;
+    }
+
+    return { price, chgPct, closes };
   } catch {
     return null;
   }
@@ -59,47 +54,64 @@ async function fxRate(base, quote) {
   }
 }
 
-export async function GET() {
-  const YAHOO_SYMS = ["^GSPC", "^IXIC", "^VIX", "AAPL", "TSLA", "NVDA", "BTC-USD", "ETH-USD", "DX-Y.NYB"];
+// Volatilidad realizada anualizada (%) a partir de cierres diarios — proxy
+// libre de la volatilidad implícita (para la que no existe fuente gratuita).
+function realizedVol(closes) {
+  if (!closes || closes.length < 6) return null;
+  const rets = [];
+  for (let i = 1; i < closes.length; i++) rets.push(Math.log(closes[i] / closes[i - 1]));
+  const mean = rets.reduce((a, b) => a + b, 0) / rets.length;
+  const variance = rets.reduce((a, b) => a + (b - mean) ** 2, 0) / (rets.length - 1);
+  return Math.sqrt(variance) * Math.sqrt(252) * 100;
+}
 
-  const [quotes, usdmxn, eurusd, moveRaw] = await Promise.all([
-    yahooQuotes(YAHOO_SYMS),
+export async function GET() {
+  const SYMBOLS = {
+    spx: "^GSPC", ndx: "^IXIC", vix: "^VIX", move: "^MOVE", dxy: "DX-Y.NYB",
+    aapl: "AAPL", tsla: "TSLA", nvda: "NVDA", btc: "BTC-USD", eth: "ETH-USD",
+    usdmxnChart: "MXN=X",
+  };
+  const keys = Object.keys(SYMBOLS);
+
+  const [charts, usdmxn, eurusd] = await Promise.all([
+    Promise.all(keys.map((k) => yahooChart(SYMBOLS[k]))),
     fxRate("USD", "MXN"),
     fxRate("EUR", "USD"),
-    stooqLast("^move"),
   ]);
 
-  const q = (sym) => quotes[sym] ?? {};
+  const c = {};
+  keys.forEach((key, i) => { c[key] = charts[i] ?? {}; });
 
   const data = {
     asOf: new Date().toISOString(),
     delayed: false,
     // FX
-    usdmxn:  usdmxn ?? 18.42,
+    usdmxn:  usdmxn ?? c.usdmxnChart.price ?? 18.42,
     eurusd:  eurusd ?? 1.084,
     // Indices
-    spx:     q("^GSPC").price   ?? 5412,
-    spxChg:  q("^GSPC").chgPct  ?? null,
-    ndx:     q("^IXIC").price   ?? 17890,
-    ndxChg:  q("^IXIC").chgPct  ?? null,
+    spx:     c.spx.price  ?? 5412,
+    spxChg:  c.spx.chgPct ?? null,
+    ndx:     c.ndx.price  ?? 17890,
+    ndxChg:  c.ndx.chgPct ?? null,
     // Volatilidad
-    vix:     q("^VIX").price    ?? 13.4,
-    move:    moveRaw             ?? 98,
-    dxy:     q("DX-Y.NYB").price ?? 104.3,
+    vix:     c.vix.price  ?? 13.4,
+    move:    c.move.price ?? 98,
+    dxy:     c.dxy.price  ?? 104.3,
     // Acciones
-    aapl:    q("AAPL").price    ?? null,
-    aaplChg: q("AAPL").chgPct   ?? null,
-    tsla:    q("TSLA").price    ?? null,
-    tslaChg: q("TSLA").chgPct   ?? null,
-    nvda:    q("NVDA").price    ?? null,
-    nvdaChg: q("NVDA").chgPct   ?? null,
+    aapl:    c.aapl.price  ?? null,
+    aaplChg: c.aapl.chgPct ?? null,
+    tsla:    c.tsla.price  ?? null,
+    tslaChg: c.tsla.chgPct ?? null,
+    nvda:    c.nvda.price  ?? null,
+    nvdaChg: c.nvda.chgPct ?? null,
     // Cripto
-    btc:     q("BTC-USD").price  ?? null,
-    btcChg:  q("BTC-USD").chgPct ?? null,
-    eth:     q("ETH-USD").price  ?? null,
-    ethChg:  q("ETH-USD").chgPct ?? null,
-    // Vol implícita MXN (sin fuente gratis; actualizar manualmente)
-    mxnVol: 9.1,
+    btc:     c.btc.price  ?? null,
+    btcChg:  c.btc.chgPct ?? null,
+    eth:     c.eth.price  ?? null,
+    ethChg:  c.eth.chgPct ?? null,
+    // Volatilidad realizada USD/MXN (proxy automático de la implícita —
+    // ya no depende de una constante editada a mano)
+    mxnVol: realizedVol(c.usdmxnChart.closes) ?? 9.1,
   };
 
   return Response.json(data, {
