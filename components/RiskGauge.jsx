@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLang, T } from "./Lang";
 import { computeRiskIndex, riskLabel, componentMeta } from "../lib/riskIndex";
+import RiskSphere from "./RiskSphere";
 
 // Humanised "hace X min" helper
 function minutesAgo(isoStr) {
@@ -35,19 +36,6 @@ function riskSentence(score, lang) {
     es: "El mercado está en modo risk-off. Preferencia por activos refugio. Cautela máxima.",
     en: "The market is in risk-off mode. Safe-haven assets are preferred. Maximum caution.",
   };
-}
-
-// Arc geometry
-const CX = 160;
-const CY = 175;
-const R  = 110;
-const ARC_LEN = Math.PI * R; // semicircle ≈ 345.6
-const ARC_PATH = `M ${CX - R} ${CY} A ${R} ${R} 0 0 1 ${CX + R} ${CY}`;
-
-// Point on the arc for a given score value (0-100)
-function ptOnArc(val) {
-  const rad = (Math.PI / 180) * (180 - val * 1.8);
-  return { x: CX + R * Math.cos(rad), y: CY - R * Math.sin(rad) };
 }
 
 // Three-state accent color
@@ -100,10 +88,8 @@ export default function RiskGauge() {
     return () => clearInterval(iv);
   }, [result, score]);
 
-  const accentColor  = accent(score);
-  const dashOffset   = ARC_LEN * (1 - display / 100);
-  const dot          = ptOnArc(display);
-  const compKeys     = ["vix", "move", "dxy", "us10y", "mxn"];
+  const accentColor = accent(score);
+  const compKeys    = ["vix", "move", "dxy", "us10y", "mxn"];
 
   return (
     <section className="reveal" style={{ animationDelay: "0.05s" }}>
@@ -130,40 +116,8 @@ export default function RiskGauge() {
           &mdash; <T es="El indice Risk On de hoy" en="Today's Risk On index" />
         </div>
 
-        {/* SVG arc */}
-        <svg
-          viewBox="0 0 320 185"
-          width="320"
-          style={{ maxWidth: "100%", display: "block", margin: "0 auto", overflow: "visible" }}
-          role="img"
-          aria-label={`Risk On index: ${score}/100`}
-        >
-          {/* Background track */}
-          <path d={ARC_PATH} fill="none" stroke="#222226" strokeWidth="2" strokeLinecap="round" />
-
-          {/* Progress glow (wide, faint) */}
-          <path
-            d={ARC_PATH} fill="none" stroke="#E8E6E0"
-            strokeWidth="10" strokeLinecap="round" opacity="0.05"
-            strokeDasharray={`${ARC_LEN} ${ARC_LEN}`}
-            strokeDashoffset={dashOffset}
-          />
-
-          {/* Progress fill (thin, crisp) */}
-          <path
-            d={ARC_PATH} fill="none" stroke="#E8E6E0"
-            strokeWidth="2" strokeLinecap="round"
-            strokeDasharray={`${ARC_LEN} ${ARC_LEN}`}
-            strokeDashoffset={dashOffset}
-          />
-
-          {/* Dot halo */}
-          <circle cx={dot.x} cy={dot.y} r="9" fill={accentColor} opacity="0.15"
-            style={{ transition: "fill .6s" }} />
-          {/* Dot */}
-          <circle cx={dot.x} cy={dot.y} r="4" fill={accentColor}
-            style={{ transition: "fill .6s" }} />
-        </svg>
+        {/* Sphere — color and pulse reflect risk score */}
+        <RiskSphere score={display} />
 
         {/* Score number */}
         <div style={{ display: "flex", alignItems: "baseline", justifyContent: "center", gap: 5, marginTop: 6 }}>
@@ -189,16 +143,6 @@ export default function RiskGauge() {
           }}>
             <T es={label.es} en={label.en} />
           </span>
-        </div>
-
-        {/* End labels */}
-        <div style={{
-          marginTop: 10, display: "flex", justifyContent: "space-between",
-          maxWidth: 244, marginLeft: "auto", marginRight: "auto",
-          fontSize: 9, textTransform: "uppercase", letterSpacing: 1.5, color: "#2E2E32",
-        }}>
-          <span>0 — risk-off</span>
-          <span>risk-on — 100</span>
         </div>
 
         {/* Description sentence */}
