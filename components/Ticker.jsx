@@ -16,6 +16,8 @@ const FALLBACK = [
   ["ETH",      "3,512",   1, "+0.94%"],
   ["WTI",      "72.40",   0, "-0.55%"],
   ["Gold",     "3,320",   1, "+0.30%"],
+  ["USD/JPY",  "154.20",  1, "+0.22%"],
+  ["US 10Y",   "4.42",    0, "-0.03%"],
 ];
 
 export default function Ticker() {
@@ -40,7 +42,9 @@ export default function Ticker() {
           ["BTC",     fmt(d.btc,  0) ?? FALLBACK[8][1],  dir(d.btcChg),  chg(d.btcChg,  FALLBACK[8][3])],
           ["ETH",     fmt(d.eth,  0) ?? FALLBACK[9][1],  dir(d.ethChg),  chg(d.ethChg,  FALLBACK[9][3])],
           ["WTI",     fmt(d.wti,  2) ?? FALLBACK[10][1], dir(d.wtiChg),  chg(d.wtiChg,  FALLBACK[10][3])],
-          ["Gold",    fmt(d.gold, 0) ?? FALLBACK[11][1], dir(d.goldChg), chg(d.goldChg, FALLBACK[11][3])],
+          ["Gold",    fmt(d.gold,   0) ?? FALLBACK[11][1], dir(d.goldChg),   chg(d.goldChg,   FALLBACK[11][3])],
+          ["USD/JPY", fmt(d.usdjpy, 2) ?? FALLBACK[12][1], dir(d.usdjpyChg), chg(d.usdjpyChg, FALLBACK[12][3])],
+          ["US 10Y",  fmt(d.us10y,  2) ?? FALLBACK[13][1], dir(d.us10yChg),  chg(d.us10yChg,  FALLBACK[13][3])],
         ];
         setItems(next);
       })
