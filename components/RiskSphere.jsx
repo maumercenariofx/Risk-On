@@ -40,7 +40,9 @@ function genSphere(n, r) {
 }
 
 export default function RiskSphere({ height = 274 }) {
-  const mountRef = useRef(null);
+  const mountRef   = useRef(null);
+  const pressedRef = useRef(false);
+  const pointerRef = useRef({ x: 0, y: 0 }); // normalised -1..1
 
   useEffect(() => {
     let destroyed = false;
@@ -52,8 +54,9 @@ export default function RiskSphere({ height = 274 }) {
       if (!container) return;
 
       const scene  = new THREE.Scene();
+      // z=6.5 → frustum half-height at z=0 = tan(22.5°)*6.5 ≈ 2.69 > sphere radius 2.34 → no clipping
       const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 100);
-      camera.position.z = 5;
+      camera.position.z = 6.5;
 
       const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
       renderer.setClearColor(0x000000, 0);
@@ -73,14 +76,13 @@ export default function RiskSphere({ height = 274 }) {
       ctx.fillStyle = g; ctx.fillRect(0, 0, sz, sz);
       const tex = new THREE.CanvasTexture(cvs);
 
-      const home      = genSphere(N, R);
-      const positions = home.slice();
-      const colors    = new Float32Array(N * 3).fill(1);
-      const jPhase    = new Float32Array(N);
+      const home    = genSphere(N, R);
+      const colors  = new Float32Array(N * 3).fill(1);
+      const jPhase  = new Float32Array(N);
       for (let i = 0; i < N; i++) jPhase[i] = Math.random() * Math.PI * 2;
 
       const geometry = new THREE.BufferGeometry();
-      geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+      geometry.setAttribute("position", new THREE.BufferAttribute(home.slice(), 3));
       geometry.setAttribute("color",    new THREE.BufferAttribute(colors, 3));
 
       const material = new THREE.PointsMaterial({
@@ -91,7 +93,7 @@ export default function RiskSphere({ height = 274 }) {
 
       const group = new THREE.Group();
       group.add(new THREE.Points(geometry, material));
-      group.scale.set(1.3, 1.3, 1.3); // 30% larger
+      group.scale.set(1.3, 1.3, 1.3);
       scene.add(group);
 
       const invMat   = new THREE.Matrix4();
@@ -105,8 +107,17 @@ export default function RiskSphere({ height = 274 }) {
         const dt = Math.min((ts - lastFrame) / 1000, 0.05);
         lastFrame = ts; elapsed += dt;
 
-        group.rotation.y += 0.003;
-        group.rotation.x  = Math.sin(elapsed * 0.2) * 0.07;
+        if (pressedRef.current) {
+          // Pointer controls tilt while pressed
+          const tx = pointerRef.current.y * 1.2;
+          const ty = pointerRef.current.x * Math.PI;
+          group.rotation.x += (tx - group.rotation.x) * 0.07;
+          group.rotation.y += (ty - group.rotation.y) * 0.07;
+        } else {
+          // Auto-rotate; x gently decays back to centre
+          group.rotation.y += 0.003;
+          group.rotation.x += (Math.sin(elapsed * 0.2) * 0.07 - group.rotation.x) * 0.03;
+        }
 
         group.updateMatrixWorld();
         invMat.copy(group.matrixWorld).invert();
@@ -121,19 +132,38 @@ export default function RiskSphere({ height = 274 }) {
           const facing = (hx/len)*vx + (hy/len)*vy + (hz/len)*vz;
           const shimmer = 0.12 * Math.sin(elapsed * 1.8 + jPhase[i]);
           const b = Math.max(0, 0.22 + (facing * 0.5 + 0.5) * 0.72 + shimmer);
-          colors[i3]   = b;
-          colors[i3+1] = b;
-          colors[i3+2] = b;
+          colors[i3] = colors[i3+1] = colors[i3+2] = b;
         }
 
-        // 3-second cycle, stays bright (min opacity 0.55, max 0.88)
         material.opacity = 0.715 + Math.sin(elapsed * PULSE_SPEED) * 0.165;
-
         geometry.attributes.color.needsUpdate = true;
         renderer.render(scene, camera);
       }
 
       animate();
+
+      // ── Pointer helpers ──
+      function updatePointer(clientX, clientY) {
+        const rect = container.getBoundingClientRect();
+        pointerRef.current = {
+          x: ((clientX - rect.left) / rect.width)  * 2 - 1,
+          y: -((clientY - rect.top)  / rect.height) * 2 + 1,
+        };
+      }
+
+      const onDown  = (e) => { pressedRef.current = true;  updatePointer(e.clientX, e.clientY); };
+      const onMove  = (e) => { if (pressedRef.current) updatePointer(e.clientX, e.clientY); };
+      const onUp    = ()  => { pressedRef.current = false; };
+      const onTDown = (e) => { pressedRef.current = true;  updatePointer(e.touches[0].clientX, e.touches[0].clientY); };
+      const onTMove = (e) => { if (pressedRef.current) updatePointer(e.touches[0].clientX, e.touches[0].clientY); };
+      const onTUp   = ()  => { pressedRef.current = false; };
+
+      container.addEventListener("mousedown",  onDown);
+      window.addEventListener("mousemove",     onMove);
+      window.addEventListener("mouseup",       onUp);
+      container.addEventListener("touchstart", onTDown, { passive: true });
+      window.addEventListener("touchmove",     onTMove, { passive: true });
+      window.addEventListener("touchend",      onTUp);
 
       const onResize = () => {
         camera.aspect = container.clientWidth / container.clientHeight;
@@ -144,7 +174,13 @@ export default function RiskSphere({ height = 274 }) {
 
       cleanup = () => {
         cancelAnimationFrame(animId);
-        window.removeEventListener("resize", onResize);
+        container.removeEventListener("mousedown",  onDown);
+        window.removeEventListener("mousemove",     onMove);
+        window.removeEventListener("mouseup",       onUp);
+        container.removeEventListener("touchstart", onTDown);
+        window.removeEventListener("touchmove",     onTMove);
+        window.removeEventListener("touchend",      onTUp);
+        window.removeEventListener("resize",        onResize);
         geometry.dispose(); tex.dispose(); material.dispose(); renderer.dispose();
         if (renderer.domElement.parentNode === container) container.removeChild(renderer.domElement);
       };
@@ -153,5 +189,12 @@ export default function RiskSphere({ height = 274 }) {
     return () => { destroyed = true; cleanup(); };
   }, []);
 
-  return <div ref={mountRef} style={{ width: "100%", height }} />;
+  return (
+    <div
+      ref={mountRef}
+      style={{ width: "100%", height, cursor: "grab" }}
+      onMouseDown={() => { if (mountRef.current) mountRef.current.style.cursor = "grabbing"; }}
+      onMouseUp={()   => { if (mountRef.current) mountRef.current.style.cursor = "grab"; }}
+    />
+  );
 }
