@@ -3,6 +3,7 @@ import Ticker from "../components/Ticker";
 import RiskGauge from "../components/RiskGauge";
 import DailyRead from "../components/DailyRead";
 import DailyWatch from "../components/DailyWatch";
+import ProjectCards from "../components/ProjectCards";
 import CountdownTimers from "../components/CountdownTimers";
 import RatesSection from "../components/RatesSection";
 import EconCalendar from "../components/EconCalendar";
@@ -32,6 +33,7 @@ export default function Home() {
       {latest && <DailyRead  post={latest} />}
       {latest && <DailyWatch post={latest} />}
 
+      <ProjectCards />
       <CountdownTimers />
       <RatesSection />
       <EconCalendar />
