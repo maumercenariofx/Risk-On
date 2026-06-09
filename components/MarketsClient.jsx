@@ -54,7 +54,7 @@ const crosshairPlugin = {
   },
 };
 
-export default function MarketsClient() {
+export default function MarketsClient({ embed = false }) {
   const { lang } = useLang();
   const canvasRef  = useRef(null);
   const chartRef   = useRef(null);
@@ -181,15 +181,17 @@ export default function MarketsClient() {
   const displayLast = last != null ? last.toFixed(currentPair.decimals) : "—";
 
   return (
-    <div className="space-y-6 pt-4">
-      <div className="reveal">
-        <h1 className="font-serif text-3xl font-medium text-bone">
-          <T es="Mercados" en="Markets" />
-        </h1>
-        <p className="mt-1 text-sm text-muted">
-          <T es="Tipos de cambio y los indicadores que mueven el riesgo." en="FX rates and the gauges that move risk." />
-        </p>
-      </div>
+    <div className={embed ? "space-y-4 p-4" : "space-y-6 pt-4"}>
+      {!embed && (
+        <div className="reveal">
+          <h1 className="font-serif text-3xl font-medium text-bone">
+            <T es="Mercados" en="Markets" />
+          </h1>
+          <p className="mt-1 text-sm text-muted">
+            <T es="Tipos de cambio y los indicadores que mueven el riesgo." en="FX rates and the gauges that move risk." />
+          </p>
+        </div>
+      )}
 
       {/* Pair selector */}
       <div className="reveal" style={{ animationDelay: "0.05s" }}>

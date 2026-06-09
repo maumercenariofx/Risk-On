@@ -120,6 +120,15 @@ body::before {
   filter: brightness(1.8);
 }
 
+/* Score blink — applied to risk number in hero */
+@keyframes score-blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.18; }
+}
+.score-blink {
+  animation: score-blink 2.8s ease-in-out 2s infinite;
+}
+
 /* Aguja del medidor */
 .needle {
   transition: transform 1.4s cubic-bezier(0.34, 1.4, 0.5, 1);

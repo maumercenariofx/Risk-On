@@ -3,6 +3,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useLang, T } from "./Lang";
 import { computeRiskIndex, riskLabel, componentMeta } from "../lib/riskIndex";
 import RiskSphere from "./RiskSphere";
+import MarketsClient from "./MarketsClient";
+import VoronoiBackground from "./VoronoiBackground";
 
 function minutesAgo(isoStr) {
   if (!isoStr) return null;
@@ -97,7 +99,7 @@ export default function RiskGauge() {
           <div style={{ color: "#2E2E34" }}>RISK?</div>
         </div>
 
-        {/* Bottom-right: score + label */}
+        {/* Bottom-right: score + label — score-blink starts after counter settles */}
         {result && (
           <div style={{
             position: "absolute",
@@ -112,7 +114,7 @@ export default function RiskGauge() {
             letterSpacing: "-0.03em",
             pointerEvents: "none",
           }}>
-            <div style={{ color: accentColor }}>{display}.</div>
+            <div className="score-blink" style={{ color: accentColor }}>{display}.</div>
             <div style={{ color: "#2E2E34" }}>
               <T es={label.es} en={label.en} />
             </div>
@@ -246,6 +248,15 @@ export default function RiskGauge() {
           )}
         </>
       )}
+
+      {/* ── Markets with Voronoi background ── */}
+      <div style={{ position: "relative", borderRadius: 16, overflow: "hidden", marginTop: 28 }}>
+        <VoronoiBackground />
+        <div style={{ position: "relative", zIndex: 1, padding: "0 0 8px" }}>
+          <MarketsClient embed />
+        </div>
+      </div>
+
     </section>
   );
 }

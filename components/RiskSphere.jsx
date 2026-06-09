@@ -210,12 +210,17 @@ export default function RiskSphere({ height = 274 }) {
       const onTMove = (e) => { if (pressedRef.current) updatePointer(e.touches[0].clientX, e.touches[0].clientY); };
       const onTUp   = ()  => { pressedRef.current = false; };
 
+      const isTouch = window.matchMedia?.("(pointer: coarse)").matches ?? false;
+
       container.addEventListener("mousedown",  onDown);
       window.addEventListener("mousemove",     onMove);
       window.addEventListener("mouseup",       onUp);
-      container.addEventListener("touchstart", onTDown, { passive: true });
-      window.addEventListener("touchmove",     onTMove, { passive: true });
-      window.addEventListener("touchend",      onTUp);
+      // Touch interaction disabled on mobile to avoid scroll conflicts
+      if (!isTouch) {
+        container.addEventListener("touchstart", onTDown, { passive: true });
+        window.addEventListener("touchmove",     onTMove, { passive: true });
+        window.addEventListener("touchend",      onTUp);
+      }
 
       const onResize = () => {
         camera.aspect = container.clientWidth / container.clientHeight;
@@ -229,9 +234,11 @@ export default function RiskSphere({ height = 274 }) {
         container.removeEventListener("mousedown",  onDown);
         window.removeEventListener("mousemove",     onMove);
         window.removeEventListener("mouseup",       onUp);
-        container.removeEventListener("touchstart", onTDown);
-        window.removeEventListener("touchmove",     onTMove);
-        window.removeEventListener("touchend",      onTUp);
+        if (!isTouch) {
+          container.removeEventListener("touchstart", onTDown);
+          window.removeEventListener("touchmove",     onTMove);
+          window.removeEventListener("touchend",      onTUp);
+        }
         window.removeEventListener("resize",        onResize);
         geometry.dispose(); tex.dispose(); material.dispose(); renderer.dispose();
         if (renderer.domElement.parentNode === container) container.removeChild(renderer.domElement);
