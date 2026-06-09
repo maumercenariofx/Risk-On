@@ -92,6 +92,7 @@ export async function GET() {
   const SYMBOLS = {
     spx: "^GSPC", ndx: "^IXIC", vix: "^VIX", move: "^MOVE", dxy: "DX-Y.NYB",
     aapl: "AAPL", tsla: "TSLA", nvda: "NVDA", btc: "BTC-USD", eth: "ETH-USD",
+    ipc: "^MXX", wti: "CL=F", gold: "GC=F",
     usdmxnChart: "MXN=X",
     eurusdChart: "EURUSD=X",
     eurmxnChart: "EURMXN=X",
@@ -143,6 +144,13 @@ export async function GET() {
     btcChg:  c.btc?.chgPct ?? null,
     eth:     c.eth?.price  ?? null,
     ethChg:  c.eth?.chgPct ?? null,
+    // IPC + commodities
+    ipc:     c.ipc?.price  ?? null,
+    ipcChg:  c.ipc?.chgPct ?? null,
+    wti:     c.wti?.price  ?? null,
+    wtiChg:  c.wti?.chgPct ?? null,
+    gold:    c.gold?.price ?? null,
+    goldChg: c.gold?.chgPct ?? null,
     // Volatilidad realizada USD/MXN (proxy automático de la implícita)
     mxnVol: realizedVol(c.usdmxnChart?.closes) ?? 9.1,
   };

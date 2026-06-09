@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 const FALLBACK = [
   ["S&P 500",  "5,412",   1, "+0.82%"],
   ["NASDAQ",   "17,890",  1, "+1.10%"],
+  ["IPC",      "55,100",  1, "+0.40%"],
   ["USD/MXN",  "18.420",  0, "-0.18%"],
   ["EUR/USD",  "1.0840",  1, "+0.09%"],
   ["AAPL",     "213.49",  1, "+0.61%"],
@@ -13,6 +14,8 @@ const FALLBACK = [
   ["NVDA",     "1,074",   1, "+2.30%"],
   ["BTC",      "67,420",  1, "+1.82%"],
   ["ETH",      "3,512",   1, "+0.94%"],
+  ["WTI",      "72.40",   0, "-0.55%"],
+  ["Gold",     "3,320",   1, "+0.30%"],
 ];
 
 export default function Ticker() {
@@ -22,16 +25,22 @@ export default function Ticker() {
     fetch("/api/market")
       .then((r) => r.json())
       .then((d) => {
+        const fmt = (v, d2) => v != null ? (d2 === 0 ? Math.round(v).toLocaleString() : v.toFixed(d2)) : null;
+        const chg = (v, fb) => v != null ? (v >= 0 ? "+" : "") + v.toFixed(2) + "%" : fb;
+        const dir = (v) => v == null ? 2 : v >= 0 ? 1 : 0;
         const next = [
-          ["S&P 500",  d.spx     ? Math.round(d.spx).toLocaleString()      : FALLBACK[0][1],  d.spxChg  >= 0 ? 1 : 0, d.spxChg  != null ? (d.spxChg  >= 0 ? "+" : "") + d.spxChg.toFixed(2)  + "%" : FALLBACK[0][3]],
-          ["NASDAQ",   d.ndx     ? Math.round(d.ndx).toLocaleString()      : FALLBACK[1][1],  d.ndxChg  >= 0 ? 1 : 0, d.ndxChg  != null ? (d.ndxChg  >= 0 ? "+" : "") + d.ndxChg.toFixed(2)  + "%" : FALLBACK[1][3]],
-          ["USD/MXN",  d.usdmxn  ? d.usdmxn.toFixed(3)                    : FALLBACK[2][1],  2,                        FALLBACK[2][3]],
-          ["EUR/USD",  d.eurusd  ? d.eurusd.toFixed(4)                    : FALLBACK[3][1],  2,                        FALLBACK[3][3]],
-          ["AAPL",     d.aapl    ? d.aapl.toFixed(2)                      : FALLBACK[4][1],  d.aaplChg >= 0 ? 1 : 0, d.aaplChg != null ? (d.aaplChg >= 0 ? "+" : "") + d.aaplChg.toFixed(2)  + "%" : FALLBACK[4][3]],
-          ["TSLA",     d.tsla    ? d.tsla.toFixed(2)                      : FALLBACK[5][1],  d.tslaChg >= 0 ? 1 : 0, d.tslaChg != null ? (d.tslaChg >= 0 ? "+" : "") + d.tslaChg.toFixed(2)  + "%" : FALLBACK[5][3]],
-          ["NVDA",     d.nvda    ? d.nvda.toFixed(2)                      : FALLBACK[6][1],  d.nvdaChg >= 0 ? 1 : 0, d.nvdaChg != null ? (d.nvdaChg >= 0 ? "+" : "") + d.nvdaChg.toFixed(2)  + "%" : FALLBACK[6][3]],
-          ["BTC",      d.btc     ? Math.round(d.btc).toLocaleString()     : FALLBACK[7][1],  d.btcChg  >= 0 ? 1 : 0, d.btcChg  != null ? (d.btcChg  >= 0 ? "+" : "") + d.btcChg.toFixed(2)   + "%" : FALLBACK[7][3]],
-          ["ETH",      d.eth     ? Math.round(d.eth).toLocaleString()     : FALLBACK[8][1],  d.ethChg  >= 0 ? 1 : 0, d.ethChg  != null ? (d.ethChg  >= 0 ? "+" : "") + d.ethChg.toFixed(2)   + "%" : FALLBACK[8][3]],
+          ["S&P 500", fmt(d.spx,  0) ?? FALLBACK[0][1],  dir(d.spxChg),  chg(d.spxChg,  FALLBACK[0][3])],
+          ["NASDAQ",  fmt(d.ndx,  0) ?? FALLBACK[1][1],  dir(d.ndxChg),  chg(d.ndxChg,  FALLBACK[1][3])],
+          ["IPC",     fmt(d.ipc,  0) ?? FALLBACK[2][1],  dir(d.ipcChg),  chg(d.ipcChg,  FALLBACK[2][3])],
+          ["USD/MXN", fmt(d.usdmxn,3) ?? FALLBACK[3][1], 2,              FALLBACK[3][3]],
+          ["EUR/USD", fmt(d.eurusd,4) ?? FALLBACK[4][1], 2,              FALLBACK[4][3]],
+          ["AAPL",    fmt(d.aapl, 2) ?? FALLBACK[5][1],  dir(d.aaplChg), chg(d.aaplChg, FALLBACK[5][3])],
+          ["TSLA",    fmt(d.tsla, 2) ?? FALLBACK[6][1],  dir(d.tslaChg), chg(d.tslaChg, FALLBACK[6][3])],
+          ["NVDA",    fmt(d.nvda, 2) ?? FALLBACK[7][1],  dir(d.nvdaChg), chg(d.nvdaChg, FALLBACK[7][3])],
+          ["BTC",     fmt(d.btc,  0) ?? FALLBACK[8][1],  dir(d.btcChg),  chg(d.btcChg,  FALLBACK[8][3])],
+          ["ETH",     fmt(d.eth,  0) ?? FALLBACK[9][1],  dir(d.ethChg),  chg(d.ethChg,  FALLBACK[9][3])],
+          ["WTI",     fmt(d.wti,  2) ?? FALLBACK[10][1], dir(d.wtiChg),  chg(d.wtiChg,  FALLBACK[10][3])],
+          ["Gold",    fmt(d.gold, 0) ?? FALLBACK[11][1], dir(d.goldChg), chg(d.goldChg, FALLBACK[11][3])],
         ];
         setItems(next);
       })
