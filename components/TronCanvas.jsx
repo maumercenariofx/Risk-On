@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const THREE_SRC = "https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js";
 
@@ -30,7 +30,7 @@ const ATTRACT_F  = 0.45;   // max attract displacement factor
 const IDLE_MS    = 600;    // ms before repel → attract
 const MORPH_S    = 1.5;    // morph duration in seconds
 const LERP_D     = 0.065;  // displacement lerp factor
-// FORMS preserved in code: DNA, ATOM, SPHERE — only VORONOI active
+const FORMS         = ["VORONOI", "DNA", "ATOM", "SPHERE"];
 const VORONOI_SEEDS = 80;
 const VORONOI_K     = 7;
 
@@ -277,7 +277,9 @@ function tickAtom(home, phases, rIdx, elapsed, n) {
 
 // ─── Component ───────────────────────────────────────────────────────────────
 export default function TronCanvas() {
-  const mountRef    = useRef(null);
+  const mountRef   = useRef(null);
+  const cycleFnRef = useRef(null);
+  const [formName, setFormName] = useState(FORMS[0]);
 
   useEffect(() => {  // eslint-disable-line react-hooks/exhaustive-deps
     let destroyed = false;
@@ -299,24 +301,28 @@ export default function TronCanvas() {
       renderer.setSize(container.clientWidth, container.clientHeight);
       container.appendChild(renderer.domElement);
 
-      // Form home positions (DNA/ATOM/genSphere preserved for future use)
+      // Generate all form home positions
       const voronoiHome = genVoronoi(N);
-      const atomData    = genAtom(N); // keep in memory, not active
-      void atomData;
+      const dnaHome     = genDNA(N);
+      const sphereHome  = genSphere(N, SR);
+      const atomData    = genAtom(N);
+      const atomHome    = atomData.pos.slice();
+      const FORM_HOMES  = { VORONOI: voronoiHome, DNA: dnaHome, ATOM: atomHome, SPHERE: sphereHome };
 
       // Particle buffers
-      const positions    = voronoiHome.slice();
-      const colors       = new Float32Array(N * 3).fill(1);
-      const disp         = new Float32Array(N * 3);
-      const jPhase       = new Float32Array(N);
+      const positions = voronoiHome.slice();
+      const colors    = new Float32Array(N * 3).fill(1);
+      const disp      = new Float32Array(N * 3);
+      const jPhase    = new Float32Array(N);
       for (let i = 0; i < N; i++) jPhase[i] = Math.random() * Math.PI * 2;
 
-      // Morph state (single form — no cycling)
-      const prevHome    = voronoiHome.slice();
-      const effHome     = voronoiHome.slice();
-      const currHome    = voronoiHome;
-      const morphT_ref  = { v: 1.0 };
-      const currentForm = "VORONOI";
+      // Morph state
+      const prevHome   = voronoiHome.slice();
+      const effHome    = voronoiHome.slice();
+      let currHome     = voronoiHome;
+      const morphT_ref = { v: 1.0 };
+      let formIdx      = 0;
+      let currentForm  = "VORONOI";
 
       // Geometry + material
       const geometry = new THREE.BufferGeometry();
@@ -382,6 +388,17 @@ export default function TronCanvas() {
       const targetFPS  = () => document.hidden ? 30 : 60;
       const frameDelay = () => 1000 / targetFPS();
 
+      // Form cycling
+      cycleFnRef.current = () => {
+        formIdx     = (formIdx + 1) % FORMS.length;
+        currentForm = FORMS[formIdx];
+        setFormName(currentForm);
+        prevHome.set(effHome);
+        morphT_ref.v = 0;
+        if (currentForm === "ATOM") tickAtom(atomHome, atomData.phases, atomData.rIdx, elapsed, N);
+        currHome = FORM_HOMES[currentForm];
+      };
+
       function animate(ts = 0) {
         animId = requestAnimationFrame(animate);
         if (ts - lastFrame < frameDelay()) return;
@@ -392,7 +409,10 @@ export default function TronCanvas() {
         group.rotation.y += 0.0008;
         group.rotation.x  = Math.sin(elapsed * 0.15) * 0.06;
 
-        // Morph (single form, morphT stays at 1.0 — lerp is instant)
+        // Tick ATOM orbital motion
+        if (currentForm === "ATOM") tickAtom(atomHome, atomData.phases, atomData.rIdx, elapsed, N);
+
+        // Morph interpolation
         if (morphT_ref.v < 1) morphT_ref.v = Math.min(1, morphT_ref.v + dt / MORPH_S);
         const mt = eio(morphT_ref.v);
         for (let i = 0; i < N * 3; i++) {
@@ -512,6 +532,7 @@ export default function TronCanvas() {
         material.dispose();
         renderer.dispose();
         if (renderer.domElement.parentNode === container) container.removeChild(renderer.domElement);
+        cycleFnRef.current = null;
       };
     }).catch(err => console.error("TronCanvas:", err));
 
@@ -520,17 +541,37 @@ export default function TronCanvas() {
 
   return (
     <div
-      ref={mountRef}
       className="reveal tron-glow"
-      style={{
-        position: "relative",
-        height: 380,
-        borderRadius: 16,
-        overflow: "hidden",
-        border: "1px solid rgba(255,255,255,0.07)",
-        background: "#000",
-        cursor: "crosshair",
-      }}
-    />
+      style={{ position: "relative", height: 380, borderRadius: 16,
+               overflow: "hidden", border: "1px solid rgba(255,255,255,0.07)" }}
+    >
+      {/* Three.js canvas fills the card */}
+      <div ref={mountRef} style={{ position: "absolute", inset: 0, background: "#000" }} />
+
+      {/* Form-cycle button — bottom right, inside the card */}
+      <button
+        onClick={() => cycleFnRef.current?.()}
+        style={{
+          position: "absolute", bottom: 14, right: 14, zIndex: 10,
+          fontFamily: "var(--font-mono, monospace)",
+          fontSize: 9, letterSpacing: 2.5, textTransform: "uppercase",
+          color: "rgba(255,255,255,0.45)",
+          background: "rgba(0,0,0,0.5)",
+          border: "1px solid rgba(255,255,255,0.10)",
+          borderRadius: 5, cursor: "pointer", padding: "5px 9px",
+          transition: "color .2s, border-color .2s",
+        }}
+        onMouseEnter={e => {
+          e.currentTarget.style.color = "rgba(255,255,255,0.85)";
+          e.currentTarget.style.borderColor = "rgba(255,255,255,0.35)";
+        }}
+        onMouseLeave={e => {
+          e.currentTarget.style.color = "rgba(255,255,255,0.45)";
+          e.currentTarget.style.borderColor = "rgba(255,255,255,0.10)";
+        }}
+      >
+        ◇ {formName}
+      </button>
+    </div>
   );
 }

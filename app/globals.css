@@ -11,7 +11,7 @@
 html { overflow-x: hidden; }
 
 html, body {
-  background: #0A0A0B;
+  background: #000;
   color: #F5F5F2;
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
