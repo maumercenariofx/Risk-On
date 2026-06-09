@@ -219,18 +219,13 @@ export default function MarketsClient({ embed = false }) {
         </div>
       </div>
 
-      {/* Chart card — embed uses @supports class so blur degrades gracefully on mobile */}
-      <div
-        className={`reveal tron-glow rounded-2xl border border-edge p-5${embed ? " chart-glass-embed" : ""}`}
-        style={{
-          animationDelay: "0.1s",
-          ...(embed ? {} : {
-            background: "rgba(5,5,6,0.50)",
-            backdropFilter: "blur(14px)",
-            WebkitBackdropFilter: "blur(14px)",
-          }),
-        }}
-      >
+      {/* Chart card */}
+      <div className="reveal tron-glow rounded-2xl border border-edge p-5" style={{
+        animationDelay: "0.1s",
+        background: "rgba(5,5,6,0.50)",
+        backdropFilter: "blur(14px)",
+        WebkitBackdropFilter: "blur(14px)",
+      }}>
         <div className="mb-4 flex items-center justify-between">
           <div>
             <div className="font-mono text-[10px] uppercase tracking-[2px] text-muted">

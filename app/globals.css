@@ -120,20 +120,6 @@ body::before {
   filter: brightness(1.8);
 }
 
-/* Markets chart card embedded over Voronoi background */
-/* Fallback (mobile / no backdrop-filter support): rely on rgba transparency only */
-.chart-glass-embed {
-  background: rgba(5,5,6,0.28) !important;
-}
-/* Desktop with backdrop-filter: add blur on top */
-@supports (backdrop-filter: blur(1px)) {
-  .chart-glass-embed {
-    backdrop-filter: blur(16px) !important;
-    -webkit-backdrop-filter: blur(16px) !important;
-    background: rgba(5,5,6,0.45) !important;
-  }
-}
-
 /* Score blink — applied to risk number in hero */
 @keyframes score-blink {
   0%, 100% { opacity: 1; }

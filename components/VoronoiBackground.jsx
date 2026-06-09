@@ -101,7 +101,7 @@ export default function VoronoiBackground() {
       camera.position.z = 6;
 
       const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-      renderer.setClearColor(0x000000, 0); // transparent — shows page background
+      renderer.setClearColor(0x000000, 1); // solid black — backdrop-filter blurs actual particles
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
       renderer.setSize(container.clientWidth, container.clientHeight);
       container.appendChild(renderer.domElement);
