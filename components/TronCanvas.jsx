@@ -22,7 +22,7 @@ function loadThree() {
 }
 
 // ─── Constants ───────────────────────────────────────────────────────────────
-const N          = 20250;
+const N          = 30375;
 const SR         = 2.4;    // sphere radius
 const IR         = 1.2;    // mouse influence radius
 const REPEL_F    = 0.55;   // max repel displacement
@@ -434,34 +434,8 @@ export default function TronCanvas() {
         ref={mountRef}
         style={{ position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none", background: "#000" }}
       />
-      {/* Form-cycle label rendered outside canvas div so it sits above all page content */}
-      <button
-        onClick={() => cycleFnRef.current?.()}
-        style={{
-          position: "fixed", bottom: 24, right: 24, zIndex: 50,
-          fontFamily: "var(--font-mono, monospace)",
-          fontSize: 10, letterSpacing: 3, textTransform: "uppercase",
-          color: "rgba(255,255,255,0.55)",
-          background: "rgba(0,0,0,0.45)",
-          border: "1px solid rgba(255,255,255,0.15)",
-          borderRadius: 6,
-          cursor: "pointer",
-          padding: "6px 10px",
-          transition: "color .25s, border-color .25s, background .25s",
-        }}
-        onMouseEnter={e => {
-          e.currentTarget.style.color = "rgba(255,255,255,0.9)";
-          e.currentTarget.style.borderColor = "rgba(255,255,255,0.4)";
-          e.currentTarget.style.background = "rgba(0,0,0,0.7)";
-        }}
-        onMouseLeave={e => {
-          e.currentTarget.style.color = "rgba(255,255,255,0.55)";
-          e.currentTarget.style.borderColor = "rgba(255,255,255,0.15)";
-          e.currentTarget.style.background = "rgba(0,0,0,0.45)";
-        }}
-      >
-        [ ◇ {formName} ]
-      </button>
+      {/* Form-cycle button hidden — forms preserved in code, re-enable by uncommenting */}
+      {/* <button onClick={() => cycleFnRef.current?.()}>[ ◇ {formName} ]</button> */}
     </>
   );
 }

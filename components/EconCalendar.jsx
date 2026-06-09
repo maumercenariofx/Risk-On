@@ -76,7 +76,8 @@ export default function EconCalendar() {
               <div style={{ minWidth: 42, fontFamily: "var(--font-mono)", fontSize: 10, color: "#3A3A3E" }}>
                 {ev.time}
               </div>
-              <div style={{ flex: 1, fontSize: 12, color: isToday ? "#E8E6E0" : "#8A8A8E", lineHeight: 1.4 }}>
+              <div style={{ flex: 1, fontSize: 12, color: isToday ? "#E8E6E0" : "#8A8A8E", lineHeight: 1.4, display: "flex", alignItems: "center", gap: 6 }}>
+                {ev.flag && <span style={{ fontSize: 14, lineHeight: 1 }}>{ev.flag}</span>}
                 {lang === "en" ? ev.event_en : ev.event_es}
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 5, flexShrink: 0 }}>

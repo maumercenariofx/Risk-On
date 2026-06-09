@@ -100,16 +100,23 @@ body::before {
 }
 .flip-back { transform: rotateY(180deg); }
 
-/* Ticker diagonal */
+/* Ticker */
 @keyframes ticker-scroll {
   from { transform: translateX(0); }
   to   { transform: translateX(-50%); }
 }
 .ticker-track {
   display: inline-flex; gap: 52px; white-space: nowrap;
-  animation: ticker-scroll 55s linear infinite;
+  animation: ticker-scroll 65s linear infinite;
 }
 .ticker-band:hover .ticker-track { animation-play-state: paused; }
+
+@keyframes ticker-paused-pulse {
+  0%, 100% { background: #111113; }
+  50%       { background: #171719; }
+}
+.ticker-paused { animation: ticker-paused-pulse 1.4s ease-in-out infinite; }
+.ticker-paused .ticker-track { animation-play-state: paused !important; }
 
 /* Aguja del medidor */
 .needle {
