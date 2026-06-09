@@ -222,9 +222,9 @@ export default function MarketsClient({ embed = false }) {
       {/* Chart card */}
       <div className="reveal tron-glow rounded-2xl border border-edge p-5" style={{
         animationDelay: "0.1s",
-        background: embed ? "rgba(3,3,4,0.72)" : "rgba(5,5,6,0.50)",
-        backdropFilter: embed ? "blur(20px) saturate(1.4) brightness(0.80)" : "blur(14px)",
-        WebkitBackdropFilter: embed ? "blur(20px) saturate(1.4) brightness(0.80)" : "blur(14px)",
+        background: embed ? "rgba(5,5,6,0.48)" : "rgba(5,5,6,0.50)",
+        backdropFilter: embed ? "blur(16px)" : "blur(14px)",
+        WebkitBackdropFilter: embed ? "blur(16px)" : "blur(14px)",
       }}>
         <div className="mb-4 flex items-center justify-between">
           <div>

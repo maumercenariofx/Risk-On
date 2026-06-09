@@ -250,16 +250,13 @@ export default function RiskGauge() {
       )}
 
       {/* ── Markets with Voronoi background ── */}
-      {/* Outer: NO overflow:hidden — keeps backdrop-filter working on iOS Safari */}
       <div style={{
-        position: "relative", borderRadius: 16, marginTop: 28,
+        position: "relative", borderRadius: 16, overflow: "hidden", marginTop: 28,
         border: "1px solid rgba(255,255,255,0.07)",
       }}>
-        {/* Voronoi clipped in its own wrapper */}
-        <div style={{ position: "absolute", inset: 0, borderRadius: 16, overflow: "hidden", zIndex: 0 }}>
+        <div style={{ position: "absolute", inset: 0, zIndex: 0 }}>
           <VoronoiBackground />
         </div>
-        {/* Content — no overflow:hidden, backdrop-filter propagates to mobile compositor */}
         <div style={{ position: "relative", zIndex: 1, padding: "16px" }}>
           <MarketsClient embed />
         </div>

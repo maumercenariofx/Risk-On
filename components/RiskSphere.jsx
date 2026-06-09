@@ -24,9 +24,9 @@ function loadThree() {
 const N          = 12000;
 const R          = 1.8;
 const PULSE_SPEED = (2 * Math.PI) / 3;
-const IR          = 1.4;   // influence radius
+const IR          = 0.7;    // half the previous size
 const REPEL_F     = 0.52;
-const ATTRACT_F   = 0.42;
+const ATTRACT_F   = 0.546;  // 30% stronger than before
 const IDLE_MS     = 600;
 const LERP_D      = 0.065;
 
