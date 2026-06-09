@@ -4,7 +4,6 @@ import "flag-icons/css/flag-icons.min.css";
 import { LangProvider } from "../components/Lang";
 import Nav from "../components/Nav";
 import Footer from "../components/Footer";
-import TronCanvas from "../components/TronCanvas";
 
 export const metadata = {
   title: "Risk On — Take risks or stay average",
@@ -30,7 +29,6 @@ export default function RootLayout({ children }) {
       </head>
       <body>
         <LangProvider>
-          <TronCanvas />
           <Nav />
           <main className="mx-auto max-w-5xl px-5 pb-20 pt-6">{children}</main>
           <Footer />

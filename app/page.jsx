@@ -1,5 +1,6 @@
 // app/page.jsx
 import Ticker from "../components/Ticker";
+import TronCanvas from "../components/TronCanvas";
 import RiskGauge from "../components/RiskGauge";
 import DailyRead from "../components/DailyRead";
 import DailyWatch from "../components/DailyWatch";
@@ -27,6 +28,8 @@ export default function Home() {
       <div className="reveal" style={{ animationDelay: "0.1s" }}>
         <Ticker />
       </div>
+
+      <TronCanvas />
 
       <RiskGauge />
 

@@ -347,8 +347,16 @@ export default function TronCanvas() {
         mouse.active   = true;
       };
       const onLeave = () => { mouse.active = false; mouse.mode = "repel"; mouse.attractStart = 0; };
-      window.addEventListener("mousemove", onMove);
-      window.addEventListener("mouseleave", onLeave);
+      container.addEventListener("mousemove", onMove);
+      container.addEventListener("mouseleave", onLeave);
+
+      // Touch support for the card
+      const onTouch = (e) => {
+        const t = e.touches[0]; if (!t) return;
+        onMove({ clientX: t.clientX, clientY: t.clientY });
+      };
+      container.addEventListener("touchmove", onTouch, { passive: true });
+      container.addEventListener("touchend", onLeave);
 
       const onResize = () => {
         camera.aspect = container.clientWidth / container.clientHeight;
@@ -494,8 +502,10 @@ export default function TronCanvas() {
 
       cleanup = () => {
         cancelAnimationFrame(animId);
-        window.removeEventListener("mousemove", onMove);
-        window.removeEventListener("mouseleave", onLeave);
+        container.removeEventListener("mousemove", onMove);
+        container.removeEventListener("mouseleave", onLeave);
+        container.removeEventListener("touchmove", onTouch);
+        container.removeEventListener("touchend", onLeave);
         window.removeEventListener("resize", onResize);
         geometry.dispose();
         material.map?.dispose();
@@ -511,7 +521,16 @@ export default function TronCanvas() {
   return (
     <div
       ref={mountRef}
-      style={{ position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none", background: "#000" }}
+      className="reveal tron-glow"
+      style={{
+        position: "relative",
+        height: 380,
+        borderRadius: 16,
+        overflow: "hidden",
+        border: "1px solid rgba(255,255,255,0.07)",
+        background: "#000",
+        cursor: "crosshair",
+      }}
     />
   );
 }

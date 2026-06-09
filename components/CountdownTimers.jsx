@@ -63,7 +63,7 @@ function Countdown({ target, label_es, label_en }) {
     <div
       className="card-glass"
       style={{
-        background: "rgba(10,10,12,0.55)", border: "1px solid #1E1E20",
+        background: "rgba(11,11,12,0.92)", border: "1px solid #1E1E20",
         borderRadius: 12, padding: "16px 18px", flex: "1 1 200px",
       }}
     >
