@@ -2,7 +2,6 @@
 import Ticker from "../components/Ticker";
 import TronCanvas from "../components/TronCanvas";
 import RiskGauge from "../components/RiskGauge";
-import RiskSphere from "../components/RiskSphere";
 import DailyRead from "../components/DailyRead";
 import DailyWatch from "../components/DailyWatch";
 import ProjectCards from "../components/ProjectCards";
@@ -32,16 +31,7 @@ export default function Home() {
 
       <TronCanvas />
 
-      {/* Risk index: gauge left, sphere right — stacks on mobile */}
-      <div style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
-        gap: 12,
-        alignItems: "start",
-      }}>
-        <RiskGauge />
-        <RiskSphere />
-      </div>
+      <RiskGauge />
 
       {latest && <DailyRead  post={latest} />}
       {latest && <DailyWatch post={latest} />}
