@@ -22,7 +22,7 @@ function loadThree() {
 }
 
 // ─── Constants ───────────────────────────────────────────────────────────────
-const N          = 13500;
+const N          = 20250;
 const SR         = 2.4;    // sphere radius
 const IR         = 1.2;    // mouse influence radius
 const REPEL_F    = 0.55;   // max repel displacement
@@ -246,6 +246,7 @@ export default function TronCanvas() {
       const group = new THREE.Group();
       group.add(new THREE.Points(geometry, material));
       group.position.x = 1.35;
+      group.scale.set(0.62, 0.62, 0.62);
       scene.add(group);
 
       // Mouse state
