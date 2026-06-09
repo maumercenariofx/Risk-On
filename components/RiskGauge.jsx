@@ -250,9 +250,12 @@ export default function RiskGauge() {
       )}
 
       {/* ── Markets with Voronoi background ── */}
-      <div style={{ position: "relative", borderRadius: 16, overflow: "hidden", marginTop: 28 }}>
+      <div style={{
+        position: "relative", borderRadius: 16, overflow: "hidden", marginTop: 28,
+        border: "1px solid rgba(255,255,255,0.07)",
+      }}>
         <VoronoiBackground />
-        <div style={{ position: "relative", zIndex: 1, padding: "0 0 8px" }}>
+        <div style={{ position: "relative", zIndex: 1, padding: "16px" }}>
           <MarketsClient embed />
         </div>
       </div>
