@@ -1,11 +1,9 @@
 "use client";
-// components/RiskGauge.jsx
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLang, T } from "./Lang";
 import { computeRiskIndex, riskLabel, componentMeta } from "../lib/riskIndex";
 import RiskSphere from "./RiskSphere";
 
-// Humanised "hace X min" helper
 function minutesAgo(isoStr) {
   if (!isoStr) return null;
   const mins = Math.round((Date.now() - new Date(isoStr)) / 60000);
@@ -14,31 +12,6 @@ function minutesAgo(isoStr) {
   return `${Math.round(mins / 60)}h`;
 }
 
-// One-sentence interpretation of the score
-function riskSentence(score, lang) {
-  if (score >= 75) return {
-    es: "El mercado muestra apetito alto por riesgo. Condiciones favorables para activos de mayor rendimiento.",
-    en: "The market shows strong risk appetite. Conditions favor higher-yield assets.",
-  };
-  if (score >= 58) return {
-    es: "Ambiente moderadamente positivo. El mercado acepta riesgo con selectividad.",
-    en: "Moderately positive environment. The market is accepting risk selectively.",
-  };
-  if (score >= 42) return {
-    es: "El mercado está en modo neutral, sin señales claras de dirección.",
-    en: "The market is in neutral mode with no clear directional signals.",
-  };
-  if (score >= 25) return {
-    es: "El mercado muestra cautela. Se recomienda reducir exposición a activos de riesgo.",
-    en: "The market is cautious. Consider reducing exposure to risk assets.",
-  };
-  return {
-    es: "El mercado está en modo risk-off. Preferencia por activos refugio. Cautela máxima.",
-    en: "The market is in risk-off mode. Safe-haven assets are preferred. Maximum caution.",
-  };
-}
-
-// Three-state accent color
 function accent(score) {
   if (score >= 58) return "#3FA77E";
   if (score < 42)  return "#A32D2D";
@@ -50,9 +23,7 @@ export default function RiskGauge() {
   const [data, setData]         = useState(null);
   const [display, setDisplay]   = useState(0);
   const [sel, setSel]           = useState("vix");
-  const [hover, setHover]       = useState(false);
   const [methOpen, setMethOpen] = useState(false);
-  const animatingRef            = useRef(true);
 
   useEffect(() => {
     fetch("/api/market")
@@ -76,13 +47,12 @@ export default function RiskGauge() {
     [data]
   );
 
-  // Count animation (same fix: result is memoized so effect doesn't re-fire on each tick)
   useEffect(() => {
     if (!result) return;
     let n = 0;
     const iv = setInterval(() => {
       n += 2;
-      if (n >= score) { n = score; clearInterval(iv); animatingRef.current = false; }
+      if (n >= score) { n = score; clearInterval(iv); }
       setDisplay(n);
     }, 22);
     return () => clearInterval(iv);
@@ -94,71 +64,74 @@ export default function RiskGauge() {
   return (
     <section className="reveal" style={{ animationDelay: "0.05s" }}>
 
-      {/* ── Gauge card ── */}
-      <div
-        className="tron-glow"
-        onMouseEnter={() => !animatingRef.current && setHover(true)}
-        onMouseLeave={() => setHover(false)}
-        style={{
-          background: "rgba(11,11,12,0.92)",
-          backdropFilter: "blur(14px)",
-          WebkitBackdropFilter: "blur(14px)",
-          border: `1px solid ${hover ? "#3A3A3E" : "#1E1E20"}`,
-          borderRadius: 16,
-          padding: "28px 24px 22px",
-          textAlign: "center",
-          cursor: "pointer",
-          transition: "border-color .3s",
-        }}
-      >
-        {/* Eyebrow */}
-        <div style={{ fontSize: 10, letterSpacing: 3, color: "#4A4A50", textTransform: "uppercase", marginBottom: 10 }}>
-          &mdash; <T es="El indice Risk On de hoy" en="Today's Risk On index" />
+      {/* ── Hero ── */}
+      <div style={{ position: "relative", height: 520, overflow: "hidden", marginBottom: 28 }}>
+
+        {/* Sphere — centered */}
+        <div style={{
+          position: "absolute",
+          left: "50%",
+          top: "50%",
+          transform: "translate(-50%, -50%)",
+          width:  "min(500px, 88vw)",
+          height: "min(500px, 88vw)",
+        }}>
+          <RiskSphere score={display} height="100%" />
         </div>
 
-        {/* Sphere */}
-        <RiskSphere score={display} />
-
-        {/* Score number */}
-        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "center", gap: 5, marginTop: 6 }}>
-          <span style={{
-            fontFamily: "var(--font-mono)", fontWeight: 500, lineHeight: 1,
-            fontSize: hover ? 78 : 48,
-            color: hover ? "#FFFFFF" : "#F5F5F2",
-            transition: "font-size .35s cubic-bezier(.34,1.3,.5,1), color .35s",
-          }}>{display}</span>
-          <span style={{
-            fontFamily: "var(--font-mono)", fontSize: 13, color: "#2E2E32",
-            opacity: hover ? 0 : 1, transition: "opacity .3s",
-          }}>/100</span>
+        {/* Top-left: title */}
+        <div style={{
+          position: "absolute",
+          top: 28,
+          left: 0,
+          lineHeight: 0.9,
+          textTransform: "uppercase",
+          fontFamily: "var(--font-sans)",
+          fontWeight: 800,
+          fontSize: "clamp(30px, 6.5vw, 80px)",
+          letterSpacing: "-0.03em",
+          pointerEvents: "none",
+        }}>
+          <div style={{ color: "#F5F5F2" }}>WHAT'S</div>
+          <div style={{ color: "#F5F5F2" }}>TODAY'S</div>
+          <div style={{ color: "#2E2E34" }}>RISK?</div>
         </div>
 
-        {/* Status label */}
-        <div style={{ marginTop: 9 }}>
-          <span style={{
-            fontSize: 10, textTransform: "uppercase", fontWeight: 500,
-            color: accentColor,
-            letterSpacing: hover ? 3.5 : 2,
-            transition: "letter-spacing .3s, color .6s",
+        {/* Bottom-right: score + label */}
+        {result && (
+          <div style={{
+            position: "absolute",
+            bottom: 28,
+            right: 0,
+            textAlign: "right",
+            lineHeight: 0.9,
+            textTransform: "uppercase",
+            fontFamily: "var(--font-sans)",
+            fontWeight: 800,
+            fontSize: "clamp(30px, 6.5vw, 80px)",
+            letterSpacing: "-0.03em",
+            pointerEvents: "none",
           }}>
-            <T es={label.es} en={label.en} />
-          </span>
-        </div>
+            <div style={{ color: accentColor }}>{display}.</div>
+            <div style={{ color: "#2E2E34" }}>
+              <T es={label.es} en={label.en} />
+            </div>
+          </div>
+        )}
 
-        {/* Description sentence */}
-        {result && (() => {
-          const sent = riskSentence(score, lang);
-          return (
-            <p style={{ marginTop: 14, fontSize: 12, color: "#6A6A70", lineHeight: 1.7, maxWidth: 380, marginLeft: "auto", marginRight: "auto" }}>
-              <T es={sent.es} en={sent.en} />
-            </p>
-          );
-        })()}
-
-        {/* Last updated */}
+        {/* Bottom-left: timestamp */}
         {data?.asOf && (
-          <div style={{ marginTop: 8, fontSize: 9, color: "#2E2E32", letterSpacing: 1 }}>
-            <T es={`Datos de hace ${minutesAgo(data.asOf)}`} en={`Data from ${minutesAgo(data.asOf)} ago`} />
+          <div style={{
+            position: "absolute",
+            bottom: 28,
+            left: 0,
+            fontSize: 9,
+            letterSpacing: 2,
+            textTransform: "uppercase",
+            color: "#2E2E32",
+            pointerEvents: "none",
+          }}>
+            <T es={`Datos hace ${minutesAgo(data.asOf)}`} en={`Data ${minutesAgo(data.asOf)} ago`} />
           </div>
         )}
       </div>
@@ -166,7 +139,7 @@ export default function RiskGauge() {
       {/* ── Component cards ── */}
       {meta && (
         <>
-          <div style={{ fontSize: 10, letterSpacing: 3, textTransform: "uppercase", color: "#4A4A50", margin: "20px 0 10px" }}>
+          <div style={{ fontSize: 10, letterSpacing: 3, textTransform: "uppercase", color: "#4A4A50", margin: "0 0 10px" }}>
             &mdash; <T es="Componentes del índice" en="Index components" />
           </div>
 
@@ -179,13 +152,13 @@ export default function RiskGauge() {
                   key={k}
                   onClick={() => setSel(k)}
                   style={{
-                    background: "rgba(11,11,12,0.92)", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)", textAlign: "left", cursor: "pointer",
+                    background: "rgba(11,11,12,0.92)", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)",
+                    textAlign: "left", cursor: "pointer",
                     padding: "12px 13px", borderRadius: 10,
                     border: `1px solid ${sel === k ? "#3A3A3E" : "#1E1E20"}`,
                     color: "#F5F5F2", transition: "border-color .2s",
                   }}
                 >
-                  {/* Label */}
                   <div style={{ fontSize: 10, color: "#4A4A50", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 5 }}>
                     {meta[k].label}
                     {meta[k].sub.es && (
@@ -194,26 +167,12 @@ export default function RiskGauge() {
                       </span>
                     )}
                   </div>
-
-                  {/* Value */}
-                  <div style={{
-                    fontFamily: "var(--font-mono)", fontSize: 22, fontWeight: 500,
-                    lineHeight: 1, color: "#F5F5F2", marginBottom: 8,
-                  }}>
+                  <div style={{ fontFamily: "var(--font-mono)", fontSize: 22, fontWeight: 500, lineHeight: 1, color: "#F5F5F2", marginBottom: 8 }}>
                     {meta[k].value}
                   </div>
-
-                  {/* Mini progress bar */}
                   <div style={{ height: 1.5, background: "#1E1E20", borderRadius: 1, marginBottom: 5 }}>
-                    <div style={{
-                      height: "100%", borderRadius: 1,
-                      width: `${compScore}%`,
-                      background: ca,
-                      transition: "width 1.2s ease-out",
-                    }} />
+                    <div style={{ height: "100%", borderRadius: 1, width: `${compScore}%`, background: ca, transition: "width 1.2s ease-out" }} />
                   </div>
-
-                  {/* Score */}
                   <div style={{ fontSize: 10, fontFamily: "var(--font-mono)", color: ca, letterSpacing: 0.5 }}>
                     {compScore}/100
                   </div>
@@ -222,17 +181,15 @@ export default function RiskGauge() {
             })}
           </div>
 
-          {/* Detail text */}
           <div style={{
             marginTop: 10, background: "rgba(11,11,12,0.92)",
             backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)",
-            border: "1px solid #1E1E20", borderRadius: 10, padding: "12px 14px", fontSize: 13,
-            lineHeight: 1.7, color: "#8A8A8E",
+            border: "1px solid #1E1E20", borderRadius: 10, padding: "12px 14px",
+            fontSize: 13, lineHeight: 1.7, color: "#8A8A8E",
           }}>
             <T es={meta[sel].detail.es} en={meta[sel].detail.en} />
           </div>
 
-          {/* Methodology toggle */}
           <button
             onClick={() => setMethOpen((o) => !o)}
             style={{
@@ -253,15 +210,12 @@ export default function RiskGauge() {
               backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)",
               border: "1px solid #1E1E20", borderRadius: 10, padding: "18px 18px",
             }}>
-              {/* Goal */}
               <p style={{ fontSize: 12, color: "#8A8A8E", lineHeight: 1.75, marginBottom: 16 }}>
                 <T
                   es="El índice Risk On resume en un número (0–100) el apetito global por riesgo con énfasis en México. Combina 5 señales de mercado reconocidas, cada una normalizada a 0–100 según rangos históricos típicos. El objetivo es que cualquier usuario pueda entender exactamente qué está impulsando el índice y por qué — sin cajas negras."
                   en="The Risk On index summarizes global risk appetite — with a Mexico focus — in a single number (0–100). It combines 5 recognized market signals, each normalized to 0–100 using typical historical ranges. The goal: any user can understand exactly what's driving the index and why — no black boxes."
                 />
               </p>
-
-              {/* Weight table */}
               <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16 }}>
                 {[
                   { k: "VIX",    w: 35, es: "Volatilidad esperada del S&P 500 · Principal indicador de miedo", en: "Expected S&P 500 volatility · Primary fear gauge" },
@@ -282,8 +236,6 @@ export default function RiskGauge() {
                   </div>
                 ))}
               </div>
-
-              {/* Scoring logic */}
               <p style={{ fontSize: 11, color: "#5A5A62", lineHeight: 1.75, borderTop: "1px solid #1A1A1C", paddingTop: 12 }}>
                 <T
                   es="Cada variable se normaliza: el extremo de calma vale 100 puntos (risk-on máximo) y el extremo de pánico vale 0. Los 5 puntajes se ponderan y suman para obtener el índice final. Rangos: VIX 12–35 · MOVE 70–140 · DXY 99–108 · US10Y 3.5–5.0% · MXN vol 7–16%."

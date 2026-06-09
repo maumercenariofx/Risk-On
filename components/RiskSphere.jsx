@@ -52,7 +52,7 @@ function genSphere(n, r) {
 }
 
 // Receives score prop from RiskGauge's animated counter
-export default function RiskSphere({ score = 50 }) {
+export default function RiskSphere({ score = 50, height = 274 }) {
   const mountRef = useRef(null);
   const scoreRef = useRef(score);
 
@@ -172,5 +172,5 @@ export default function RiskSphere({ score = 50 }) {
     return () => { destroyed = true; cleanup(); };
   }, []);
 
-  return <div ref={mountRef} style={{ width: "100%", height: 274 }} />;
+  return <div ref={mountRef} style={{ width: "100%", height }} />;
 }
