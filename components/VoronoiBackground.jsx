@@ -242,7 +242,7 @@ export default function VoronoiBackground() {
           colors[i3] = colors[i3+1] = colors[i3+2] = b;
         }
 
-        material.opacity = 0.38 + Math.sin(elapsed * 0.74) * 0.22;
+        material.opacity = 0.285 + Math.sin(elapsed * 0.74) * 0.165; // -25% brightness
         geometry.attributes.position.needsUpdate = true;
         geometry.attributes.color.needsUpdate     = true;
         renderer.render(scene, camera);
