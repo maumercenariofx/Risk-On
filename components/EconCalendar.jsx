@@ -45,7 +45,9 @@ export default function EconCalendar() {
       <div
         className="card-glass"
         style={{
-          background: "rgba(11,11,12,0.85)",
+          background: "rgba(5,5,6,0.50)",
+          backdropFilter: "blur(14px)",
+          WebkitBackdropFilter: "blur(14px)",
           border: "1px solid #1E1E20",
           borderRadius: 12,
           overflow: "hidden",

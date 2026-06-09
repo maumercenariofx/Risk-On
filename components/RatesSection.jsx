@@ -32,7 +32,7 @@ export default function RatesSection() {
       </div>
       <div
         className="card-glass"
-        style={{ background: "rgba(11,11,12,0.85)", border: "1px solid #1E1E20", borderRadius: 12, padding: "18px 20px" }}
+        style={{ background: "rgba(5,5,6,0.50)", border: "1px solid #1E1E20", borderRadius: 12, padding: "18px 20px" }}
       >
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: "16px 20px", marginBottom: 16 }}>
           {items.map((item, i) => (
