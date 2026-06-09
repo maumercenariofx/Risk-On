@@ -22,7 +22,7 @@ function loadThree() {
 }
 
 // ─── Constants ───────────────────────────────────────────────────────────────
-const N          = 9000;
+const N          = 13500;
 const SR         = 2.4;    // sphere radius
 const IR         = 1.2;    // mouse influence radius
 const REPEL_F    = 0.55;   // max repel displacement
@@ -395,8 +395,8 @@ export default function TronCanvas() {
           const len = Math.sqrt(hx*hx + hy*hy + hz*hz) || 1;
           const facing  = (hx/len)*vx + (hy/len)*vy + (hz/len)*vz;
           // Per-particle shimmer: each particle breathes slightly out of phase
-          const shimmer = 0.07 * Math.sin(elapsed * 2.0 + jPhase[i]);
-          const bright  = 0.15 + (facing * 0.5 + 0.5) * 0.60 + shimmer;
+          const shimmer = 0.09 * Math.sin(elapsed * 2.0 + jPhase[i]);
+          const bright  = 0.25 + (facing * 0.5 + 0.5) * 0.72 + shimmer;
           colors[i3] = colors[i3+1] = colors[i3+2] = Math.max(0, bright);
         }
 
