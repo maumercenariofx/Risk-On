@@ -59,22 +59,23 @@ function accent(score) {
 
 export default function RiskGauge() {
   const { lang } = useLang();
-  const [data, setData]       = useState(null);
-  const [display, setDisplay] = useState(0);
-  const [sel, setSel]         = useState("vix");
-  const [hover, setHover]     = useState(false);
-  const animatingRef          = useRef(true);
+  const [data, setData]         = useState(null);
+  const [display, setDisplay]   = useState(0);
+  const [sel, setSel]           = useState("vix");
+  const [hover, setHover]       = useState(false);
+  const [methOpen, setMethOpen] = useState(false);
+  const animatingRef            = useRef(true);
 
   useEffect(() => {
     fetch("/api/market")
       .then((r) => r.json())
       .then((d) => setData(d))
-      .catch(() => setData({ vix: 13.4, move: 98, dxy: 104.3, mxnVol: 9.1 }));
+      .catch(() => setData({ vix: 13.4, move: 98, dxy: 104.3, mxnVol: 9.1, us10y: 4.3 }));
   }, []);
 
   const result = useMemo(
     () => data
-      ? computeRiskIndex({ vix: data.vix, move: data.move, dxy: data.dxy, mxnVol: data.mxnVol })
+      ? computeRiskIndex({ vix: data.vix, move: data.move, dxy: data.dxy, mxnVol: data.mxnVol, us10y: data.us10y })
       : null,
     [data]
   );
@@ -82,7 +83,7 @@ export default function RiskGauge() {
   const label = riskLabel(score);
   const meta  = useMemo(
     () => data
-      ? componentMeta({ vix: data.vix, move: data.move, dxy: data.dxy, mxnVol: data.mxnVol })
+      ? componentMeta({ vix: data.vix, move: data.move, dxy: data.dxy, mxnVol: data.mxnVol, us10y: data.us10y })
       : null,
     [data]
   );
@@ -102,7 +103,7 @@ export default function RiskGauge() {
   const accentColor  = accent(score);
   const dashOffset   = ARC_LEN * (1 - display / 100);
   const dot          = ptOnArc(display);
-  const compKeys     = ["vix", "move", "dxy", "mxn"];
+  const compKeys     = ["vix", "move", "dxy", "us10y", "mxn"];
 
   return (
     <section className="reveal" style={{ animationDelay: "0.05s" }}>
@@ -283,6 +284,66 @@ export default function RiskGauge() {
           }}>
             <T es={meta[sel].detail.es} en={meta[sel].detail.en} />
           </div>
+
+          {/* Methodology toggle */}
+          <button
+            onClick={() => setMethOpen((o) => !o)}
+            style={{
+              marginTop: 12, background: "none", border: "none", cursor: "pointer",
+              fontSize: 10, letterSpacing: 2, textTransform: "uppercase",
+              color: methOpen ? "#8A8A8E" : "#4A4A50",
+              display: "flex", alignItems: "center", gap: 6,
+              transition: "color .2s", padding: 0,
+            }}
+          >
+            <span style={{ fontSize: 8 }}>{methOpen ? "▲" : "▼"}</span>
+            <T es="¿Cómo se calcula este índice?" en="How is this index calculated?" />
+          </button>
+
+          {methOpen && (
+            <div style={{
+              marginTop: 10, background: "rgba(11,11,12,0.85)",
+              border: "1px solid #1E1E20", borderRadius: 10, padding: "18px 18px",
+            }}>
+              {/* Goal */}
+              <p style={{ fontSize: 12, color: "#8A8A8E", lineHeight: 1.75, marginBottom: 16 }}>
+                <T
+                  es="El índice Risk On resume en un número (0–100) el apetito global por riesgo con énfasis en México. Combina 5 señales de mercado reconocidas, cada una normalizada a 0–100 según rangos históricos típicos. El objetivo es que cualquier usuario pueda entender exactamente qué está impulsando el índice y por qué — sin cajas negras."
+                  en="The Risk On index summarizes global risk appetite — with a Mexico focus — in a single number (0–100). It combines 5 recognized market signals, each normalized to 0–100 using typical historical ranges. The goal: any user can understand exactly what's driving the index and why — no black boxes."
+                />
+              </p>
+
+              {/* Weight table */}
+              <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16 }}>
+                {[
+                  { k: "VIX",    w: 35, es: "Volatilidad esperada del S&P 500 · Principal indicador de miedo", en: "Expected S&P 500 volatility · Primary fear gauge" },
+                  { k: "DXY",    w: 22, es: "Fuerza del dólar · Dólar fuerte = refugio = risk-off",           en: "Dollar strength · Strong dollar = safe haven = risk-off" },
+                  { k: "MOVE",   w: 18, es: "Volatilidad en bonos del Tesoro de EE.UU.",                      en: "US Treasury bond volatility" },
+                  { k: "US 10Y", w: 15, es: "Tasa del bono a 10 años · Alta = condiciones restrictivas",      en: "10Y Treasury yield · High = tighter financial conditions" },
+                  { k: "MXN",    w: 10, es: "Volatilidad realizada del USD/MXN",                              en: "Realized USD/MXN volatility" },
+                ].map(({ k, w, es, en }) => (
+                  <div key={k} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "#6A6A70", width: 52, flexShrink: 0 }}>{k}</div>
+                    <div style={{ flex: 1, height: 3, background: "#1E1E20", borderRadius: 2 }}>
+                      <div style={{ height: "100%", width: `${w * 2}%`, background: "#3A3A44", borderRadius: 2 }} />
+                    </div>
+                    <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "#8A8A8E", width: 30, textAlign: "right", flexShrink: 0 }}>{w}%</div>
+                    <div style={{ fontSize: 11, color: "#5A5A62", flex: 2, minWidth: 0 }}>
+                      <T es={es} en={en} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Scoring logic */}
+              <p style={{ fontSize: 11, color: "#5A5A62", lineHeight: 1.75, borderTop: "1px solid #1A1A1C", paddingTop: 12 }}>
+                <T
+                  es="Cada variable se normaliza: el extremo de calma vale 100 puntos (risk-on máximo) y el extremo de pánico vale 0. Los 5 puntajes se ponderan y suman para obtener el índice final. Rangos: VIX 12–35 · MOVE 70–140 · DXY 99–108 · US10Y 3.5–5.0% · MXN vol 7–16%."
+                  en="Each variable is normalized: the calm extreme scores 100 (full risk-on) and the panic extreme scores 0. The 5 scores are weighted and summed. Ranges: VIX 12–35 · MOVE 70–140 · DXY 99–108 · US10Y 3.5–5.0% · MXN vol 7–16%."
+                />
+              </p>
+            </div>
+          )}
         </>
       )}
     </section>
