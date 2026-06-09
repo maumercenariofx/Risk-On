@@ -30,7 +30,7 @@ const ATTRACT_F  = 0.45;   // max attract displacement factor
 const IDLE_MS    = 600;    // ms before repel → attract
 const MORPH_S    = 1.5;    // morph duration in seconds
 const LERP_D     = 0.065;  // displacement lerp factor
-const FORMS      = ["SPHERE", "VORONOI", "ATOM"];
+const FORMS      = ["DNA", "VORONOI"]; // ATOM preserved in code, not in active cycle
 
 // ─── Utilities ───────────────────────────────────────────────────────────────
 const eio = t => t < 0.5 ? 2*t*t : 1 - 2*(1-t)*(1-t);
@@ -90,6 +90,70 @@ function genSphere(n, r) {
     pos[i*3+1] = y * r;
     pos[i*3+2] = Math.sin(th) * rad * r;
   }
+  return pos;
+}
+
+function genDNA(n) {
+  const pos      = new Float32Array(n * 3);
+  const HELIX_R  = 1.55; // radius from center axis to each strand
+  const HELIX_H  = 4.6;  // total vertical height
+  const TURNS    = 3.5;  // complete rotations
+  const RUNGS    = Math.round(TURNS * 10); // ~35 base-pair rungs
+
+  const strandN  = Math.floor(n * 0.44);          // per strand
+  const rungTot  = n - 2 * strandN;               // remaining for cross-links
+  const perRung  = Math.max(2, Math.floor(rungTot / RUNGS));
+
+  let pi = 0;
+
+  // Strand A
+  for (let i = 0; i < strandN; i++) {
+    const t = i / (strandN - 1);
+    const a = t * TURNS * Math.PI * 2;
+    pos[pi*3]   = Math.cos(a) * HELIX_R;
+    pos[pi*3+1] = (t - 0.5) * HELIX_H;
+    pos[pi*3+2] = Math.sin(a) * HELIX_R;
+    pi++;
+  }
+
+  // Strand B — offset by π (180°)
+  for (let i = 0; i < strandN; i++) {
+    const t = i / (strandN - 1);
+    const a = t * TURNS * Math.PI * 2 + Math.PI;
+    pos[pi*3]   = Math.cos(a) * HELIX_R;
+    pos[pi*3+1] = (t - 0.5) * HELIX_H;
+    pos[pi*3+2] = Math.sin(a) * HELIX_R;
+    pi++;
+  }
+
+  // Rungs (base pairs connecting the two strands)
+  for (let r = 0; r < RUNGS && pi < n; r++) {
+    const t  = r / (RUNGS - 1);
+    const a  = t * TURNS * Math.PI * 2;
+    const y  = (t - 0.5) * HELIX_H;
+    const ax = Math.cos(a)          * HELIX_R;
+    const az = Math.sin(a)          * HELIX_R;
+    const bx = Math.cos(a + Math.PI) * HELIX_R;
+    const bz = Math.sin(a + Math.PI) * HELIX_R;
+    for (let k = 0; k < perRung && pi < n; k++) {
+      const s     = perRung > 1 ? k / (perRung - 1) : 0.5;
+      pos[pi*3]   = ax + (bx - ax) * s;
+      pos[pi*3+1] = y;
+      pos[pi*3+2] = az + (bz - az) * s;
+      pi++;
+    }
+  }
+
+  // Fill any overflow back onto strand A
+  while (pi < n) {
+    const t = Math.random();
+    const a = t * TURNS * Math.PI * 2;
+    pos[pi*3]   = Math.cos(a) * HELIX_R;
+    pos[pi*3+1] = (t - 0.5) * HELIX_H;
+    pos[pi*3+2] = Math.sin(a) * HELIX_R;
+    pi++;
+  }
+
   return pos;
 }
 
@@ -246,27 +310,27 @@ export default function TronCanvas() {
       container.appendChild(renderer.domElement);
 
       // Pre-generate all form home positions
-      const sphereHome  = genSphere(N, SR);
+      const dnaHome     = genDNA(N);
       const voronoiHome = genVoronoi(N);
       const atomData    = genAtom(N);
       const atomHome    = atomData.pos.slice(); // mutated each frame by tickAtom
 
-      const FORM_HOMES = { SPHERE: sphereHome, VORONOI: voronoiHome, ATOM: atomHome };
+      const FORM_HOMES = { DNA: dnaHome, VORONOI: voronoiHome, ATOM: atomHome };
 
       // Particle buffers
-      const positions    = sphereHome.slice();
+      const positions    = dnaHome.slice();
       const colors       = new Float32Array(N * 3).fill(1);
       const disp         = new Float32Array(N * 3);
       const jPhase       = new Float32Array(N);
       for (let i = 0; i < N; i++) jPhase[i] = Math.random() * Math.PI * 2;
 
       // Morph state
-      const prevHome    = sphereHome.slice();
-      const effHome     = sphereHome.slice();
-      let currHome      = sphereHome;
+      const prevHome    = dnaHome.slice();
+      const effHome     = dnaHome.slice();
+      let currHome      = dnaHome;
       let morphT        = 1.0;
       let formIdx       = 0;
-      let currentForm   = "SPHERE";
+      let currentForm   = "DNA";
 
       // Geometry + material
       const geometry = new THREE.BufferGeometry();
@@ -338,6 +402,10 @@ export default function TronCanvas() {
 
         group.rotation.y += 0.0008;
         group.rotation.x  = Math.sin(elapsed * 0.15) * 0.06;
+
+        // Slide group: DNA offset right, Voronoi centered
+        const targetX = currentForm === "VORONOI" ? 0 : 1.35;
+        group.position.x += (targetX - group.position.x) * 0.025;
 
         // Advance atom orbital positions every frame
         if (currentForm === "ATOM") tickAtom(atomHome, atomData.phases, atomData.rIdx, elapsed, N);
@@ -475,8 +543,31 @@ export default function TronCanvas() {
         ref={mountRef}
         style={{ position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none", background: "#000" }}
       />
-      {/* Form-cycle button hidden — forms preserved in code, re-enable by uncommenting */}
-      {/* <button onClick={() => cycleFnRef.current?.()}>[ ◇ {formName} ]</button> */}
+      <button
+        onClick={() => cycleFnRef.current?.()}
+        style={{
+          position: "fixed", bottom: 24, right: 24, zIndex: 50,
+          fontFamily: "var(--font-mono, monospace)",
+          fontSize: 10, letterSpacing: 3, textTransform: "uppercase",
+          color: "rgba(255,255,255,0.55)",
+          background: "rgba(0,0,0,0.45)",
+          border: "1px solid rgba(255,255,255,0.15)",
+          borderRadius: 6, cursor: "pointer", padding: "6px 10px",
+          transition: "color .25s, border-color .25s, background .25s",
+        }}
+        onMouseEnter={e => {
+          e.currentTarget.style.color = "rgba(255,255,255,0.9)";
+          e.currentTarget.style.borderColor = "rgba(255,255,255,0.45)";
+          e.currentTarget.style.background = "rgba(0,0,0,0.75)";
+        }}
+        onMouseLeave={e => {
+          e.currentTarget.style.color = "rgba(255,255,255,0.55)";
+          e.currentTarget.style.borderColor = "rgba(255,255,255,0.15)";
+          e.currentTarget.style.background = "rgba(0,0,0,0.45)";
+        }}
+      >
+        [ ◇ {formName} ]
+      </button>
     </>
   );
 }
