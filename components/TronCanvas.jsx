@@ -35,6 +35,34 @@ const FORMS      = ["SPHERE", "VORONOI", "ATOM"];
 // ─── Utilities ───────────────────────────────────────────────────────────────
 const eio = t => t < 0.5 ? 2*t*t : 1 - 2*(1-t)*(1-t);
 
+// Inline risk scorer (mirrors lib/riskIndex.js weights, no import needed)
+function quickRiskScore(d) {
+  if (!d) return 50;
+  const cl  = (x) => Math.max(0, Math.min(100, x));
+  const fg  = (v, calm, panic) => cl(100 - (v - calm) / (panic - calm) * 100);
+  const dol = (v, weak, str)   => cl(100 - (v - weak)  / (str - weak)  * 100);
+  return Math.round(
+    fg(d.vix    ?? 20,  12,   35)  * 0.35 +
+    dol(d.dxy   ?? 104, 99,  108)  * 0.22 +
+    fg(d.move   ?? 100, 70,  140)  * 0.18 +
+    fg(d.us10y  ?? 4.3, 3.5, 5.0) * 0.15 +
+    fg(d.mxnVol ?? 9,   7,   16)   * 0.10
+  );
+}
+
+// 3-stop gradient 0=red → 50=amber → 100=green, returns [r,g,b] each 0-1
+function scoreToRGB(score) {
+  const stops = [
+    [0.639, 0.176, 0.176], // 0   — #A32D2D red
+    [0.729, 0.459, 0.090], // 50  — #BA7517 amber
+    [0.059, 0.541, 0.373], // 100 — #0F8A5F green
+  ];
+  const t  = Math.max(0, Math.min(100, score)) / 100;
+  const lo = t < 0.5 ? 0 : 1;
+  const f  = t < 0.5 ? t * 2 : (t - 0.5) * 2;
+  return stops[lo].map((c, i) => c + (stops[lo + 1][i] - c) * f);
+}
+
 function makeDotTexture(THREE) {
   const size = 64;
   const c = document.createElement("canvas");
@@ -184,9 +212,18 @@ function tickAtom(home, phases, rIdx, elapsed, n) {
 
 // ─── Component ───────────────────────────────────────────────────────────────
 export default function TronCanvas() {
-  const mountRef   = useRef(null);
-  const cycleFnRef = useRef(null);
+  const mountRef    = useRef(null);
+  const cycleFnRef  = useRef(null);
+  const riskRGB     = useRef([1, 1, 1]); // default white; updated when API responds
   const [formName, setFormName] = useState(FORMS[0]);
+
+  // Fetch market data once and derive risk color
+  useEffect(() => {
+    fetch("/api/market")
+      .then((r) => r.json())
+      .then((d) => { riskRGB.current = scoreToRGB(quickRiskScore(d)); })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     let destroyed = false;
@@ -395,14 +432,18 @@ export default function TronCanvas() {
           // Depth shading via dot product with view direction
           const len = Math.sqrt(hx*hx + hy*hy + hz*hz) || 1;
           const facing  = (hx/len)*vx + (hy/len)*vy + (hz/len)*vz;
-          // Per-particle shimmer: wide phase offset for organic wave
+          // Per-particle shimmer + risk-based color
           const shimmer = 0.18 * Math.sin(elapsed * 2.0 + jPhase[i]);
           const bright  = 0.18 + (facing * 0.5 + 0.5) * 0.78 + shimmer;
-          colors[i3] = colors[i3+1] = colors[i3+2] = Math.max(0, bright);
+          const b       = Math.max(0, bright);
+          const [cr, cg, cb] = riskRGB.current;
+          colors[i3]   = cr * b;
+          colors[i3+1] = cg * b;
+          colors[i3+2] = cb * b;
         }
 
-        // Global breath: aggressive pulse — nearly off to fully on
-        material.opacity = 0.46 + Math.sin(elapsed * 1.4) * 0.40;
+        // Global breath: ~8.5s cycle (was 4.5s)
+        material.opacity = 0.46 + Math.sin(elapsed * 0.74) * 0.40;
 
         geometry.attributes.position.needsUpdate = true;
         geometry.attributes.color.needsUpdate     = true;
