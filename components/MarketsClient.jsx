@@ -219,10 +219,11 @@ export default function MarketsClient({ embed = false }) {
         </div>
       </div>
 
-      {/* Chart card */}
-      <div className="reveal tron-glow rounded-2xl border border-edge p-5" style={{
+      {/* Chart card — no border when embedded, blends with Voronoi bg */}
+      <div className="reveal rounded-2xl p-5" style={{
         animationDelay: "0.1s",
-        background: "rgba(5,5,6,0.50)",
+        background: embed ? "rgba(5,5,6,0.55)" : "rgba(5,5,6,0.50)",
+        border: embed ? "none" : undefined,
         backdropFilter: "blur(14px)",
         WebkitBackdropFilter: "blur(14px)",
       }}>
