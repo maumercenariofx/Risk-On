@@ -339,7 +339,7 @@ export default function TronCanvas() {
       const group = new THREE.Group();
       group.add(new THREE.Points(geometry, material));
       group.position.x = 0;
-      group.scale.set(0.62, 0.62, 0.62);
+      group.scale.set(0.90, 0.90, 0.90);
       scene.add(group);
 
       // Mouse state
