@@ -6,7 +6,7 @@ import { createContext, useContext, useState, useEffect } from "react";
 const LangContext = createContext({ lang: "es", setLang: () => {} });
 
 export function LangProvider({ children }) {
-  const [lang, setLang] = useState("es");
+  const [lang, setLang] = useState("en");
   useEffect(() => {
     const saved = typeof window !== "undefined" && window.localStorage?.getItem("riskon-lang");
     if (saved === "en" || saved === "es") setLang(saved);

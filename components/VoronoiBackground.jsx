@@ -21,69 +21,68 @@ function loadThree() {
   });
 }
 
-const N            = 14000;
-const SR           = 2.4;
-const IR           = 1.2;
-const REPEL_F      = 0.55;
-const ATTRACT_F    = 0.45;
-const IDLE_MS      = 600;
-const LERP_D       = 0.065;
-const VORONOI_SEEDS = 80;
-const VORONOI_K     = 7;
+const N         = 14000;
+const SR        = 2.4;
+const IR        = 1.2;
+const REPEL_F   = 0.55;
+const ATTRACT_F = 0.45;
+const IDLE_MS   = 600;
+const LERP_D    = 0.065;
 
-function genVoronoi(n) {
-  const seeds = [];
-  while (seeds.length < VORONOI_SEEDS) {
-    const x = (Math.random() - 0.5) * SR * 2.2;
-    const y = (Math.random() - 0.5) * SR * 2.2;
-    const z = (Math.random() - 0.5) * SR * 2.2;
-    if (x*x + y*y + z*z < SR * SR * 1.15) seeds.push([x, y, z]);
-  }
-  const edgeSet = new Set(), edges = [];
-  for (let i = 0; i < VORONOI_SEEDS; i++) {
-    seeds
-      .map((s, j) => {
-        if (i === j) return { j, d: Infinity };
-        const dx = seeds[i][0]-s[0], dy = seeds[i][1]-s[1], dz = seeds[i][2]-s[2];
-        return { j, d: Math.sqrt(dx*dx + dy*dy + dz*dz) };
-      })
-      .sort((a, b) => a.d - b.d)
-      .slice(0, VORONOI_K)
-      .forEach(({ j }) => {
-        const key = Math.min(i,j) + "_" + Math.max(i,j);
-        if (!edgeSet.has(key)) { edgeSet.add(key); edges.push([i, j]); }
-      });
-  }
-  const lens     = edges.map(([a, b]) => {
-    const dx = seeds[a][0]-seeds[b][0], dy = seeds[a][1]-seeds[b][1], dz = seeds[a][2]-seeds[b][2];
-    return Math.sqrt(dx*dx + dy*dy + dz*dz);
-  });
-  const totalLen = lens.reduce((a, b) => a + b, 0);
-  const pos = new Float32Array(n * 3);
+const ATOM_RINGS = [
+  { a: 2.2, b: 2.2, rx: 0,             rz: 0           },
+  { a: 2.0, b: 2.0, rx: Math.PI / 3,  rz: 0           },
+  { a: 2.1, b: 2.1, rx: -Math.PI / 4, rz: Math.PI / 4 },
+  { a: 1.8, b: 1.8, rx: Math.PI / 2,  rz: Math.PI / 6 },
+];
+
+function ringPos(a, b, rx, rz, phi, buf, i) {
+  const lx = a * Math.cos(phi);
+  const ly = b * Math.sin(phi);
+  const cy = ly * Math.cos(rx), cz = ly * Math.sin(rx);
+  buf[i*3]   = lx * Math.cos(rz) - cy * Math.sin(rz);
+  buf[i*3+1] = lx * Math.sin(rz) + cy * Math.cos(rz);
+  buf[i*3+2] = cz;
+}
+
+function genAtom(n) {
+  const nucleusN = Math.round(n * 0.06);
+  const ringN    = n - nucleusN;
+  const perRing  = Math.round(ringN / ATOM_RINGS.length);
+  const phases   = new Float32Array(n);
+  const rIdx     = new Uint8Array(n).fill(255);
+  const pos      = new Float32Array(n * 3);
   let pi = 0;
-  for (let e = 0; e < edges.length; e++) {
-    const cnt = Math.round((lens[e] / totalLen) * n);
-    const [a, b] = edges[e];
-    for (let k = 0; k < cnt && pi < n; k++) {
-      const t = cnt > 1 ? k / (cnt - 1) : 0.5;
-      pos[pi*3]   = seeds[a][0] + (seeds[b][0] - seeds[a][0]) * t;
-      pos[pi*3+1] = seeds[a][1] + (seeds[b][1] - seeds[a][1]) * t;
-      pos[pi*3+2] = seeds[a][2] + (seeds[b][2] - seeds[a][2]) * t;
+  for (let r = 0; r < ATOM_RINGS.length; r++) {
+    const { a, b, rx, rz } = ATOM_RINGS[r];
+    const cnt = r < ATOM_RINGS.length - 1 ? perRing : (ringN - perRing * (ATOM_RINGS.length - 1));
+    for (let k = 0; k < cnt && pi < n - nucleusN; k++) {
+      const phi = (k / Math.max(1, cnt)) * Math.PI * 2;
+      phases[pi] = phi;
+      rIdx[pi]   = r;
+      ringPos(a, b, rx, rz, phi, pos, pi);
       pi++;
     }
   }
-  while (pi < n) {
-    const e = Math.floor(Math.random() * edges.length);
-    const [a, b] = edges[e]; const t = Math.random();
-    pos[pi*3]   = seeds[a][0] + (seeds[b][0] - seeds[a][0]) * t;
-    pos[pi*3+1] = seeds[a][1] + (seeds[b][1] - seeds[a][1]) * t;
-    pos[pi*3+2] = seeds[a][2] + (seeds[b][2] - seeds[a][2]) * t;
-    pi++;
+  for (; pi < n; pi++) {
+    const r2 = 0.25 * Math.cbrt(Math.random());
+    const u  = Math.random(), v = Math.random();
+    const th = 2 * Math.PI * u, ph = Math.acos(2 * v - 1);
+    pos[pi*3]   = r2 * Math.sin(ph) * Math.cos(th);
+    pos[pi*3+1] = r2 * Math.cos(ph);
+    pos[pi*3+2] = r2 * Math.sin(ph) * Math.sin(th);
   }
-  return pos;
+  return { pos, phases, rIdx };
 }
 
-// Transparent Voronoi-only background — no button, no cycling, no black background
+function tickAtom(home, phases, rIdx, elapsed, n) {
+  for (let i = 0; i < n; i++) {
+    if (rIdx[i] === 255) continue;
+    const { a, b, rx, rz } = ATOM_RINGS[rIdx[i]];
+    ringPos(a, b, rx, rz, phases[i] + elapsed * 0.35, home, i);
+  }
+}
+
 export default function VoronoiBackground() {
   const mountRef = useRef(null);
 
@@ -118,7 +117,10 @@ export default function VoronoiBackground() {
       ctx.fillStyle = g; ctx.fillRect(0, 0, sz, sz);
       const tex = new THREE.CanvasTexture(cvs);
 
-      const home      = genVoronoi(N);
+      const atomData  = genAtom(N);
+      const home      = atomData.pos;
+      const aPhases   = atomData.phases;
+      const aRIdx     = atomData.rIdx;
       const positions = home.slice();
       const colors    = new Float32Array(N * 3).fill(1);
       const disp      = new Float32Array(N * 3);
@@ -173,6 +175,8 @@ export default function VoronoiBackground() {
 
         group.rotation.y += 0.0008;
         group.rotation.x  = Math.sin(elapsed * 0.15) * 0.06;
+
+        tickAtom(home, aPhases, aRIdx, elapsed, N);
 
         group.updateMatrixWorld();
         invMat.copy(group.matrixWorld).invert();

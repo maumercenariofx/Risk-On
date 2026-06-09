@@ -14,7 +14,6 @@ export default function Nav() {
     { href: "/", es: "Inicio", en: "Home" },
     { href: "/markets", es: "Mercados", en: "Markets" },
     { href: "/learn", es: "Aprende", en: "Learn" },
-    { href: "/archive", es: "Archivo", en: "Archive" },
     { href: "/about", es: "Contacto", en: "Contact" },
   ];
 
