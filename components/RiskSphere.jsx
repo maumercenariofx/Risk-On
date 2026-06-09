@@ -21,9 +21,14 @@ function loadThree() {
   });
 }
 
-const N = 12000;
-const R = 1.8;
+const N          = 12000;
+const R          = 1.8;
 const PULSE_SPEED = (2 * Math.PI) / 3;
+const IR          = 1.4;   // influence radius
+const REPEL_F     = 0.52;
+const ATTRACT_F   = 0.42;
+const IDLE_MS     = 600;
+const LERP_D      = 0.065;
 
 function genSphere(n, r) {
   const pos = new Float32Array(n * 3);
@@ -41,8 +46,7 @@ function genSphere(n, r) {
 
 export default function RiskSphere({ height = 274 }) {
   const mountRef   = useRef(null);
-  const pressedRef = useRef(false);
-  const pointerRef = useRef({ x: 0, y: 0 }); // NDC -1..1
+  const pointerRef = useRef({ x: 0, y: 0 });
 
   useEffect(() => {
     let destroyed = false;
@@ -55,7 +59,7 @@ export default function RiskSphere({ height = 274 }) {
 
       const scene  = new THREE.Scene();
       const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 100);
-      camera.position.z = 6.5; // frustum half = tan(22.5°)*6.5 ≈ 2.69 > sphere radius 2.34
+      camera.position.z = 6.5;
 
       const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
       renderer.setClearColor(0x000000, 0);
@@ -75,10 +79,11 @@ export default function RiskSphere({ height = 274 }) {
       ctx.fillStyle = g; ctx.fillRect(0, 0, sz, sz);
       const tex = new THREE.CanvasTexture(cvs);
 
-      const home   = genSphere(N, R);
-      const pos    = home.slice(); // mutable positions — modified by black-hole effect
-      const colors = new Float32Array(N * 3).fill(1);
-      const jPhase = new Float32Array(N);
+      const home    = genSphere(N, R);
+      const pos     = home.slice();     // displaced positions
+      const disp    = new Float32Array(N * 3);
+      const colors  = new Float32Array(N * 3).fill(1);
+      const jPhase  = new Float32Array(N);
       for (let i = 0; i < N; i++) jPhase[i] = Math.random() * Math.PI * 2;
 
       const geometry = new THREE.BufferGeometry();
@@ -97,14 +102,18 @@ export default function RiskSphere({ height = 274 }) {
       group.scale.set(1.3, 1.3, 1.3);
       scene.add(group);
 
-      // Pre-allocated vectors (avoid GC pressure)
-      const invMat   = new THREE.Matrix4();
-      const localCam = new THREE.Vector3();
-      const viewDir  = new THREE.Vector3();
-      const _near    = new THREE.Vector3();
-      const _far     = new THREE.Vector3();
-      const _rDir    = new THREE.Vector3();
-      const _hitL    = new THREE.Vector3();
+      // Mouse state
+      const mouse = { x: 0, y: 0, active: false, lastMove: 0, mode: "repel", attractStart: 0 };
+
+      // Pre-allocated vectors
+      const invMat    = new THREE.Matrix4();
+      const localCam  = new THREE.Vector3();
+      const viewDir   = new THREE.Vector3();
+      const raycaster = new THREE.Raycaster();
+      const ndc       = new THREE.Vector2();
+      const localO    = new THREE.Vector3();
+      const localD    = new THREE.Vector3();
+      const infPt     = new THREE.Vector3();
 
       let elapsed = 0, animId, lastFrame = 0;
 
@@ -114,113 +123,116 @@ export default function RiskSphere({ height = 274 }) {
         const dt = Math.min((ts - lastFrame) / 1000, 0.05);
         lastFrame = ts; elapsed += dt;
 
-        // Slow rotation while pressing so the hole stays "still"
-        const rotSpeed = pressedRef.current ? 0.0006 : 0.003;
-        group.rotation.y += rotSpeed;
+        group.rotation.y += 0.003;
         group.rotation.x += (Math.sin(elapsed * 0.2) * 0.07 - group.rotation.x) * 0.03;
 
         group.updateMatrixWorld();
         invMat.copy(group.matrixWorld).invert();
         localCam.copy(camera.position).applyMatrix4(invMat);
         viewDir.copy(localCam).normalize();
-        const vx = viewDir.x, vy = viewDir.y, vz = viewDir.z;
 
-        // ── Black-hole attraction ──
-        let ax = 0, ay = 0, az = 0, doAttract = false;
-        if (pressedRef.current) {
-          const mx = pointerRef.current.x, my = pointerRef.current.y;
-
-          // Unproject mouse to world-space ray
-          _near.set(mx, my, -1).unproject(camera);
-          _far.set(mx, my,  1).unproject(camera);
-          _rDir.copy(_far).sub(_near).normalize();
-
-          // Ray-sphere intersection (world sphere: center=origin, radius=R*scale=2.34)
-          const RS  = R * 1.3;
-          const ox = camera.position.x, oy = camera.position.y, oz = camera.position.z;
-          const dx = _rDir.x, dy = _rDir.y, dz = _rDir.z;
-          const b   = ox*dx + oy*dy + oz*dz;
-          const c   = ox*ox + oy*oy + oz*oz - RS*RS;
-          const disc = b*b - c;
-
-          if (disc >= 0) {
-            const t = -b - Math.sqrt(disc); // entry (front face)
-            _hitL.set(ox + dx*t, oy + dy*t, oz + dz*t).applyMatrix4(invMat);
-          } else {
-            // Ray missed — project closest ray point onto sphere surface in world space
-            const t = -(ox*dx + oy*dy + oz*dz);
-            _hitL.set(ox + dx*t, oy + dy*t, oz + dz*t);
-            const l = _hitL.length() || 1;
-            _hitL.multiplyScalar(RS / l);
-            _hitL.applyMatrix4(invMat);
-          }
-          ax = _hitL.x; ay = _hitL.y; az = _hitL.z;
-          doAttract = true;
+        // Idle → attract transition
+        const now = Date.now();
+        if (mouse.active && now - mouse.lastMove >= IDLE_MS && mouse.mode === "repel") {
+          mouse.mode = "attract";
+          mouse.attractStart = now;
         }
 
-        // ── Per-particle update ──
+        // Ray → sphere intersection in local space (for influence center)
+        let hasInf = false, ix = 0, iy = 0, iz = 0;
+        if (mouse.active) {
+          ndc.set(mouse.x, mouse.y);
+          raycaster.setFromCamera(ndc, camera);
+          localO.copy(raycaster.ray.origin).applyMatrix4(invMat);
+          localD.copy(raycaster.ray.direction).transformDirection(invMat).normalize();
+          const b    = 2 * localO.dot(localD);
+          const c    = localO.lengthSq() - R * R;
+          const disc = b * b - 4 * c;
+          if (disc >= 0) {
+            const sq = Math.sqrt(disc);
+            const t  = (-b - sq) / 2 > 0 ? (-b - sq) / 2 : (-b + sq) / 2;
+            if (t > 0) {
+              infPt.copy(localD).multiplyScalar(t).add(localO);
+              hasInf = true; ix = infPt.x; iy = infPt.y; iz = infPt.z;
+            }
+          }
+        }
+
+        const vx = viewDir.x, vy = viewDir.y, vz = viewDir.z;
+        const attractAccum = mouse.mode === "attract" && mouse.attractStart > 0
+          ? Math.min(3, (now - mouse.attractStart) / 400) : 0;
+        const LD = mouse.mode === "attract" ? 0.08 : LERP_D;
+
         for (let i = 0; i < N; i++) {
           const i3 = i * 3;
+          const hx = home[i3], hy = home[i3+1], hz = home[i3+2];
 
-          if (doAttract) {
-            // Pull toward attraction point — stronger the closer the particle is
-            const ddx = ax - pos[i3], ddy = ay - pos[i3+1], ddz = az - pos[i3+2];
-            const dist2 = ddx*ddx + ddy*ddy + ddz*ddz;
-            const force = Math.min(0.18, 2.2 / (dist2 + 0.25));
-            pos[i3]   += ddx * force;
-            pos[i3+1] += ddy * force;
-            pos[i3+2] += ddz * force;
-          } else {
-            // Snap back to sphere surface
-            pos[i3]   += (home[i3]   - pos[i3])   * 0.06;
-            pos[i3+1] += (home[i3+1] - pos[i3+1]) * 0.06;
-            pos[i3+2] += (home[i3+2] - pos[i3+2]) * 0.06;
+          let tdx = 0, tdy = 0, tdz = 0;
+          if (hasInf) {
+            const dx = hx - ix, dy = hy - iy, dz = hz - iz;
+            const d2 = dx*dx + dy*dy + dz*dz;
+            if (d2 < IR * IR) {
+              const dist = Math.sqrt(d2);
+              const t = 1 - dist / IR;
+              const s = t * t * (3 - 2 * t); // smoothstep
+
+              if (mouse.mode === "repel") {
+                // Wave ripple pushing particles outward
+                const len = Math.max(0.01, dist);
+                const j   = Math.sin(elapsed * 4 + jPhase[i]) * 0.1 * s;
+                tdx = (dx/len) * s * REPEL_F + j;
+                tdy = (dy/len) * s * REPEL_F;
+                tdz = (dz/len) * s * REPEL_F;
+              } else {
+                // Vortex: pull inward + circular orbit (the "black hole" swirl)
+                const af      = s * ATTRACT_F * Math.min(attractAccum, 2) * 0.22;
+                const swirl   = s * 0.38;
+                const orbitT  = elapsed * 2.5 + jPhase[i];
+                tdx = -dx * af + swirl * Math.cos(orbitT);
+                tdy = -dy * af * 0.28;
+                tdz = -dz * af + swirl * Math.sin(orbitT);
+              }
+            }
           }
 
-          // Lighting (use current pos for normal approximation)
-          const px = pos[i3], py = pos[i3+1], pz = pos[i3+2];
-          const len    = Math.sqrt(px*px + py*py + pz*pz) || 1;
-          const facing = (px/len)*vx + (py/len)*vy + (pz/len)*vz;
+          disp[i3]   += (tdx - disp[i3])   * LD;
+          disp[i3+1] += (tdy - disp[i3+1]) * LD;
+          disp[i3+2] += (tdz - disp[i3+2]) * LD;
+
+          pos[i3]   = hx + disp[i3];
+          pos[i3+1] = hy + disp[i3+1];
+          pos[i3+2] = hz + disp[i3+2];
+
+          // Lighting using home position for stable normals
+          const len    = Math.sqrt(hx*hx + hy*hy + hz*hz) || 1;
+          const facing = (hx/len)*vx + (hy/len)*vy + (hz/len)*vz;
           const shimmer = 0.12 * Math.sin(elapsed * 1.8 + jPhase[i]);
           const b = Math.max(0, 0.22 + (facing * 0.5 + 0.5) * 0.72 + shimmer);
           colors[i3] = colors[i3+1] = colors[i3+2] = b;
         }
 
         material.opacity = 0.715 + Math.sin(elapsed * PULSE_SPEED) * 0.165;
-        posAttr.needsUpdate              = true;
+        posAttr.needsUpdate                   = true;
         geometry.attributes.color.needsUpdate = true;
         renderer.render(scene, camera);
       }
 
       animate();
 
-      // ── Pointer tracking ──
-      function updatePointer(clientX, clientY) {
+      // ── Mouse tracking ──
+      const onMove = (e) => {
         const rect = container.getBoundingClientRect();
-        pointerRef.current = {
-          x:  ((clientX - rect.left) / rect.width)  * 2 - 1,
-          y: -((clientY - rect.top)  / rect.height) * 2 + 1,
-        };
-      }
+        mouse.x        = ((e.clientX - rect.left) / rect.width)  * 2 - 1;
+        mouse.y        = -((e.clientY - rect.top)  / rect.height) * 2 + 1;
+        mouse.lastMove = Date.now();
+        if (mouse.mode === "attract") { mouse.mode = "repel"; mouse.attractStart = 0; }
+        mouse.active   = true;
+        pointerRef.current = { x: mouse.x, y: mouse.y };
+      };
+      const onLeave = () => { mouse.active = false; mouse.mode = "repel"; mouse.attractStart = 0; };
 
-      const onDown  = (e) => { pressedRef.current = true;  updatePointer(e.clientX, e.clientY); };
-      const onMove  = (e) => { if (pressedRef.current) updatePointer(e.clientX, e.clientY); };
-      const onUp    = ()  => { pressedRef.current = false; };
-      const onTDown = (e) => { pressedRef.current = true;  updatePointer(e.touches[0].clientX, e.touches[0].clientY); };
-      const onTMove = (e) => { if (pressedRef.current) updatePointer(e.touches[0].clientX, e.touches[0].clientY); };
-      const onTUp   = ()  => { pressedRef.current = false; };
-
-      const isTouch = window.matchMedia?.("(pointer: coarse)").matches ?? false;
-
-      container.addEventListener("mousedown",  onDown);
-      window.addEventListener("mousemove",     onMove);
-      window.addEventListener("mouseup",       onUp);
-      // Touch interaction disabled on mobile to avoid scroll conflicts
-      if (!isTouch) {
-        container.addEventListener("touchstart", onTDown, { passive: true });
-        window.addEventListener("touchmove",     onTMove, { passive: true });
-        window.addEventListener("touchend",      onTUp);
-      }
+      container.addEventListener("mousemove",  onMove);
+      container.addEventListener("mouseleave", onLeave);
 
       const onResize = () => {
         camera.aspect = container.clientWidth / container.clientHeight;
@@ -231,14 +243,8 @@ export default function RiskSphere({ height = 274 }) {
 
       cleanup = () => {
         cancelAnimationFrame(animId);
-        container.removeEventListener("mousedown",  onDown);
-        window.removeEventListener("mousemove",     onMove);
-        window.removeEventListener("mouseup",       onUp);
-        if (!isTouch) {
-          container.removeEventListener("touchstart", onTDown);
-          window.removeEventListener("touchmove",     onTMove);
-          window.removeEventListener("touchend",      onTUp);
-        }
+        container.removeEventListener("mousemove",  onMove);
+        container.removeEventListener("mouseleave", onLeave);
         window.removeEventListener("resize",        onResize);
         geometry.dispose(); tex.dispose(); material.dispose(); renderer.dispose();
         if (renderer.domElement.parentNode === container) container.removeChild(renderer.domElement);
