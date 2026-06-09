@@ -4,6 +4,39 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useLang, T } from "./Lang";
 import { computeRiskIndex, riskLabel, componentMeta } from "../lib/riskIndex";
 
+// Humanised "hace X min" helper
+function minutesAgo(isoStr) {
+  if (!isoStr) return null;
+  const mins = Math.round((Date.now() - new Date(isoStr)) / 60000);
+  if (mins < 1) return "ahora";
+  if (mins < 60) return `${mins} min`;
+  return `${Math.round(mins / 60)}h`;
+}
+
+// One-sentence interpretation of the score
+function riskSentence(score, lang) {
+  if (score >= 75) return {
+    es: "El mercado muestra apetito alto por riesgo. Condiciones favorables para activos de mayor rendimiento.",
+    en: "The market shows strong risk appetite. Conditions favor higher-yield assets.",
+  };
+  if (score >= 58) return {
+    es: "Ambiente moderadamente positivo. El mercado acepta riesgo con selectividad.",
+    en: "Moderately positive environment. The market is accepting risk selectively.",
+  };
+  if (score >= 42) return {
+    es: "El mercado está en modo neutral, sin señales claras de dirección.",
+    en: "The market is in neutral mode with no clear directional signals.",
+  };
+  if (score >= 25) return {
+    es: "El mercado muestra cautela. Se recomienda reducir exposición a activos de riesgo.",
+    en: "The market is cautious. Consider reducing exposure to risk assets.",
+  };
+  return {
+    es: "El mercado está en modo risk-off. Preferencia por activos refugio. Cautela máxima.",
+    en: "The market is in risk-off mode. Safe-haven assets are preferred. Maximum caution.",
+  };
+}
+
 // Arc geometry
 const CX = 160;
 const CY = 175;
@@ -164,13 +197,30 @@ export default function RiskGauge() {
           <span>0 — risk-off</span>
           <span>risk-on — 100</span>
         </div>
+
+        {/* Description sentence */}
+        {result && (() => {
+          const sent = riskSentence(score, lang);
+          return (
+            <p style={{ marginTop: 14, fontSize: 12, color: "#6A6A70", lineHeight: 1.7, maxWidth: 380, marginLeft: "auto", marginRight: "auto" }}>
+              <T es={sent.es} en={sent.en} />
+            </p>
+          );
+        })()}
+
+        {/* Last updated */}
+        {data?.asOf && (
+          <div style={{ marginTop: 8, fontSize: 9, color: "#2E2E32", letterSpacing: 1 }}>
+            <T es={`Datos de hace ${minutesAgo(data.asOf)}`} en={`Data from ${minutesAgo(data.asOf)} ago`} />
+          </div>
+        )}
       </div>
 
       {/* ── Component cards ── */}
       {meta && (
         <>
           <div style={{ fontSize: 10, letterSpacing: 3, textTransform: "uppercase", color: "#4A4A50", margin: "20px 0 10px" }}>
-            &mdash; <T es="Que lo mueve hoy" en="What's driving it today" />
+            &mdash; <T es="Componentes del índice" en="Index components" />
           </div>
 
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 10 }}>

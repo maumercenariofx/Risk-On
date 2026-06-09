@@ -371,11 +371,13 @@ export default function TronCanvas() {
                 tdy = (dy / len) * s * REPEL_F;
                 tdz = (dz / len) * s * REPEL_F;
               } else {
-                // Pull home position toward cursor (black-hole suction)
-                const af = s * ATTRACT_F * attractAccum * 0.5;
-                tdx = -dx * af;
-                tdy = -dy * af;
-                tdz = -dz * af;
+                // Black-hole: inward pull + continuous swirl so particles never freeze
+                const af      = s * ATTRACT_F * Math.min(attractAccum, 2) * 0.22;
+                const swirl   = s * 0.38;
+                const orbitT  = elapsed * 2.5 + jPhase[i];
+                tdx = -dx * af + swirl * Math.cos(orbitT);
+                tdy = -dy * af * 0.28;
+                tdz = -dz * af + swirl * Math.sin(orbitT);
               }
             }
           }
@@ -392,7 +394,7 @@ export default function TronCanvas() {
           // Depth shading via dot product with view direction
           const len = Math.sqrt(hx*hx + hy*hy + hz*hz) || 1;
           const facing = (hx/len)*vx + (hy/len)*vy + (hz/len)*vz;
-          const bright = 0.07 + (facing * 0.5 + 0.5) * 0.43;
+          const bright = 0.15 + (facing * 0.5 + 0.5) * 0.60;
           colors[i3] = colors[i3+1] = colors[i3+2] = bright;
         }
 

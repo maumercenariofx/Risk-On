@@ -49,7 +49,7 @@ export default function DailyWatch({ post }) {
       {/* ── FX hoy: USD/MXN · EUR/MXN · EUR/USD ── */}
       <div style={{ marginBottom: 20 }}>
         <div style={{ fontSize: 10, letterSpacing: 3, textTransform: "uppercase", color: "#4A4A50", marginBottom: 10 }}>
-          &mdash; <T es="Que lo mueve hoy" en="What's moving it today" />
+          &mdash; <T es="Tipo de cambio" en="Exchange rates" />
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))", gap: 10 }}>
           {FX_PAIRS.map(({ key, chgKey, label, decimals }) => {
@@ -98,49 +98,66 @@ export default function DailyWatch({ post }) {
         </div>
       )}
 
-      {/* ── Niveles técnicos USD/MXN ── */}
-      {hasLevels && (
+      {/* ── Rango técnico USD/MXN: barra visual de posición ── */}
+      {hasLevels && market?.usdmxn && (
         <div>
           <div style={{ fontSize: 10, letterSpacing: 3, textTransform: "uppercase", color: "#4A4A50", marginBottom: 10 }}>
-            &mdash; <T es="Niveles técnicos USD/MXN" en="USD/MXN technical levels" />
-            {market?.mxnS1 && (
-              <span style={{ marginLeft: 8, color: "#2E2E32", fontSize: 9 }}>
-                · <T es="rolling 10d" en="rolling 10d" />
-              </span>
-            )}
+            &mdash; <T es="Rango técnico USD/MXN · 10d" en="USD/MXN range · 10d" />
           </div>
           <div
             className="card-glass"
-            style={{ background: "rgba(11,11,12,0.85)", border: "1px solid #1E1E20", borderRadius: 12, padding: "14px 18px" }}
+            style={{ background: "rgba(11,11,12,0.85)", border: "1px solid #1E1E20", borderRadius: 12, padding: "16px 18px" }}
           >
-            <div style={{ display: "flex", gap: 28, marginBottom: 12, flexWrap: "wrap" }}>
-              {support && (
-                <div>
-                  <div style={{ fontSize: 9, letterSpacing: 2, textTransform: "uppercase", color: "#4A4A50", marginBottom: 5 }}>
-                    <T es="Soporte" en="Support" />
+            {(() => {
+              const lo  = typeof support    === "number" ? support    : parseFloat(support);
+              const hi  = typeof resistance === "number" ? resistance : parseFloat(resistance);
+              const cur = market.usdmxn;
+              const pct = Math.min(100, Math.max(0, ((cur - lo) / (hi - lo)) * 100));
+              const isNearHigh = pct > 70;
+              const isNearLow  = pct < 30;
+              const dotColor   = isNearHigh ? "#A32D2D" : isNearLow ? "#0F8A5F" : "#E8E6E0";
+              return (
+                <>
+                  {/* Range bar */}
+                  <div style={{ position: "relative", height: 3, background: "#1E1E20", borderRadius: 2, margin: "8px 0 16px" }}>
+                    <div style={{
+                      position: "absolute", left: `${pct}%`, top: "50%",
+                      transform: "translate(-50%, -50%)",
+                      width: 9, height: 9, borderRadius: "50%",
+                      background: dotColor, boxShadow: `0 0 8px ${dotColor}55`,
+                      transition: "left .6s ease-out",
+                    }} />
                   </div>
-                  <div style={{ fontFamily: "var(--font-mono)", fontSize: 24, fontWeight: 500, color: "#0F8A5F" }}>
-                    {typeof support === "number" ? support.toFixed(4) : support}
+                  {/* Labels */}
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
+                    <div>
+                      <div style={{ fontSize: 8, color: "#4A4A50", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 3 }}>
+                        <T es="Soporte" en="Support" />
+                      </div>
+                      <div style={{ fontFamily: "var(--font-mono)", fontSize: 15, color: "#0F8A5F" }}>
+                        {lo.toFixed(4)}
+                      </div>
+                    </div>
+                    <div style={{ textAlign: "center" }}>
+                      <div style={{ fontSize: 8, color: "#4A4A50", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 3 }}>
+                        <T es="Actual" en="Current" />
+                      </div>
+                      <div style={{ fontFamily: "var(--font-mono)", fontSize: 19, fontWeight: 500, color: dotColor }}>
+                        {cur.toFixed(4)}
+                      </div>
+                    </div>
+                    <div style={{ textAlign: "right" }}>
+                      <div style={{ fontSize: 8, color: "#4A4A50", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 3 }}>
+                        <T es="Resistencia" en="Resistance" />
+                      </div>
+                      <div style={{ fontFamily: "var(--font-mono)", fontSize: 15, color: "#A32D2D" }}>
+                        {hi.toFixed(4)}
+                      </div>
+                    </div>
                   </div>
-                </div>
-              )}
-              {resistance && (
-                <div>
-                  <div style={{ fontSize: 9, letterSpacing: 2, textTransform: "uppercase", color: "#4A4A50", marginBottom: 5 }}>
-                    <T es="Resistencia" en="Resistance" />
-                  </div>
-                  <div style={{ fontFamily: "var(--font-mono)", fontSize: 24, fontWeight: 500, color: "#A32D2D" }}>
-                    {typeof resistance === "number" ? resistance.toFixed(4) : resistance}
-                  </div>
-                </div>
-              )}
-            </div>
-            <p style={{ fontSize: 11, color: "#4A4A50", lineHeight: 1.7 }}>
-              <T
-                es="Soporte: precio donde la demanda suele frenar las caídas. Resistencia: nivel donde la oferta suele contener las subidas. Son referencias técnicas, no garantías."
-                en="Support: price level where demand tends to halt declines. Resistance: level where supply tends to cap advances. These are technical guides, not guarantees."
-              />
-            </p>
+                </>
+              );
+            })()}
           </div>
         </div>
       )}
