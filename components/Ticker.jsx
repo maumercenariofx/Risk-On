@@ -19,8 +19,7 @@ const FALLBACK = [
 ];
 
 export default function Ticker() {
-  const [items,  setItems]  = useState(FALLBACK);
-  const [paused, setPaused] = useState(false);
+  const [items, setItems] = useState(FALLBACK);
 
   useEffect(() => {
     fetch("/api/market")
@@ -71,42 +70,12 @@ export default function Ticker() {
       marginLeft: "-50vw",
       width: "100vw",
       overflow: "hidden",
-      cursor: "pointer",
-    }}
-      onClick={() => setPaused((p) => !p)}
-      title={paused ? "Toca para reanudar" : "Toca para pausar"}
-    >
-      <div
-        className={`ticker-band${paused ? " ticker-paused" : ""}`}
-        style={{
-          background: "#111113",
-          borderTop: "1px solid #1E1E22",
-          borderBottom: "1px solid #1E1E22",
-          padding: "11px 0",
-          position: "relative",
-        }}
-      >
-        <div
-          className="ticker-track"
-          style={{ animationPlayState: paused ? "paused" : "running" }}
-        >
+    }}>
+      <div className="ticker-band" style={{ padding: "11px 0" }}>
+        <div className="ticker-track">
           {row("a")}
           {row("b")}
         </div>
-
-        {/* Paused indicator */}
-        {paused && (
-          <div style={{
-            position: "absolute", right: 14, top: "50%",
-            transform: "translateY(-50%)",
-            fontFamily: "var(--font-mono)", fontSize: 9,
-            letterSpacing: 2, color: "#4A4A50",
-            textTransform: "uppercase",
-            pointerEvents: "none",
-          }}>
-            ⏸ pausa
-          </div>
-        )}
       </div>
     </div>
   );

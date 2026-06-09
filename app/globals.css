@@ -108,15 +108,17 @@ body::before {
 .ticker-track {
   display: inline-flex; gap: 52px; white-space: nowrap;
   animation: ticker-scroll 65s linear infinite;
+  transition: filter 0.3s;
 }
-.ticker-band:hover .ticker-track { animation-play-state: paused; }
-
-@keyframes ticker-paused-pulse {
-  0%, 100% { background: #111113; }
-  50%       { background: #171719; }
+.ticker-band {
+  background: transparent;
+  border-top: 1px solid rgba(245,245,242,0.05);
+  border-bottom: 1px solid rgba(245,245,242,0.05);
 }
-.ticker-paused { animation: ticker-paused-pulse 1.4s ease-in-out infinite; }
-.ticker-paused .ticker-track { animation-play-state: paused !important; }
+.ticker-band:hover .ticker-track {
+  animation-play-state: paused;
+  filter: brightness(1.8);
+}
 
 /* Aguja del medidor */
 .needle {

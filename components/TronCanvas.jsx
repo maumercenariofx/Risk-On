@@ -395,14 +395,14 @@ export default function TronCanvas() {
           // Depth shading via dot product with view direction
           const len = Math.sqrt(hx*hx + hy*hy + hz*hz) || 1;
           const facing  = (hx/len)*vx + (hy/len)*vy + (hz/len)*vz;
-          // Per-particle shimmer: each particle breathes slightly out of phase
-          const shimmer = 0.09 * Math.sin(elapsed * 2.0 + jPhase[i]);
-          const bright  = 0.25 + (facing * 0.5 + 0.5) * 0.72 + shimmer;
+          // Per-particle shimmer: wide phase offset for organic wave
+          const shimmer = 0.18 * Math.sin(elapsed * 2.0 + jPhase[i]);
+          const bright  = 0.18 + (facing * 0.5 + 0.5) * 0.78 + shimmer;
           colors[i3] = colors[i3+1] = colors[i3+2] = Math.max(0, bright);
         }
 
-        // Global breath: slow opacity pulse ~4s cycle
-        material.opacity = 0.52 + Math.sin(elapsed * 1.55) * 0.20;
+        // Global breath: aggressive pulse — nearly off to fully on
+        material.opacity = 0.46 + Math.sin(elapsed * 1.4) * 0.40;
 
         geometry.attributes.position.needsUpdate = true;
         geometry.attributes.color.needsUpdate     = true;

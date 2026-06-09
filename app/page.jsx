@@ -18,11 +18,8 @@ export default function Home() {
       <section className="reveal pt-4 text-center">
         <div className="tron-corner inline-block px-10 py-3">
           <h1 className="font-serif text-5xl font-medium tracking-tight text-bone sm:text-6xl">
-            Risk On
+            Today's Risk?
           </h1>
-          <p className="mt-2 font-mono text-xs uppercase tracking-[3px] text-muted">
-            [ take risks or stay average ]
-          </p>
         </div>
       </section>
 

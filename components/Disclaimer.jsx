@@ -8,10 +8,10 @@ export default function Disclaimer() {
       <p style={{
         fontSize: 10,
         lineHeight: 1.9,
-        color: "#3A3A3E",
+        color: "#666670",
         letterSpacing: 0.3,
       }}>
-        <strong style={{ color: "#4A4A50", letterSpacing: 1, textTransform: "uppercase", fontSize: 9 }}>
+        <strong style={{ color: "#888892", letterSpacing: 1, textTransform: "uppercase", fontSize: 9 }}>
           Aviso Legal &mdash;
         </strong>{" "}
         La información, análisis y opiniones publicados en este sitio tienen fines exclusivamente informativos
