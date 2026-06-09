@@ -368,16 +368,24 @@ export default function TronCanvas() {
       const viewDir   = new THREE.Vector3();
 
       let elapsed = 0, animId;
+      let lastFrame = 0;
 
-      function animate() {
+      // Throttle to ~30fps when tab is hidden to save GPU under backdrop-filter cards
+      const targetFPS  = () => document.hidden ? 30 : 60;
+      const frameDelay = () => 1000 / targetFPS();
+
+      function animate(ts = 0) {
         animId = requestAnimationFrame(animate);
-        elapsed += 1 / 60;
+        if (ts - lastFrame < frameDelay()) return;
+        const dt = Math.min((ts - lastFrame) / 1000, 0.05); // cap at 50ms to avoid jumps
+        lastFrame = ts;
+        elapsed += dt;
 
         group.rotation.y += 0.0008;
         group.rotation.x  = Math.sin(elapsed * 0.15) * 0.06;
 
         // Morph (single form, morphT stays at 1.0 — lerp is instant)
-        if (morphT_ref.v < 1) morphT_ref.v = Math.min(1, morphT_ref.v + 1 / (60 * MORPH_S));
+        if (morphT_ref.v < 1) morphT_ref.v = Math.min(1, morphT_ref.v + dt / MORPH_S);
         const mt = eio(morphT_ref.v);
         for (let i = 0; i < N * 3; i++) {
           effHome[i] = prevHome[i] + (currHome[i] - prevHome[i]) * mt;

@@ -59,9 +59,9 @@ export default function DailyWatch({ post }) {
               <div
                 key={key}
                 style={{
-                  background: "rgba(5,5,6,0.50)",
-                  backdropFilter: "blur(14px)",
-                  WebkitBackdropFilter: "blur(14px)",
+                  background: "rgba(10,10,12,0.55)",
+                  backdropFilter: "blur(20px) saturate(1.05) brightness(0.6)",
+                  WebkitBackdropFilter: "blur(20px) saturate(1.05) brightness(0.6)",
                   border: "1px solid #1E1E20",
                   borderRadius: 10,
                   padding: "12px 13px",
@@ -88,7 +88,7 @@ export default function DailyWatch({ post }) {
           </div>
           <div
             className="card-glass"
-            style={{ background: "rgba(5,5,6,0.50)", border: "1px solid #1E1E20", borderRadius: 12, padding: "14px 18px" }}
+            style={{ background: "rgba(10,10,12,0.55)", border: "1px solid #1E1E20", borderRadius: 12, padding: "14px 18px" }}
           >
             {bullets.map((b, i) => (
               <div key={i} style={{ display: "flex", gap: 10, marginBottom: i < bullets.length - 1 ? 9 : 0 }}>
@@ -108,7 +108,7 @@ export default function DailyWatch({ post }) {
           </div>
           <div
             className="card-glass"
-            style={{ background: "rgba(5,5,6,0.50)", border: "1px solid #1E1E20", borderRadius: 12, padding: "16px 18px" }}
+            style={{ background: "rgba(10,10,12,0.55)", border: "1px solid #1E1E20", borderRadius: 12, padding: "16px 18px" }}
           >
             {(() => {
               const lo  = typeof support    === "number" ? support    : parseFloat(support);

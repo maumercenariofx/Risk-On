@@ -206,7 +206,7 @@ export default function MarketsClient() {
                 borderRadius:  6,
                 cursor:        "pointer",
                 border:        `1px solid ${pair === p.key ? "rgba(245,245,242,0.3)" : "#1E1E20"}`,
-                background:    pair === p.key ? "rgba(245,245,242,0.08)" : "rgba(5,5,6,0.50)",
+                background:    pair === p.key ? "rgba(245,245,242,0.08)" : "rgba(10,10,12,0.55)",
                 color:         pair === p.key ? "#F5F5F2" : "#8A8A8E",
                 transition:    "all 0.2s",
               }}
@@ -218,11 +218,13 @@ export default function MarketsClient() {
       </div>
 
       {/* Chart card */}
-      <div className="reveal tron-glow rounded-2xl border border-edge p-5" style={{
+      <div className="reveal tron-glow rounded-2xl p-5" style={{
         animationDelay: "0.1s",
-        background: "rgba(5,5,6,0.50)",
-        backdropFilter: "blur(14px)",
-        WebkitBackdropFilter: "blur(14px)",
+        background: "linear-gradient(to bottom, rgba(255,255,255,0.025) 0%, transparent 35%), rgba(10,10,12,0.55)",
+        backdropFilter: "blur(22px) saturate(1.05) brightness(0.6)",
+        WebkitBackdropFilter: "blur(22px) saturate(1.05) brightness(0.6)",
+        border: "1px solid rgba(255,255,255,0.06)",
+        borderRadius: 16,
       }}>
         <div className="mb-4 flex items-center justify-between">
           <div>

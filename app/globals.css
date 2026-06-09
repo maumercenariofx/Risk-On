@@ -48,15 +48,21 @@ body::before {
   -webkit-backdrop-filter: blur(8px);
 }
 
-/* Tarjetas de información — efecto glass + reacción hover al cursor */
+/* Tarjetas de información — frosted-glass sobre el canvas de partículas */
 .card-glass {
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(20px) saturate(1.05) brightness(0.6);
+  -webkit-backdrop-filter: blur(20px) saturate(1.05) brightness(0.6);
   transition: box-shadow 0.35s ease, border-color 0.35s ease;
 }
+/* Fallback: backdrop-filter no soportado (algunos Android WebView) */
+@supports not (backdrop-filter: blur(1px)) {
+  .card-glass {
+    background: rgba(10, 10, 12, 0.92) !important;
+  }
+}
 .card-glass:hover {
-  box-shadow: 0 0 0 1px rgba(140,180,255,0.08),
-              0 0 28px rgba(140,180,255,0.06),
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.06),
+              0 0 28px rgba(255,255,255,0.04),
               0 8px 40px rgba(0,0,0,0.5);
 }
 

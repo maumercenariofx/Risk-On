@@ -114,7 +114,7 @@ export default function RiskGauge() {
         onMouseEnter={() => !animatingRef.current && setHover(true)}
         onMouseLeave={() => setHover(false)}
         style={{
-          background: "rgba(5,5,6,0.50)",
+          background: "rgba(10,10,12,0.55)",
           backdropFilter: "blur(14px)",
           WebkitBackdropFilter: "blur(14px)",
           border: `1px solid ${hover ? "#3A3A3E" : "#1E1E20"}`,
@@ -235,7 +235,7 @@ export default function RiskGauge() {
                   key={k}
                   onClick={() => setSel(k)}
                   style={{
-                    background: "rgba(5,5,6,0.50)", backdropFilter: "blur(14px)", WebkitBackdropFilter: "blur(14px)", textAlign: "left", cursor: "pointer",
+                    background: "rgba(10,10,12,0.55)", backdropFilter: "blur(20px) saturate(1.05) brightness(0.6)", WebkitBackdropFilter: "blur(20px) saturate(1.05) brightness(0.6)", textAlign: "left", cursor: "pointer",
                     padding: "12px 13px", borderRadius: 10,
                     border: `1px solid ${sel === k ? "#3A3A3E" : "#1E1E20"}`,
                     color: "#F5F5F2", transition: "border-color .2s",
@@ -280,8 +280,8 @@ export default function RiskGauge() {
 
           {/* Detail text */}
           <div style={{
-            marginTop: 10, background: "rgba(5,5,6,0.50)",
-            backdropFilter: "blur(14px)", WebkitBackdropFilter: "blur(14px)",
+            marginTop: 10, background: "rgba(10,10,12,0.55)",
+            backdropFilter: "blur(20px) saturate(1.05) brightness(0.6)", WebkitBackdropFilter: "blur(20px) saturate(1.05) brightness(0.6)",
             border: "1px solid #1E1E20", borderRadius: 10, padding: "12px 14px", fontSize: 13,
             lineHeight: 1.7, color: "#8A8A8E",
           }}>
@@ -305,8 +305,8 @@ export default function RiskGauge() {
 
           {methOpen && (
             <div style={{
-              marginTop: 10, background: "rgba(5,5,6,0.50)",
-              backdropFilter: "blur(14px)", WebkitBackdropFilter: "blur(14px)",
+              marginTop: 10, background: "rgba(10,10,12,0.55)",
+              backdropFilter: "blur(20px) saturate(1.05) brightness(0.6)", WebkitBackdropFilter: "blur(20px) saturate(1.05) brightness(0.6)",
               border: "1px solid #1E1E20", borderRadius: 10, padding: "18px 18px",
             }}>
               {/* Goal */}
