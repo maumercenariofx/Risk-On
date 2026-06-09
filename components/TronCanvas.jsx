@@ -421,26 +421,39 @@ export default function TronCanvas() {
   }, []);
 
   return (
-    <div
-      ref={mountRef}
-      style={{ position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none", background: "#000" }}
-    >
-      {/* Clickable form-cycle label — pointer-events re-enabled on this element only */}
+    <>
+      <div
+        ref={mountRef}
+        style={{ position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none", background: "#000" }}
+      />
+      {/* Form-cycle label rendered outside canvas div so it sits above all page content */}
       <button
         onClick={() => cycleFnRef.current?.()}
         style={{
-          position: "absolute", top: 16, right: 20,
+          position: "fixed", bottom: 24, right: 24, zIndex: 50,
           fontFamily: "var(--font-mono, monospace)",
           fontSize: 10, letterSpacing: 3, textTransform: "uppercase",
-          color: "rgba(255,255,255,0.22)", background: "none",
-          border: "none", cursor: "pointer", pointerEvents: "all",
-          padding: "4px 2px", transition: "color .25s",
+          color: "rgba(255,255,255,0.55)",
+          background: "rgba(0,0,0,0.45)",
+          border: "1px solid rgba(255,255,255,0.15)",
+          borderRadius: 6,
+          cursor: "pointer",
+          padding: "6px 10px",
+          transition: "color .25s, border-color .25s, background .25s",
         }}
-        onMouseEnter={e => e.currentTarget.style.color = "rgba(255,255,255,0.65)"}
-        onMouseLeave={e => e.currentTarget.style.color = "rgba(255,255,255,0.22)"}
+        onMouseEnter={e => {
+          e.currentTarget.style.color = "rgba(255,255,255,0.9)";
+          e.currentTarget.style.borderColor = "rgba(255,255,255,0.4)";
+          e.currentTarget.style.background = "rgba(0,0,0,0.7)";
+        }}
+        onMouseLeave={e => {
+          e.currentTarget.style.color = "rgba(255,255,255,0.55)";
+          e.currentTarget.style.borderColor = "rgba(255,255,255,0.15)";
+          e.currentTarget.style.background = "rgba(0,0,0,0.45)";
+        }}
       >
         [ ◇ {formName} ]
       </button>
-    </div>
+    </>
   );
 }
