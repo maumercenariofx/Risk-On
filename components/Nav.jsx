@@ -19,7 +19,7 @@ export default function Nav() {
   ];
 
   return (
-    <header className="sticky top-0 z-50 border-b border-edge bg-ink/90 backdrop-blur">
+    <header className="sticky top-0 z-50 border-b border-edge bg-black">
       <nav className="mx-auto flex max-w-5xl items-center justify-between px-5 py-3">
         <Link href="/" className="font-serif text-2xl font-medium tracking-tight text-bone" onClick={() => setOpen(false)}>
           Risk On
