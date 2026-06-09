@@ -78,6 +78,9 @@ export default function MarketsClient({ embed = false }) {
       const Chart = mod.default;
       if (chartRef.current) chartRef.current.destroy();
 
+      // Transparent canvas background so Voronoi shows through in embed mode
+      canvasRef.current.style.background = "transparent";
+
       chartRef.current = new Chart(canvasRef.current, {
         type: "line",
         plugins: [crosshairPlugin],
@@ -101,6 +104,7 @@ export default function MarketsClient({ embed = false }) {
           responsive:          true,
           maintainAspectRatio: false,
           interaction:         { intersect: false, mode: "index" },
+          animation:           { duration: 400 },
           plugins: {
             legend:  { display: false },
             tooltip: {
@@ -207,8 +211,8 @@ export default function MarketsClient({ embed = false }) {
                 padding:       "5px 10px",
                 borderRadius:  6,
                 cursor:        "pointer",
-                border:        `1px solid ${pair === p.key ? "rgba(245,245,242,0.3)" : "#1E1E20"}`,
-                background:    pair === p.key ? "rgba(245,245,242,0.08)" : "rgba(5,5,6,0.50)",
+                border:        `1px solid ${pair === p.key ? "rgba(245,245,242,0.3)" : "rgba(255,255,255,0.10)"}`,
+                background:    pair === p.key ? "rgba(245,245,242,0.10)" : "transparent",
                 color:         pair === p.key ? "#F5F5F2" : "#8A8A8E",
                 transition:    "all 0.2s",
               }}
@@ -219,13 +223,12 @@ export default function MarketsClient({ embed = false }) {
         </div>
       </div>
 
-      {/* Chart card — no border when embedded, blends with Voronoi bg */}
+      {/* Chart card */}
       <div className="reveal rounded-2xl p-5" style={{
         animationDelay: "0.1s",
-        background: embed ? "rgba(5,5,6,0.55)" : "rgba(5,5,6,0.50)",
-        border: embed ? "none" : undefined,
-        backdropFilter: "blur(14px)",
-        WebkitBackdropFilter: "blur(14px)",
+        background: embed ? "transparent" : "rgba(5,5,6,0.50)",
+        backdropFilter: embed ? "none" : "blur(14px)",
+        WebkitBackdropFilter: embed ? "none" : "blur(14px)",
       }}>
         <div className="mb-4 flex items-center justify-between">
           <div>
