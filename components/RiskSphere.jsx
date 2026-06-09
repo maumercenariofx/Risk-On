@@ -23,19 +23,7 @@ function loadThree() {
 
 const N = 12000;
 const R = 1.8;
-const PULSE_SPEED = (2 * Math.PI) / 3; // exactly 3-second cycle
-
-function scoreToRGB(score) {
-  const stops = [
-    [0.639, 0.176, 0.176],
-    [0.729, 0.459, 0.090],
-    [0.059, 0.541, 0.373],
-  ];
-  const t  = Math.max(0, Math.min(100, score)) / 100;
-  const lo = t < 0.5 ? 0 : 1;
-  const f  = t < 0.5 ? t * 2 : (t - 0.5) * 2;
-  return stops[lo].map((c, i) => c + (stops[lo + 1][i] - c) * f);
-}
+const PULSE_SPEED = (2 * Math.PI) / 3;
 
 function genSphere(n, r) {
   const pos = new Float32Array(n * 3);
@@ -51,12 +39,8 @@ function genSphere(n, r) {
   return pos;
 }
 
-// Receives score prop from RiskGauge's animated counter
-export default function RiskSphere({ score = 50, height = 274 }) {
+export default function RiskSphere({ height = 274 }) {
   const mountRef = useRef(null);
-  const scoreRef = useRef(score);
-
-  useEffect(() => { scoreRef.current = score; }, [score]);
 
   useEffect(() => {
     let destroyed = false;
@@ -124,9 +108,6 @@ export default function RiskSphere({ score = 50, height = 274 }) {
         group.rotation.y += 0.003;
         group.rotation.x  = Math.sin(elapsed * 0.2) * 0.07;
 
-        const sc = scoreRef.current;
-        const [cr, cg, cb] = scoreToRGB(sc);
-
         group.updateMatrixWorld();
         invMat.copy(group.matrixWorld).invert();
         localCam.copy(camera.position).applyMatrix4(invMat);
@@ -140,9 +121,9 @@ export default function RiskSphere({ score = 50, height = 274 }) {
           const facing = (hx/len)*vx + (hy/len)*vy + (hz/len)*vz;
           const shimmer = 0.12 * Math.sin(elapsed * 1.8 + jPhase[i]);
           const b = Math.max(0, 0.22 + (facing * 0.5 + 0.5) * 0.72 + shimmer);
-          colors[i3]   = cr * b;
-          colors[i3+1] = cg * b;
-          colors[i3+2] = cb * b;
+          colors[i3]   = b;
+          colors[i3+1] = b;
+          colors[i3+2] = b;
         }
 
         // 3-second cycle, stays bright (min opacity 0.55, max 0.88)

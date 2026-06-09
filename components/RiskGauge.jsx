@@ -65,7 +65,7 @@ export default function RiskGauge() {
     <section className="reveal" style={{ animationDelay: "0.05s" }}>
 
       {/* ── Hero ── */}
-      <div style={{ position: "relative", height: 520, overflow: "hidden", marginBottom: 28 }}>
+      <div style={{ position: "relative", height: 520, marginBottom: 28 }}>
 
         {/* Sphere — centered */}
         <div style={{
@@ -76,7 +76,7 @@ export default function RiskGauge() {
           width:  "min(500px, 88vw)",
           height: "min(500px, 88vw)",
         }}>
-          <RiskSphere score={display} height="100%" />
+          <RiskSphere height="100%" />
         </div>
 
         {/* Top-left: title */}
