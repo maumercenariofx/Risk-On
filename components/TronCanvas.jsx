@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const THREE_SRC = "https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js";
 
@@ -8,74 +8,198 @@ function loadThree() {
   return new Promise((resolve, reject) => {
     const existing = document.querySelector(`script[src="${THREE_SRC}"]`);
     if (existing) {
+      if (window.THREE) return resolve(window.THREE);
       existing.addEventListener("load", () => resolve(window.THREE));
       existing.addEventListener("error", reject);
       return;
     }
-    const script = document.createElement("script");
-    script.src = THREE_SRC;
-    script.async = true;
-    script.onload = () => resolve(window.THREE);
-    script.onerror = reject;
-    document.head.appendChild(script);
+    const s = document.createElement("script");
+    s.src = THREE_SRC; s.async = true;
+    s.onload = () => resolve(window.THREE);
+    s.onerror = reject;
+    document.head.appendChild(s);
   });
 }
 
-const PARTICLES        = 9000;
-const RADIUS           = 2.4;
-const INFLUENCE_RADIUS = 1.2;
-const MAX_DISPLACEMENT = 0.55;
-const LERP             = 0.07;
+// ─── Constants ───────────────────────────────────────────────────────────────
+const N          = 9000;
+const SR         = 2.4;    // sphere radius
+const IR         = 1.2;    // mouse influence radius
+const REPEL_F    = 0.55;   // max repel displacement
+const ATTRACT_F  = 0.45;   // max attract displacement factor
+const IDLE_MS    = 600;    // ms before repel → attract
+const MORPH_S    = 1.5;    // morph duration in seconds
+const LERP_D     = 0.065;  // displacement lerp factor
+const FORMS      = ["SPHERE", "VORONOI", "ATOM"];
 
-function createDotTexture(THREE) {
+// ─── Utilities ───────────────────────────────────────────────────────────────
+const eio = t => t < 0.5 ? 2*t*t : 1 - 2*(1-t)*(1-t);
+
+function makeDotTexture(THREE) {
   const size = 64;
-  const canvas = document.createElement("canvas");
-  canvas.width = canvas.height = size;
-  const ctx = canvas.getContext("2d");
-  const g = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+  const c = document.createElement("canvas");
+  c.width = c.height = size;
+  const ctx = c.getContext("2d");
+  const g = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
   g.addColorStop(0,   "rgba(255,255,255,1)");
-  g.addColorStop(0.4, "rgba(255,255,255,0.65)");
+  g.addColorStop(0.4, "rgba(255,255,255,0.6)");
   g.addColorStop(1,   "rgba(255,255,255,0)");
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, size, size);
-  return new THREE.CanvasTexture(canvas);
+  return new THREE.CanvasTexture(c);
 }
 
-// Fibonacci sphere (golden-angle spiral) — uniform point density, no pole clustering
-function fibonacciSphere(count, radius) {
-  const pos  = new Float32Array(count * 3);
-  const norm = new Float32Array(count * 3);
-  const goldenAngle = Math.PI * (3 - Math.sqrt(5));
-  for (let i = 0; i < count; i++) {
-    const y = 1 - (i / (count - 1)) * 2;
-    const r = Math.sqrt(Math.max(0, 1 - y * y));
-    const theta = goldenAngle * i;
-    const x = Math.cos(theta) * r;
-    const z = Math.sin(theta) * r;
-    norm[i * 3]     = x;
-    norm[i * 3 + 1] = y;
-    norm[i * 3 + 2] = z;
-    pos[i * 3]     = x * radius;
-    pos[i * 3 + 1] = y * radius;
-    pos[i * 3 + 2] = z * radius;
+// ─── Form generators ─────────────────────────────────────────────────────────
+
+function genSphere(n, r) {
+  const pos = new Float32Array(n * 3);
+  const ga  = Math.PI * (3 - Math.sqrt(5));
+  for (let i = 0; i < n; i++) {
+    const y   = 1 - (i / (n - 1)) * 2;
+    const rad = Math.sqrt(Math.max(0, 1 - y * y));
+    const th  = ga * i;
+    pos[i*3]   = Math.cos(th) * rad * r;
+    pos[i*3+1] = y * r;
+    pos[i*3+2] = Math.sin(th) * rad * r;
   }
-  return { pos, norm };
+  return pos;
 }
 
+function genVoronoi(n) {
+  const SEEDS = 52, K = 5;
+  // Volumetric seed scatter inside sphere
+  const seeds = [];
+  while (seeds.length < SEEDS) {
+    const x = (Math.random() - 0.5) * SR * 2.2;
+    const y = (Math.random() - 0.5) * SR * 2.2;
+    const z = (Math.random() - 0.5) * SR * 2.2;
+    if (x*x + y*y + z*z < SR * SR * 1.15) seeds.push([x, y, z]);
+  }
+
+  // k-NN edges (deduplicated)
+  const edgeSet = new Set(), edges = [];
+  for (let i = 0; i < SEEDS; i++) {
+    const dists = seeds
+      .map((s, j) => {
+        if (i === j) return { j, d: Infinity };
+        const dx = seeds[i][0]-s[0], dy = seeds[i][1]-s[1], dz = seeds[i][2]-s[2];
+        return { j, d: Math.sqrt(dx*dx + dy*dy + dz*dz) };
+      })
+      .sort((a, b) => a.d - b.d)
+      .slice(0, K);
+    for (const { j } of dists) {
+      const key = Math.min(i,j) + "_" + Math.max(i,j);
+      if (!edgeSet.has(key)) { edgeSet.add(key); edges.push([i, j]); }
+    }
+  }
+
+  // Distribute particles along edges weighted by length
+  const lens    = edges.map(([a, b]) => {
+    const dx = seeds[a][0]-seeds[b][0], dy = seeds[a][1]-seeds[b][1], dz = seeds[a][2]-seeds[b][2];
+    return Math.sqrt(dx*dx + dy*dy + dz*dz);
+  });
+  const totalLen = lens.reduce((a, b) => a + b, 0);
+
+  const pos = new Float32Array(n * 3);
+  let pi = 0;
+  for (let e = 0; e < edges.length; e++) {
+    const cnt = Math.round((lens[e] / totalLen) * n);
+    const [a, b] = edges[e];
+    for (let k = 0; k < cnt && pi < n; k++) {
+      const t = cnt > 1 ? k / (cnt - 1) : 0.5;
+      pos[pi*3]   = seeds[a][0] + (seeds[b][0] - seeds[a][0]) * t;
+      pos[pi*3+1] = seeds[a][1] + (seeds[b][1] - seeds[a][1]) * t;
+      pos[pi*3+2] = seeds[a][2] + (seeds[b][2] - seeds[a][2]) * t;
+      pi++;
+    }
+  }
+  while (pi < n) {
+    const e = Math.floor(Math.random() * edges.length);
+    const [a, b] = edges[e]; const t = Math.random();
+    pos[pi*3]   = seeds[a][0] + (seeds[b][0] - seeds[a][0]) * t;
+    pos[pi*3+1] = seeds[a][1] + (seeds[b][1] - seeds[a][1]) * t;
+    pos[pi*3+2] = seeds[a][2] + (seeds[b][2] - seeds[a][2]) * t;
+    pi++;
+  }
+  return pos;
+}
+
+// Ring position math: lx,ly in ring plane → tilt by rx (X-axis) then rz (Z-axis)
+function ringPos(a, b, rx, rz, phi, buf, i) {
+  const lx = a * Math.cos(phi);
+  const ly = b * Math.sin(phi);
+  const cy = ly * Math.cos(rx), cz = ly * Math.sin(rx);
+  buf[i*3]   = lx * Math.cos(rz) - cy * Math.sin(rz);
+  buf[i*3+1] = lx * Math.sin(rz) + cy * Math.cos(rz);
+  buf[i*3+2] = cz;
+}
+
+const ATOM_RINGS = [
+  { a: 2.2, b: 2.2, rx: 0,              rz: 0           },
+  { a: 2.0, b: 2.0, rx: Math.PI / 3,   rz: 0           },
+  { a: 2.1, b: 2.1, rx: -Math.PI / 4,  rz: Math.PI / 4 },
+  { a: 1.8, b: 1.8, rx: Math.PI / 2,   rz: Math.PI / 6 },
+];
+
+function genAtom(n) {
+  const nucleusN = Math.round(n * 0.06);
+  const ringN    = n - nucleusN;
+  const perRing  = Math.round(ringN / ATOM_RINGS.length);
+  const phases   = new Float32Array(n);
+  const rIdx     = new Uint8Array(n).fill(255); // 255 = nucleus
+  const pos      = new Float32Array(n * 3);
+
+  let pi = 0;
+  for (let r = 0; r < ATOM_RINGS.length; r++) {
+    const { a, b, rx, rz } = ATOM_RINGS[r];
+    const cnt = r < ATOM_RINGS.length - 1 ? perRing : (ringN - perRing * (ATOM_RINGS.length - 1));
+    for (let k = 0; k < cnt && pi < n - nucleusN; k++) {
+      const phi = (k / Math.max(1, cnt)) * Math.PI * 2;
+      phases[pi] = phi;
+      rIdx[pi]   = r;
+      ringPos(a, b, rx, rz, phi, pos, pi);
+      pi++;
+    }
+  }
+  // Nucleus: dense random cluster at center
+  for (; pi < n; pi++) {
+    const r2 = 0.25 * Math.cbrt(Math.random());
+    const u  = Math.random(), v = Math.random();
+    const th = 2 * Math.PI * u, ph = Math.acos(2 * v - 1);
+    pos[pi*3]   = r2 * Math.sin(ph) * Math.cos(th);
+    pos[pi*3+1] = r2 * Math.cos(ph);
+    pos[pi*3+2] = r2 * Math.sin(ph) * Math.sin(th);
+  }
+  return { pos, phases, rIdx };
+}
+
+function tickAtom(home, phases, rIdx, elapsed, n) {
+  const speed = 0.35;
+  for (let i = 0; i < n; i++) {
+    if (rIdx[i] === 255) continue;
+    const { a, b, rx, rz } = ATOM_RINGS[rIdx[i]];
+    ringPos(a, b, rx, rz, phases[i] + elapsed * speed, home, i);
+  }
+}
+
+// ─── Component ───────────────────────────────────────────────────────────────
 export default function TronCanvas() {
-  const mountRef = useRef(null);
+  const mountRef   = useRef(null);
+  const cycleFnRef = useRef(null);
+  const [formName, setFormName] = useState(FORMS[0]);
 
   useEffect(() => {
     let destroyed = false;
-    let cleanup = () => {};
+    let cleanup   = () => {};
 
-    loadThree().then((THREE) => {
+    loadThree().then(THREE => {
       if (destroyed) return;
       const container = mountRef.current;
       if (!container) return;
 
-      const scene  = new THREE.Scene();
-      const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 100);
+      // Renderer + camera
+      const scene    = new THREE.Scene();
+      const camera   = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 100);
       camera.position.z = 6;
 
       const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
@@ -84,196 +208,239 @@ export default function TronCanvas() {
       renderer.setSize(container.clientWidth, container.clientHeight);
       container.appendChild(renderer.domElement);
 
-      // Particle data: HOME (Fibonacci position), NORM (radial direction == home/radius)
-      const { pos: home, norm } = fibonacciSphere(PARTICLES, RADIUS);
-      const positions   = home.slice();
-      const colors      = new Float32Array(PARTICLES * 3).fill(1);
-      const dispState   = new Float32Array(PARTICLES);
-      const jitterPhase = new Float32Array(PARTICLES);
-      for (let i = 0; i < PARTICLES; i++) jitterPhase[i] = Math.random() * Math.PI * 2;
+      // Pre-generate all form home positions
+      const sphereHome  = genSphere(N, SR);
+      const voronoiHome = genVoronoi(N);
+      const atomData    = genAtom(N);
+      const atomHome    = atomData.pos.slice(); // mutated each frame by tickAtom
 
+      const FORM_HOMES = { SPHERE: sphereHome, VORONOI: voronoiHome, ATOM: atomHome };
+
+      // Particle buffers
+      const positions    = sphereHome.slice();
+      const colors       = new Float32Array(N * 3).fill(1);
+      const disp         = new Float32Array(N * 3);
+      const jPhase       = new Float32Array(N);
+      for (let i = 0; i < N; i++) jPhase[i] = Math.random() * Math.PI * 2;
+
+      // Morph state
+      const prevHome    = sphereHome.slice();
+      const effHome     = sphereHome.slice();
+      let currHome      = sphereHome;
+      let morphT        = 1.0;
+      let formIdx       = 0;
+      let currentForm   = "SPHERE";
+
+      // Geometry + material
       const geometry = new THREE.BufferGeometry();
       geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
-      geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+      geometry.setAttribute("color",    new THREE.BufferAttribute(colors, 3));
 
       const material = new THREE.PointsMaterial({
-        size: 0.05,
-        map: createDotTexture(THREE),
-        transparent: true,
-        opacity: 0.55,
-        vertexColors: true,
-        sizeAttenuation: true,
-        depthWrite: false,
-        blending: THREE.AdditiveBlending,
+        size: 0.05, map: makeDotTexture(THREE),
+        transparent: true, opacity: 0.6,
+        vertexColors: true, sizeAttenuation: true,
+        depthWrite: false, blending: THREE.AdditiveBlending,
       });
 
-      const group  = new THREE.Group();
-      const points = new THREE.Points(geometry, material);
-      group.add(points);
-      scene.add(group);
-      // Nudged off-center so it reads as ambient texture rather than
-      // competing with the centered text columns for attention.
+      const group = new THREE.Group();
+      group.add(new THREE.Points(geometry, material));
       group.position.x = 1.35;
+      scene.add(group);
 
-      // Mouse tracked in NDC relative to the container (canvas itself has pointer-events: none)
-      const mouse = { x: -10, y: -10, active: false };
-      const onMouseMove = (e) => {
+      // Mouse state
+      const mouse = { x: 0, y: 0, active: false, lastMove: 0, mode: "repel", attractStart: 0 };
+      const onMove = e => {
         const rect = container.getBoundingClientRect();
-        mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-        mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
-        mouse.active = true;
+        mouse.x        = ((e.clientX - rect.left) / rect.width)  * 2 - 1;
+        mouse.y        = -((e.clientY - rect.top)  / rect.height) * 2 + 1;
+        mouse.lastMove = Date.now();
+        if (mouse.mode === "attract") { mouse.mode = "repel"; mouse.attractStart = 0; }
+        mouse.active   = true;
       };
-      const onMouseLeave = () => { mouse.active = false; };
-      window.addEventListener("mousemove", onMouseMove);
-      window.addEventListener("mouseleave", onMouseLeave);
+      const onLeave = () => { mouse.active = false; mouse.mode = "repel"; mouse.attractStart = 0; };
+      window.addEventListener("mousemove", onMove);
+      window.addEventListener("mouseleave", onLeave);
 
       const onResize = () => {
-        const w = container.clientWidth, h = container.clientHeight;
-        camera.aspect = w / h;
+        camera.aspect = container.clientWidth / container.clientHeight;
         camera.updateProjectionMatrix();
-        renderer.setSize(w, h);
+        renderer.setSize(container.clientWidth, container.clientHeight);
       };
       window.addEventListener("resize", onResize);
 
-      const raycaster   = new THREE.Raycaster();
-      const ndc         = new THREE.Vector2();
-      const invMatrix   = new THREE.Matrix4();
-      const localOrigin = new THREE.Vector3();
-      const localDir    = new THREE.Vector3();
-      const influence   = new THREE.Vector3();
-      const localCamPos = new THREE.Vector3();
-      const localViewDir = new THREE.Vector3();
+      // Reusable Three objects
+      const raycaster = new THREE.Raycaster();
+      const ndc       = new THREE.Vector2();
+      const invMat    = new THREE.Matrix4();
+      const localO    = new THREE.Vector3();
+      const localD    = new THREE.Vector3();
+      const infPt     = new THREE.Vector3();
+      const localCam  = new THREE.Vector3();
+      const viewDir   = new THREE.Vector3();
 
-      let animId;
-      let elapsed = 0;
+      let elapsed = 0, animId;
+
+      // Form cycling (called by the label button)
+      cycleFnRef.current = () => {
+        const nextIdx  = (formIdx + 1) % FORMS.length;
+        const nextForm = FORMS[nextIdx];
+        formIdx      = nextIdx;
+        currentForm  = nextForm;
+        setFormName(nextForm);
+        prevHome.set(effHome);
+        morphT   = 0;
+        if (nextForm === "ATOM") tickAtom(atomHome, atomData.phases, atomData.rIdx, elapsed, N);
+        currHome = FORM_HOMES[nextForm];
+      };
 
       function animate() {
         animId = requestAnimationFrame(animate);
-        elapsed += 16.7;
+        elapsed += 1 / 60;
 
-        // Continuous slow rotation around Y, with a subtle X tilt that breathes
         group.rotation.y += 0.0008;
-        group.rotation.x = Math.sin(elapsed * 0.00015) * 0.06;
+        group.rotation.x  = Math.sin(elapsed * 0.15) * 0.06;
 
+        // Advance atom orbital positions every frame
+        if (currentForm === "ATOM") tickAtom(atomHome, atomData.phases, atomData.rIdx, elapsed, N);
+
+        // Update morph interpolation
+        if (morphT < 1) morphT = Math.min(1, morphT + 1 / (60 * MORPH_S));
+        const mt = eio(morphT);
+        for (let i = 0; i < N * 3; i++) {
+          effHome[i] = prevHome[i] + (currHome[i] - prevHome[i]) * mt;
+        }
+
+        // Mouse idle → attract mode
+        const now = Date.now();
+        if (mouse.active) {
+          if (now - mouse.lastMove >= IDLE_MS && mouse.mode === "repel") {
+            mouse.mode = "attract";
+            mouse.attractStart = now;
+          }
+        }
+
+        // Analytic ray → sphere intersection in group local space
         group.updateMatrixWorld();
-        invMatrix.copy(group.matrixWorld).invert();
+        invMat.copy(group.matrixWorld).invert();
+        localCam.copy(camera.position).applyMatrix4(invMat);
+        viewDir.copy(localCam).normalize();
 
-        // View direction in the sphere's local space — drives depth shading
-        localCamPos.copy(camera.position).applyMatrix4(invMatrix);
-        localViewDir.copy(localCamPos).normalize();
-
-        // Project the cursor onto the sphere (analytic ray/sphere intersection in local space)
-        let hasInfluence = false;
+        let hasInf = false, ix = 0, iy = 0, iz = 0;
         if (mouse.active) {
           ndc.set(mouse.x, mouse.y);
           raycaster.setFromCamera(ndc, camera);
-          localOrigin.copy(raycaster.ray.origin).applyMatrix4(invMatrix);
-          localDir.copy(raycaster.ray.direction).transformDirection(invMatrix).normalize();
+          localO.copy(raycaster.ray.origin).applyMatrix4(invMat);
+          localD.copy(raycaster.ray.direction).transformDirection(invMat).normalize();
 
-          const b    = 2 * localOrigin.dot(localDir);
-          const c    = localOrigin.lengthSq() - RADIUS * RADIUS;
+          const b    = 2 * localO.dot(localD);
+          const c    = localO.lengthSq() - SR * SR;
           const disc = b * b - 4 * c;
           if (disc >= 0) {
-            const t = (-b - Math.sqrt(disc)) / 2;
+            const sq = Math.sqrt(disc);
+            const t  = (-b - sq) / 2 > 0 ? (-b - sq) / 2 : (-b + sq) / 2;
             if (t > 0) {
-              influence.copy(localDir).multiplyScalar(t).add(localOrigin);
-              hasInfluence = true;
+              infPt.copy(localD).multiplyScalar(t).add(localO);
+              hasInf = true; ix = infPt.x; iy = infPt.y; iz = infPt.z;
             }
           }
         }
 
-        const ix = influence.x, iy = influence.y, iz = influence.z;
-        const vx = localViewDir.x, vy = localViewDir.y, vz = localViewDir.z;
+        const vx = viewDir.x, vy = viewDir.y, vz = viewDir.z;
+        const attractAccum = mouse.mode === "attract" && mouse.attractStart > 0
+          ? Math.min(3, (now - mouse.attractStart) / 400) : 0;
+        const LD = mouse.mode === "attract" ? 0.08 : LERP_D;
 
-        for (let i = 0; i < PARTICLES; i++) {
+        for (let i = 0; i < N; i++) {
           const i3 = i * 3;
-          const hx = home[i3], hy = home[i3 + 1], hz = home[i3 + 2];
-          const nx = norm[i3], ny = norm[i3 + 1], nz = norm[i3 + 2];
+          const hx = effHome[i3], hy = effHome[i3+1], hz = effHome[i3+2];
 
-          // Outward push along the surface normal, falling off smoothly with distance
-          let target = 0;
-          if (hasInfluence) {
+          // Target displacement from mouse
+          let tdx = 0, tdy = 0, tdz = 0;
+          if (hasInf) {
             const dx = hx - ix, dy = hy - iy, dz = hz - iz;
-            const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
-            if (dist < INFLUENCE_RADIUS) {
-              const t = 1 - dist / INFLUENCE_RADIUS;
+            const d2 = dx*dx + dy*dy + dz*dz;
+            if (d2 < IR * IR) {
+              const dist = Math.sqrt(d2);
+              const t = 1 - dist / IR;
               const s = t * t * (3 - 2 * t); // smoothstep
-              target = s * MAX_DISPLACEMENT;
+              if (mouse.mode === "repel") {
+                const len = Math.max(0.01, dist);
+                const j   = Math.sin(elapsed * 4 + jPhase[i]) * 0.1 * s;
+                tdx = (dx / len) * s * REPEL_F + j;
+                tdy = (dy / len) * s * REPEL_F;
+                tdz = (dz / len) * s * REPEL_F;
+              } else {
+                // Pull home position toward cursor (black-hole suction)
+                const af = s * ATTRACT_F * attractAccum * 0.5;
+                tdx = -dx * af;
+                tdy = -dy * af;
+                tdz = -dz * af;
+              }
             }
           }
 
-          // Spring/lerp toward the target — elastic settle back to HOME when influence fades
-          let d = dispState[i];
-          d += (target - d) * LERP;
-          dispState[i] = d;
+          // Ease displacement toward target (springs back to 0 when no influence)
+          disp[i3]   += (tdx - disp[i3])   * LD;
+          disp[i3+1] += (tdy - disp[i3+1]) * LD;
+          disp[i3+2] += (tdz - disp[i3+2]) * LD;
 
-          // Organic per-particle jitter, scaled by current displacement so idle points stay still
-          const jitter = Math.sin(elapsed * 0.004 + jitterPhase[i]) * d * 0.2;
-          const total  = d + jitter;
+          positions[i3]   = hx + disp[i3];
+          positions[i3+1] = hy + disp[i3+1];
+          positions[i3+2] = hz + disp[i3+2];
 
-          positions[i3]     = hx + nx * total;
-          positions[i3 + 1] = hy + ny * total;
-          positions[i3 + 2] = hz + nz * total;
-
-          // Depth shading: dimmer on the far side relative to the camera
-          const facing = nx * vx + ny * vy + nz * vz;
-          const bright = 0.06 + (facing * 0.5 + 0.5) * 0.44;
-          colors[i3] = colors[i3 + 1] = colors[i3 + 2] = bright;
+          // Depth shading via dot product with view direction
+          const len = Math.sqrt(hx*hx + hy*hy + hz*hz) || 1;
+          const facing = (hx/len)*vx + (hy/len)*vy + (hz/len)*vz;
+          const bright = 0.07 + (facing * 0.5 + 0.5) * 0.43;
+          colors[i3] = colors[i3+1] = colors[i3+2] = bright;
         }
 
         geometry.attributes.position.needsUpdate = true;
-        geometry.attributes.color.needsUpdate = true;
-
+        geometry.attributes.color.needsUpdate     = true;
         renderer.render(scene, camera);
       }
+
       animate();
 
       cleanup = () => {
         cancelAnimationFrame(animId);
-        window.removeEventListener("mousemove", onMouseMove);
-        window.removeEventListener("mouseleave", onMouseLeave);
+        window.removeEventListener("mousemove", onMove);
+        window.removeEventListener("mouseleave", onLeave);
         window.removeEventListener("resize", onResize);
         geometry.dispose();
         material.map?.dispose();
         material.dispose();
         renderer.dispose();
-        if (renderer.domElement.parentNode === container) {
-          container.removeChild(renderer.domElement);
-        }
+        if (renderer.domElement.parentNode === container) container.removeChild(renderer.domElement);
+        cycleFnRef.current = null;
       };
-    }).catch((err) => {
-      console.error("Failed to load three.js for TronCanvas:", err);
-    });
+    }).catch(err => console.error("TronCanvas:", err));
 
-    return () => {
-      destroyed = true;
-      cleanup();
-    };
+    return () => { destroyed = true; cleanup(); };
   }, []);
 
   return (
     <div
       ref={mountRef}
-      style={{
-        position: "fixed",
-        top: 0, left: 0,
-        width: "100%", height: "100%",
-        zIndex: 0,
-        pointerEvents: "none",
-        background: "#000000",
-      }}
+      style={{ position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none", background: "#000" }}
     >
-      <div style={{
-        position: "absolute",
-        top: 16, right: 20,
-        fontFamily: "var(--font-mono, monospace)",
-        fontSize: 10,
-        letterSpacing: 3,
-        textTransform: "uppercase",
-        color: "rgba(255,255,255,0.18)",
-      }}>
-        [ ◇ Sphere ]
-      </div>
+      {/* Clickable form-cycle label — pointer-events re-enabled on this element only */}
+      <button
+        onClick={() => cycleFnRef.current?.()}
+        style={{
+          position: "absolute", top: 16, right: 20,
+          fontFamily: "var(--font-mono, monospace)",
+          fontSize: 10, letterSpacing: 3, textTransform: "uppercase",
+          color: "rgba(255,255,255,0.22)", background: "none",
+          border: "none", cursor: "pointer", pointerEvents: "all",
+          padding: "4px 2px", transition: "color .25s",
+        }}
+        onMouseEnter={e => e.currentTarget.style.color = "rgba(255,255,255,0.65)"}
+        onMouseLeave={e => e.currentTarget.style.color = "rgba(255,255,255,0.22)"}
+      >
+        [ ◇ {formName} ]
+      </button>
     </div>
   );
 }

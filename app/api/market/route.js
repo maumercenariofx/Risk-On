@@ -21,9 +21,21 @@ async function yahooChart(symbol) {
     const result = json?.chart?.result?.[0];
     if (!result) return null;
 
-    const meta   = result.meta ?? {};
-    const closes = (result.indicators?.quote?.[0]?.close ?? []).filter((v) => v != null && !isNaN(v));
-    const price  = meta.regularMarketPrice ?? closes[closes.length - 1] ?? null;
+    const meta     = result.meta ?? {};
+    const rawQuote = result.indicators?.quote?.[0] ?? {};
+
+    // Construir arrays alineados (solo candles donde close es válido)
+    const closes = [], highs = [], lows = [];
+    const rawC = rawQuote.close ?? [], rawH = rawQuote.high ?? [], rawL = rawQuote.low ?? [];
+    for (let i = 0; i < rawC.length; i++) {
+      const c = rawC[i];
+      if (c == null || isNaN(c)) continue;
+      closes.push(c);
+      highs.push(rawH[i] ?? c);
+      lows.push(rawL[i] ?? c);
+    }
+
+    const price = meta.regularMarketPrice ?? closes[closes.length - 1] ?? null;
 
     // % de cambio diario = último cierre vs el anterior. OJO: meta.chartPreviousClose
     // no es fiable con range != "1d" (regresa el cierre de hace ~N días, no el de ayer),
@@ -35,10 +47,21 @@ async function yahooChart(symbol) {
       if (prev) chgPct = ((last - prev) / prev) * 100;
     }
 
-    return { price, chgPct, closes };
+    return { price, chgPct, closes, highs, lows };
   } catch {
     return null;
   }
+}
+
+// Soporte y resistencia: rolling high/low de los últimos `period` candles.
+// Da niveles técnicos actualizados sin depender de inputs manuales.
+function rollingLevels(highs, lows, period = 10) {
+  if (!highs?.length || !lows?.length || highs.length < 2) return null;
+  const n = Math.min(period, highs.length);
+  return {
+    support:    Math.round(Math.min(...lows.slice(-n))  * 10000) / 10000,
+    resistance: Math.round(Math.max(...highs.slice(-n)) * 10000) / 10000,
+  };
 }
 
 async function fxRate(base, quote) {
@@ -70,6 +93,8 @@ export async function GET() {
     spx: "^GSPC", ndx: "^IXIC", vix: "^VIX", move: "^MOVE", dxy: "DX-Y.NYB",
     aapl: "AAPL", tsla: "TSLA", nvda: "NVDA", btc: "BTC-USD", eth: "ETH-USD",
     usdmxnChart: "MXN=X",
+    eurusdChart: "EURUSD=X",
+    eurmxnChart: "EURMXN=X",
   };
   const keys = Object.keys(SYMBOLS);
 
@@ -82,36 +107,44 @@ export async function GET() {
   const c = {};
   keys.forEach((key, i) => { c[key] = charts[i] ?? {}; });
 
+  const mxnLevels = rollingLevels(c.usdmxnChart?.highs, c.usdmxnChart?.lows);
+
   const data = {
     asOf: new Date().toISOString(),
     delayed: false,
-    // FX
-    usdmxn:  usdmxn ?? c.usdmxnChart.price ?? 18.42,
-    eurusd:  eurusd ?? 1.084,
+    // FX — precio y cambio diario
+    usdmxn:    usdmxn ?? c.usdmxnChart?.price ?? 18.42,
+    usdmxnChg: c.usdmxnChart?.chgPct ?? null,
+    eurusd:    eurusd ?? c.eurusdChart?.price ?? 1.084,
+    eurusdChg: c.eurusdChart?.chgPct ?? null,
+    eurmxn:    c.eurmxnChart?.price ?? null,
+    eurmxnChg: c.eurmxnChart?.chgPct ?? null,
+    // Soportes y resistencias USD/MXN (rolling 10-day high/low, se actualiza con el mercado)
+    mxnS1: mxnLevels?.support    ?? null,
+    mxnR1: mxnLevels?.resistance ?? null,
     // Indices
-    spx:     c.spx.price  ?? 5412,
-    spxChg:  c.spx.chgPct ?? null,
-    ndx:     c.ndx.price  ?? 17890,
-    ndxChg:  c.ndx.chgPct ?? null,
+    spx:     c.spx?.price  ?? 5412,
+    spxChg:  c.spx?.chgPct ?? null,
+    ndx:     c.ndx?.price  ?? 17890,
+    ndxChg:  c.ndx?.chgPct ?? null,
     // Volatilidad
-    vix:     c.vix.price  ?? 13.4,
-    move:    c.move.price ?? 98,
-    dxy:     c.dxy.price  ?? 104.3,
+    vix:     c.vix?.price  ?? 13.4,
+    move:    c.move?.price ?? 98,
+    dxy:     c.dxy?.price  ?? 104.3,
     // Acciones
-    aapl:    c.aapl.price  ?? null,
-    aaplChg: c.aapl.chgPct ?? null,
-    tsla:    c.tsla.price  ?? null,
-    tslaChg: c.tsla.chgPct ?? null,
-    nvda:    c.nvda.price  ?? null,
-    nvdaChg: c.nvda.chgPct ?? null,
+    aapl:    c.aapl?.price  ?? null,
+    aaplChg: c.aapl?.chgPct ?? null,
+    tsla:    c.tsla?.price  ?? null,
+    tslaChg: c.tsla?.chgPct ?? null,
+    nvda:    c.nvda?.price  ?? null,
+    nvdaChg: c.nvda?.chgPct ?? null,
     // Cripto
-    btc:     c.btc.price  ?? null,
-    btcChg:  c.btc.chgPct ?? null,
-    eth:     c.eth.price  ?? null,
-    ethChg:  c.eth.chgPct ?? null,
-    // Volatilidad realizada USD/MXN (proxy automático de la implícita —
-    // ya no depende de una constante editada a mano)
-    mxnVol: realizedVol(c.usdmxnChart.closes) ?? 9.1,
+    btc:     c.btc?.price  ?? null,
+    btcChg:  c.btc?.chgPct ?? null,
+    eth:     c.eth?.price  ?? null,
+    ethChg:  c.eth?.chgPct ?? null,
+    // Volatilidad realizada USD/MXN (proxy automático de la implícita)
+    mxnVol: realizedVol(c.usdmxnChart?.closes) ?? 9.1,
   };
 
   return Response.json(data, {
