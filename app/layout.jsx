@@ -1,5 +1,6 @@
 // app/layout.jsx
 import "./globals.css";
+import "flag-icons/css/flag-icons.min.css";
 import { LangProvider } from "../components/Lang";
 import Nav from "../components/Nav";
 import Footer from "../components/Footer";

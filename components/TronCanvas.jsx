@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 
 const THREE_SRC = "https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js";
 
@@ -30,7 +30,9 @@ const ATTRACT_F  = 0.45;   // max attract displacement factor
 const IDLE_MS    = 600;    // ms before repel → attract
 const MORPH_S    = 1.5;    // morph duration in seconds
 const LERP_D     = 0.065;  // displacement lerp factor
-const FORMS      = ["DNA", "VORONOI"]; // ATOM preserved in code, not in active cycle
+// FORMS preserved in code: DNA, ATOM, SPHERE — only VORONOI active
+const VORONOI_SEEDS = 80;
+const VORONOI_K     = 7;
 
 // ─── Utilities ───────────────────────────────────────────────────────────────
 const eio = t => t < 0.5 ? 2*t*t : 1 - 2*(1-t)*(1-t);
@@ -158,8 +160,7 @@ function genDNA(n) {
 }
 
 function genVoronoi(n) {
-  const SEEDS = 52, K = 5;
-  // Volumetric seed scatter inside sphere
+  const SEEDS = VORONOI_SEEDS, K = VORONOI_K;
   const seeds = [];
   while (seeds.length < SEEDS) {
     const x = (Math.random() - 0.5) * SR * 2.2;
@@ -277,19 +278,8 @@ function tickAtom(home, phases, rIdx, elapsed, n) {
 // ─── Component ───────────────────────────────────────────────────────────────
 export default function TronCanvas() {
   const mountRef    = useRef(null);
-  const cycleFnRef  = useRef(null);
-  const riskRGB     = useRef([1, 1, 1]); // default white; updated when API responds
-  const [formName, setFormName] = useState(FORMS[0]);
 
-  // Fetch market data once and derive risk color
-  useEffect(() => {
-    fetch("/api/market")
-      .then((r) => r.json())
-      .then((d) => { riskRGB.current = scoreToRGB(quickRiskScore(d)); })
-      .catch(() => {});
-  }, []);
-
-  useEffect(() => {
+  useEffect(() => {  // eslint-disable-line react-hooks/exhaustive-deps
     let destroyed = false;
     let cleanup   = () => {};
 
@@ -305,32 +295,28 @@ export default function TronCanvas() {
 
       const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
       renderer.setClearColor(0x000000, 1);
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.setPixelRatio(window.devicePixelRatio);
       renderer.setSize(container.clientWidth, container.clientHeight);
       container.appendChild(renderer.domElement);
 
-      // Pre-generate all form home positions
-      const dnaHome     = genDNA(N);
+      // Form home positions (DNA/ATOM/genSphere preserved for future use)
       const voronoiHome = genVoronoi(N);
-      const atomData    = genAtom(N);
-      const atomHome    = atomData.pos.slice(); // mutated each frame by tickAtom
-
-      const FORM_HOMES = { DNA: dnaHome, VORONOI: voronoiHome, ATOM: atomHome };
+      const atomData    = genAtom(N); // keep in memory, not active
+      void atomData;
 
       // Particle buffers
-      const positions    = dnaHome.slice();
+      const positions    = voronoiHome.slice();
       const colors       = new Float32Array(N * 3).fill(1);
       const disp         = new Float32Array(N * 3);
       const jPhase       = new Float32Array(N);
       for (let i = 0; i < N; i++) jPhase[i] = Math.random() * Math.PI * 2;
 
-      // Morph state
-      const prevHome    = dnaHome.slice();
-      const effHome     = dnaHome.slice();
-      let currHome      = dnaHome;
-      let morphT        = 1.0;
-      let formIdx       = 0;
-      let currentForm   = "DNA";
+      // Morph state (single form — no cycling)
+      const prevHome    = voronoiHome.slice();
+      const effHome     = voronoiHome.slice();
+      const currHome    = voronoiHome;
+      const morphT_ref  = { v: 1.0 };
+      const currentForm = "VORONOI";
 
       // Geometry + material
       const geometry = new THREE.BufferGeometry();
@@ -346,7 +332,7 @@ export default function TronCanvas() {
 
       const group = new THREE.Group();
       group.add(new THREE.Points(geometry, material));
-      group.position.x = 1.35;
+      group.position.x = 0;
       group.scale.set(0.62, 0.62, 0.62);
       scene.add(group);
 
@@ -383,19 +369,6 @@ export default function TronCanvas() {
 
       let elapsed = 0, animId;
 
-      // Form cycling (called by the label button)
-      cycleFnRef.current = () => {
-        const nextIdx  = (formIdx + 1) % FORMS.length;
-        const nextForm = FORMS[nextIdx];
-        formIdx      = nextIdx;
-        currentForm  = nextForm;
-        setFormName(nextForm);
-        prevHome.set(effHome);
-        morphT   = 0;
-        if (nextForm === "ATOM") tickAtom(atomHome, atomData.phases, atomData.rIdx, elapsed, N);
-        currHome = FORM_HOMES[nextForm];
-      };
-
       function animate() {
         animId = requestAnimationFrame(animate);
         elapsed += 1 / 60;
@@ -403,16 +376,9 @@ export default function TronCanvas() {
         group.rotation.y += 0.0008;
         group.rotation.x  = Math.sin(elapsed * 0.15) * 0.06;
 
-        // Slide group: DNA offset right, Voronoi centered
-        const targetX = currentForm === "VORONOI" ? 0 : 1.35;
-        group.position.x += (targetX - group.position.x) * 0.025;
-
-        // Advance atom orbital positions every frame
-        if (currentForm === "ATOM") tickAtom(atomHome, atomData.phases, atomData.rIdx, elapsed, N);
-
-        // Update morph interpolation
-        if (morphT < 1) morphT = Math.min(1, morphT + 1 / (60 * MORPH_S));
-        const mt = eio(morphT);
+        // Morph (single form, morphT stays at 1.0 — lerp is instant)
+        if (morphT_ref.v < 1) morphT_ref.v = Math.min(1, morphT_ref.v + 1 / (60 * MORPH_S));
+        const mt = eio(morphT_ref.v);
         for (let i = 0; i < N * 3; i++) {
           effHome[i] = prevHome[i] + (currHome[i] - prevHome[i]) * mt;
         }
@@ -500,14 +466,12 @@ export default function TronCanvas() {
           // Depth shading via dot product with view direction
           const len = Math.sqrt(hx*hx + hy*hy + hz*hz) || 1;
           const facing  = (hx/len)*vx + (hy/len)*vy + (hz/len)*vz;
-          // Per-particle shimmer + risk-based color
+          // Per-particle shimmer — pure white
           const shimmer = 0.18 * Math.sin(elapsed * 2.0 + jPhase[i]);
-          const bright  = 0.18 + (facing * 0.5 + 0.5) * 0.78 + shimmer;
-          const b       = Math.max(0, bright);
-          const [cr, cg, cb] = riskRGB.current;
-          colors[i3]   = cr * b;
-          colors[i3+1] = cg * b;
-          colors[i3+2] = cb * b;
+          const b       = Math.max(0, 0.18 + (facing * 0.5 + 0.5) * 0.78 + shimmer);
+          colors[i3]   = b;
+          colors[i3+1] = b;
+          colors[i3+2] = b;
         }
 
         // Global breath: ~8.5s cycle (was 4.5s)
@@ -530,7 +494,6 @@ export default function TronCanvas() {
         material.dispose();
         renderer.dispose();
         if (renderer.domElement.parentNode === container) container.removeChild(renderer.domElement);
-        cycleFnRef.current = null;
       };
     }).catch(err => console.error("TronCanvas:", err));
 
@@ -538,36 +501,9 @@ export default function TronCanvas() {
   }, []);
 
   return (
-    <>
-      <div
-        ref={mountRef}
-        style={{ position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none", background: "#000" }}
-      />
-      <button
-        onClick={() => cycleFnRef.current?.()}
-        style={{
-          position: "fixed", bottom: 24, right: 24, zIndex: 50,
-          fontFamily: "var(--font-mono, monospace)",
-          fontSize: 10, letterSpacing: 3, textTransform: "uppercase",
-          color: "rgba(255,255,255,0.55)",
-          background: "rgba(0,0,0,0.45)",
-          border: "1px solid rgba(255,255,255,0.15)",
-          borderRadius: 6, cursor: "pointer", padding: "6px 10px",
-          transition: "color .25s, border-color .25s, background .25s",
-        }}
-        onMouseEnter={e => {
-          e.currentTarget.style.color = "rgba(255,255,255,0.9)";
-          e.currentTarget.style.borderColor = "rgba(255,255,255,0.45)";
-          e.currentTarget.style.background = "rgba(0,0,0,0.75)";
-        }}
-        onMouseLeave={e => {
-          e.currentTarget.style.color = "rgba(255,255,255,0.55)";
-          e.currentTarget.style.borderColor = "rgba(255,255,255,0.15)";
-          e.currentTarget.style.background = "rgba(0,0,0,0.45)";
-        }}
-      >
-        [ ◇ {formName} ]
-      </button>
-    </>
+    <div
+      ref={mountRef}
+      style={{ position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none", background: "#000" }}
+    />
   );
 }

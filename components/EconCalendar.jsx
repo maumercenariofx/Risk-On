@@ -3,11 +3,11 @@ import { useEffect, useState } from "react";
 import { useLang, T } from "./Lang";
 
 const FLAG_BADGE = {
-  "🇺🇸": { code: "US", color: "#4A7BC4" },
-  "🇲🇽": { code: "MX", color: "#4AB464" },
-  "🇪🇺": { code: "EU", color: "#6464C8" },
-  "🇬🇧": { code: "UK", color: "#C46464" },
-  "🇯🇵": { code: "JP", color: "#C46480" },
+  "🇺🇸": { fi: "us" },
+  "🇲🇽": { fi: "mx" },
+  "🇪🇺": { fi: "eu" },
+  "🇬🇧": { fi: "gb" },
+  "🇯🇵": { fi: "jp" },
 };
 
 const IMPACT = {
@@ -86,15 +86,10 @@ export default function EconCalendar() {
               </div>
               <div style={{ flex: 1, fontSize: 12, color: isToday ? "#E8E6E0" : "#8A8A8E", lineHeight: 1.4, display: "flex", alignItems: "center", gap: 7 }}>
                 {ev.flag && FLAG_BADGE[ev.flag] && (
-                  <span style={{
-                    fontFamily: "var(--font-mono)", fontSize: 8, letterSpacing: 0.8,
-                    padding: "1px 5px", borderRadius: 3, flexShrink: 0,
-                    color: FLAG_BADGE[ev.flag].color,
-                    border: `1px solid ${FLAG_BADGE[ev.flag].color}55`,
-                    background: `${FLAG_BADGE[ev.flag].color}11`,
-                  }}>
-                    {FLAG_BADGE[ev.flag].code}
-                  </span>
+                  <span
+                    className={`fi fi-${FLAG_BADGE[ev.flag].fi}`}
+                    style={{ fontSize: 14, flexShrink: 0, borderRadius: 2, lineHeight: 1 }}
+                  />
                 )}
                 {lang === "en" ? ev.event_en : ev.event_es}
               </div>
