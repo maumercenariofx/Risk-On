@@ -79,7 +79,7 @@ function tickAtom(home, phases, rIdx, elapsed, n) {
   for (let i = 0; i < n; i++) {
     if (rIdx[i] === 255) continue;
     const { a, b, rx, rz } = ATOM_RINGS[rIdx[i]];
-    ringPos(a, b, rx, rz, phases[i] + elapsed * 0.35, home, i);
+    ringPos(a, b, rx, rz, phases[i] + elapsed * 0.525, home, i);
   }
 }
 
@@ -173,7 +173,7 @@ export default function VoronoiBackground() {
         const dt = Math.min((ts - lastFrame) / 1000, 0.05);
         lastFrame = ts; elapsed += dt;
 
-        group.rotation.y += 0.0008;
+        group.rotation.y += 0.0012;
         group.rotation.x  = Math.sin(elapsed * 0.15) * 0.06;
 
         tickAtom(home, aPhases, aRIdx, elapsed, N);
