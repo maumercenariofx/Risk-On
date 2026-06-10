@@ -1,6 +1,7 @@
 "use client";
 // app/learn/page.jsx
 import { useLang, T } from "../../components/Lang";
+import QuantLab from "../../components/QuantLab";
 
 const TERMS = [
   { term: "Risk-on / Risk-off",
@@ -42,6 +43,13 @@ export default function LearnPage() {
              en="Market terms, in English and explained for everyone." />
         </p>
       </div>
+      <div className="reveal" style={{ animationDelay: "0.05s" }}>
+        <div style={{ fontSize: 10, letterSpacing: 3, textTransform: "uppercase", color: "#4A4A50", marginBottom: 12 }}>
+          &mdash; <T es="Laboratorio cuant" en="Quant lab" />
+        </div>
+        <QuantLab />
+      </div>
+
       <div className="grid gap-3 sm:grid-cols-2">
         {TERMS.map((t, i) => (
           <div key={t.term} className="reveal rounded-xl border border-edge bg-ink2/40 p-4"

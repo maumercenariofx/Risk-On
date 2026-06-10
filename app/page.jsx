@@ -7,6 +7,7 @@ import ProjectCards from "../components/ProjectCards";
 import CountdownTimers from "../components/CountdownTimers";
 import RatesSection from "../components/RatesSection";
 import EconCalendar from "../components/EconCalendar";
+import AdvancedData from "../components/AdvancedData";
 import { getAllPostsMeta } from "../lib/posts";
 
 export default function Home() {
@@ -28,6 +29,7 @@ export default function Home() {
       <CountdownTimers />
       <RatesSection />
       <EconCalendar />
+      <AdvancedData />
     </div>
   );
 }
