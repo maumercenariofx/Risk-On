@@ -64,7 +64,7 @@ export default function CorrelationScatter() {
           r = <span style={{ fontFamily: "var(--font-mono)", color: "#F5F5F2" }}>{data.corr}</span>
         </div>
       )}
-      <div style={{ height: 180 }}>
+      <div style={{ position: "relative", height: 180 }}>
         <canvas ref={canvasRef} />
       </div>
     </div>

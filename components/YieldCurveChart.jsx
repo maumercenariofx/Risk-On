@@ -82,7 +82,7 @@ export default function YieldCurveChart() {
           {data.inverted && <> — <T es="curva invertida" en="curve inverted" /></>}
         </div>
       )}
-      <div style={{ height: 180 }}>
+      <div style={{ position: "relative", height: 180 }}>
         <canvas ref={canvasRef} />
       </div>
     </div>

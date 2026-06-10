@@ -82,6 +82,20 @@ function genSaddle(n, cols, rows) {
   return pos;
 }
 
+// Edge list for the COLSxROWS grid — used to draw a wireframe mesh over the
+// vol surface / saddle so they read as surfaces, not just a cloud of points.
+function genGridEdges(cols, rows) {
+  const edges = [];
+  for (let row = 0; row < rows; row++) {
+    for (let col = 0; col < cols; col++) {
+      const i = row * cols + col;
+      if (col < cols - 1) edges.push(i, i + 1);
+      if (row < rows - 1) edges.push(i, i + cols);
+    }
+  }
+  return new Uint32Array(edges);
+}
+
 // Geodesic across the saddle — the path a quant rebalancer would follow.
 function genGeodesic(numPts) {
   const pos = new Float32Array(numPts * 3);
@@ -192,11 +206,22 @@ export default function QuantLab() {
       group.scale.set(1.15, 1.15, 1.15);
       scene.add(group);
 
+      // Wireframe mesh over the grid — only meaningful (and shown) for the
+      // vol surface / saddle, where adjacent indices are spatial neighbors.
+      // Shares the same position attribute, so it morphs along with the points.
+      const posAttr  = geometry.attributes.position;
+      const wireGeom = new THREE.BufferGeometry();
+      wireGeom.setAttribute("position", posAttr);
+      wireGeom.setIndex(new THREE.BufferAttribute(genGridEdges(COLS, ROWS), 1));
+      const wireMat  = new THREE.LineBasicMaterial({ color: 0xF5F5F2, transparent: true, opacity: 0 });
+      const wireMesh = new THREE.LineSegments(wireGeom, wireMat);
+      group.add(wireMesh);
+
       // Geodesic line — only relevant (and visible) for the SADDLE form
       const geoPos  = genGeodesic(160);
       const geoGeom = new THREE.BufferGeometry();
       geoGeom.setAttribute("position", new THREE.BufferAttribute(geoPos, 3));
-      const geoMat  = new THREE.LineBasicMaterial({ color: 0xF5F5F2, transparent: true, opacity: 0 });
+      const geoMat  = new THREE.LineBasicMaterial({ color: 0xBA7517, transparent: true, opacity: 0 });
       const geoLine = new THREE.Line(geoGeom, geoMat);
       group.add(geoLine);
 
@@ -240,13 +265,17 @@ export default function QuantLab() {
           colors[i3] = colors[i3+1] = colors[i3+2] = b;
         }
 
-        // Geodesic line: only fade in once the saddle has fully morphed in
-        const geoTarget = (currentIdx === 2 && morphT >= 1) ? 0.85 : 0;
-        geoMat.opacity += (geoTarget - geoMat.opacity) * 0.08;
+        // Wireframe: shown for the vol surface / saddle grids, hidden for the sphere
+        const wireTarget = currentIdx !== 0 ? 0.4 : 0;
+        wireMat.opacity += (wireTarget - wireMat.opacity) * 0.07;
 
-        material.opacity = 0.6 + Math.sin(elapsed * (2 * Math.PI / 4)) * 0.1;
-        geometry.attributes.position.needsUpdate = true;
-        geometry.attributes.color.needsUpdate    = true;
+        // Geodesic line: only fades in once the saddle has mostly morphed in
+        const geoTarget = (currentIdx === 2 && morphT > 0.5) ? 0.95 : 0;
+        geoMat.opacity += (geoTarget - geoMat.opacity) * 0.07;
+
+        material.opacity = 0.55 + Math.sin(elapsed * (2 * Math.PI / 4)) * 0.1;
+        posAttr.needsUpdate = true;
+        geometry.attributes.color.needsUpdate = true;
         renderer.render(scene, camera);
       }
       animate();
@@ -261,8 +290,8 @@ export default function QuantLab() {
       cleanup = () => {
         cancelAnimationFrame(animId);
         window.removeEventListener("resize", onResize);
-        geometry.dispose(); geoGeom.dispose();
-        material.map?.dispose(); material.dispose(); geoMat.dispose();
+        geometry.dispose(); wireGeom.dispose(); geoGeom.dispose();
+        material.map?.dispose(); material.dispose(); wireMat.dispose(); geoMat.dispose();
         renderer.dispose();
         if (renderer.domElement.parentNode === container) container.removeChild(renderer.domElement);
         selectFnRef.current = null;
