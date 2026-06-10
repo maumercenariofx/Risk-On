@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { T } from "./Lang";
 import {
-  eio, genSphere, genVolCone, genSaddle, genGridEdges, genGeodesic,
+  eio, genSphere, genLorenz, genThomas, genChainEdges,
   makeDotTexture, FORMS,
 } from "../lib/quantForms";
 
@@ -26,8 +26,7 @@ function loadThree() {
   });
 }
 
-const COLS = 90, ROWS = 90;
-const N    = COLS * ROWS; // 8100 — same particle count for every form, enables morphing
+const N = 8100; // same particle count for every form, enables morphing
 const MORPH_S = 1.2;
 
 export default function QuantLab() {
@@ -57,8 +56,8 @@ export default function QuantLab() {
 
       const HOMES = [
         genSphere(N, 1.8),
-        genVolCone(N, COLS, ROWS),
-        genSaddle(N, COLS, ROWS),
+        genLorenz(N),
+        genThomas(N),
       ];
 
       const positions = HOMES[0].slice();
@@ -88,24 +87,15 @@ export default function QuantLab() {
       group.scale.set(1.15, 1.15, 1.15);
       scene.add(group);
 
-      // Wireframe mesh over the grid — only meaningful (and shown) for the
-      // vol cone / saddle, where adjacent indices are spatial neighbors.
-      // Shares the same position attribute, so it morphs along with the points.
+      // Wireframe — draws the attractor's trajectory as a continuous curve
+      // through phase space. Only shown (and meaningful) for the attractors.
       const posAttr  = geometry.attributes.position;
       const wireGeom = new THREE.BufferGeometry();
       wireGeom.setAttribute("position", posAttr);
-      wireGeom.setIndex(new THREE.BufferAttribute(genGridEdges(COLS, ROWS), 1));
+      wireGeom.setIndex(new THREE.BufferAttribute(genChainEdges(N), 1));
       const wireMat  = new THREE.LineBasicMaterial({ color: 0xF5F5F2, transparent: true, opacity: 0 });
       const wireMesh = new THREE.LineSegments(wireGeom, wireMat);
       group.add(wireMesh);
-
-      // Geodesic line — only relevant (and visible) for the SADDLE form
-      const geoPos  = genGeodesic(160);
-      const geoGeom = new THREE.BufferGeometry();
-      geoGeom.setAttribute("position", new THREE.BufferAttribute(geoPos, 3));
-      const geoMat  = new THREE.LineBasicMaterial({ color: 0xBA7517, transparent: true, opacity: 0 });
-      const geoLine = new THREE.Line(geoGeom, geoMat);
-      group.add(geoLine);
 
       let elapsed = 0, animId, lastFrame = 0;
 
@@ -147,13 +137,9 @@ export default function QuantLab() {
           colors[i3] = colors[i3+1] = colors[i3+2] = b;
         }
 
-        // Wireframe: shown for the vol cone / saddle grids, hidden for the sphere
+        // Wireframe: traces the attractor's path, hidden for the sphere
         const wireTarget = currentIdx !== 0 ? 0.4 : 0;
         wireMat.opacity += (wireTarget - wireMat.opacity) * 0.07;
-
-        // Geodesic line: only fades in once the saddle has mostly morphed in
-        const geoTarget = (currentIdx === 2 && morphT > 0.5) ? 0.95 : 0;
-        geoMat.opacity += (geoTarget - geoMat.opacity) * 0.07;
 
         material.opacity = 0.55 + Math.sin(elapsed * (2 * Math.PI / 4)) * 0.1;
         posAttr.needsUpdate = true;
@@ -172,8 +158,8 @@ export default function QuantLab() {
       cleanup = () => {
         cancelAnimationFrame(animId);
         window.removeEventListener("resize", onResize);
-        geometry.dispose(); wireGeom.dispose(); geoGeom.dispose();
-        material.map?.dispose(); material.dispose(); wireMat.dispose(); geoMat.dispose();
+        geometry.dispose(); wireGeom.dispose();
+        material.map?.dispose(); material.dispose(); wireMat.dispose();
         renderer.dispose();
         if (renderer.domElement.parentNode === container) container.removeChild(renderer.domElement);
         selectFnRef.current = null;

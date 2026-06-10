@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, forwardRef, useImperativeHandle } from "react";
 import {
-  eio, genSphere, genVolCone, genSaddle, genGridEdges, genGeodesic, makeDotTexture,
+  eio, genSphere, genLorenz, genThomas, genChainEdges, makeDotTexture,
 } from "../lib/quantForms";
 
 const THREE_SRC = "https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js";
@@ -24,9 +24,8 @@ function loadThree() {
   });
 }
 
-const COLS = 120, ROWS = 100;
-const N    = COLS * ROWS; // 12000 — same particle count for every form, enables morphing
-const R    = 1.8;
+const N = 12000; // same particle count for every form, enables morphing
+const R = 1.8;
 const MORPH_S     = 1.2;
 const PULSE_SPEED = (2 * Math.PI) / 3;
 const IR          = 0.7;    // half the previous size
@@ -67,8 +66,8 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
 
       const HOMES = [
         genSphere(N, R),
-        genVolCone(N, COLS, ROWS),
-        genSaddle(N, COLS, ROWS),
+        genLorenz(N),
+        genThomas(N),
       ];
 
       const prevHome = HOMES[0].slice();
@@ -99,22 +98,14 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
       group.scale.set(1.3, 1.3, 1.3);
       scene.add(group);
 
-      // Wireframe mesh over the grid — only meaningful (and shown) for the
-      // vol cone / saddle, where adjacent indices are spatial neighbors.
+      // Wireframe — draws the attractor's trajectory as a continuous curve
+      // through phase space. Only shown (and meaningful) for the attractors.
       const wireGeom = new THREE.BufferGeometry();
       wireGeom.setAttribute("position", posAttr);
-      wireGeom.setIndex(new THREE.BufferAttribute(genGridEdges(COLS, ROWS), 1));
+      wireGeom.setIndex(new THREE.BufferAttribute(genChainEdges(N), 1));
       const wireMat  = new THREE.LineBasicMaterial({ color: 0xF5F5F2, transparent: true, opacity: 0 });
       const wireMesh = new THREE.LineSegments(wireGeom, wireMat);
       group.add(wireMesh);
-
-      // Geodesic line — only relevant (and visible) for the SADDLE form
-      const geoPos  = genGeodesic(160);
-      const geoGeom = new THREE.BufferGeometry();
-      geoGeom.setAttribute("position", new THREE.BufferAttribute(geoPos, 3));
-      const geoMat  = new THREE.LineBasicMaterial({ color: 0xBA7517, transparent: true, opacity: 0 });
-      const geoLine = new THREE.Line(geoGeom, geoMat);
-      group.add(geoLine);
 
       selectRef.current = (idx) => {
         if (idx === currentIdx && morphT >= 1) return;
@@ -240,13 +231,9 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
           colors[i3] = colors[i3+1] = colors[i3+2] = b;
         }
 
-        // Wireframe: shown for the vol cone / saddle grids, hidden for the sphere
+        // Wireframe: traces the attractor's path, hidden for the sphere
         const wireTarget = currentIdx !== 0 ? 0.35 : 0;
         wireMat.opacity += (wireTarget - wireMat.opacity) * 0.07;
-
-        // Geodesic line: only fades in once the saddle has mostly morphed in
-        const geoTarget = (currentIdx === 2 && morphT > 0.5) ? 0.9 : 0;
-        geoMat.opacity += (geoTarget - geoMat.opacity) * 0.07;
 
         material.opacity = 0.715 + Math.sin(elapsed * PULSE_SPEED) * 0.165;
         posAttr.needsUpdate                   = true;
@@ -283,8 +270,8 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
         container.removeEventListener("mousemove",  onMove);
         container.removeEventListener("mouseleave", onLeave);
         window.removeEventListener("resize",        onResize);
-        geometry.dispose(); wireGeom.dispose(); geoGeom.dispose();
-        tex.dispose(); material.dispose(); wireMat.dispose(); geoMat.dispose();
+        geometry.dispose(); wireGeom.dispose();
+        tex.dispose(); material.dispose(); wireMat.dispose();
         renderer.dispose();
         if (renderer.domElement.parentNode === container) container.removeChild(renderer.domElement);
         selectRef.current = null;
