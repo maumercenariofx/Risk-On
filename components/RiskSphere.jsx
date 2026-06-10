@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, forwardRef, useImperativeHandle } from "react";
 import {
-  eio, genSphere, genVolSurface, genSaddle, genGridEdges, genGeodesic, makeDotTexture,
+  eio, genSphere, genVolCone, genSaddle, genGridEdges, genGeodesic, makeDotTexture,
 } from "../lib/quantForms";
 
 const THREE_SRC = "https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js";
@@ -67,7 +67,7 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
 
       const HOMES = [
         genSphere(N, R),
-        genVolSurface(N, COLS, ROWS),
+        genVolCone(N, COLS, ROWS),
         genSaddle(N, COLS, ROWS),
       ];
 
@@ -100,7 +100,7 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
       scene.add(group);
 
       // Wireframe mesh over the grid — only meaningful (and shown) for the
-      // vol surface / saddle, where adjacent indices are spatial neighbors.
+      // vol cone / saddle, where adjacent indices are spatial neighbors.
       const wireGeom = new THREE.BufferGeometry();
       wireGeom.setAttribute("position", posAttr);
       wireGeom.setIndex(new THREE.BufferAttribute(genGridEdges(COLS, ROWS), 1));
@@ -240,7 +240,7 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
           colors[i3] = colors[i3+1] = colors[i3+2] = b;
         }
 
-        // Wireframe: shown for the vol surface / saddle grids, hidden for the sphere
+        // Wireframe: shown for the vol cone / saddle grids, hidden for the sphere
         const wireTarget = currentIdx !== 0 ? 0.35 : 0;
         wireMat.opacity += (wireTarget - wireMat.opacity) * 0.07;
 

@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { T } from "./Lang";
 import {
-  eio, genSphere, genVolSurface, genSaddle, genGridEdges, genGeodesic,
+  eio, genSphere, genVolCone, genSaddle, genGridEdges, genGeodesic,
   makeDotTexture, FORMS,
 } from "../lib/quantForms";
 
@@ -57,7 +57,7 @@ export default function QuantLab() {
 
       const HOMES = [
         genSphere(N, 1.8),
-        genVolSurface(N, COLS, ROWS),
+        genVolCone(N, COLS, ROWS),
         genSaddle(N, COLS, ROWS),
       ];
 
@@ -89,7 +89,7 @@ export default function QuantLab() {
       scene.add(group);
 
       // Wireframe mesh over the grid — only meaningful (and shown) for the
-      // vol surface / saddle, where adjacent indices are spatial neighbors.
+      // vol cone / saddle, where adjacent indices are spatial neighbors.
       // Shares the same position attribute, so it morphs along with the points.
       const posAttr  = geometry.attributes.position;
       const wireGeom = new THREE.BufferGeometry();
@@ -147,7 +147,7 @@ export default function QuantLab() {
           colors[i3] = colors[i3+1] = colors[i3+2] = b;
         }
 
-        // Wireframe: shown for the vol surface / saddle grids, hidden for the sphere
+        // Wireframe: shown for the vol cone / saddle grids, hidden for the sphere
         const wireTarget = currentIdx !== 0 ? 0.4 : 0;
         wireMat.opacity += (wireTarget - wireMat.opacity) * 0.07;
 
