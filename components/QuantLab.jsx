@@ -26,7 +26,7 @@ function loadThree() {
   });
 }
 
-const N = 36000; // same particle count for every form, enables morphing
+const N = 48600; // same particle count for every form, enables morphing
 const MORPH_S = 1.2;
 
 export default function QuantLab() {
