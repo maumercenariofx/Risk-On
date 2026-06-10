@@ -142,11 +142,13 @@ export default function QuantLab() {
             const k = globeKind[i];
             let tr, tg, tb;
             if (k === 2) {
-              tr = tg = tb = 0.75 + b * 0.5; // border — bright white
+              tr = tg = 0.75 + b * 0.5; tb = (0.75 + b * 0.5) * 0.97; // border — bright bone
             } else if (k === 1) {
-              tr = 0.28 + b * 0.45; tg = tb = 0.18 + b * 0.3; // land — red-gray
+              const base = 0.18 + b * 0.3;
+              tr = base * 1.588; tg = base; tb = base * 0.196; // land — amber
             } else {
-              tr = tg = tb = 0.5 + b * 0.6; // ocean — white
+              const oc = 0.5 + b * 0.6;
+              tr = tg = oc * 0.961; tb = oc * 0.949; // ocean — bone
             }
             colors[i3]   = b + (tr - b) * globeColorT;
             colors[i3+1] = b + (tg - b) * globeColorT;
