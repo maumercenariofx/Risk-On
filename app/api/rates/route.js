@@ -2,9 +2,9 @@
 // Fuentes:
 //   Banxico SIE API  → TIIE 28d (SF43783) y Tasa objetivo (SF61745)
 //   FRED API         → Fed Funds upper limit (DFEDTARU) y lower (DFEDTARL)
-// Revalida cada 4 horas; las tasas cambian solo en reuniones (~cada 6-8 semanas).
+// Revalida cada semana; las tasas cambian solo en reuniones (~cada 6-8 semanas).
 
-export const revalidate = 1800;
+export const revalidate = 604800;
 
 const BANXICO_BASE = "https://www.banxico.org.mx/SieAPIRest/service/v1/series";
 const FRED_BASE    = "https://api.stlouisfed.org/fred/series/observations";
@@ -61,6 +61,6 @@ export async function GET() {
   };
 
   return Response.json(data, {
-    headers: { "Cache-Control": "s-maxage=1800, stale-while-revalidate=86400" },
+    headers: { "Cache-Control": "s-maxage=604800, stale-while-revalidate=86400" },
   });
 }
