@@ -235,18 +235,17 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
 
           if (globeColorT > 0.001) {
             const k = globeKind[i];
-            let tr, tg, tb;
+            let v;
             if (k === 2) {
-              const bf = 0.65 + b * 0.5;
-              tr = 1.6 * bf; tg = 1.25 * bf; tb = 0.55 * bf;
+              v = 0.75 + b * 0.5; // border — bright white
             } else if (k === 1) {
-              tr = b * 1.25; tg = b * 1.05; tb = b * 0.55;
+              v = b * 0.12; // land — near black
             } else {
-              tr = b * 0.30; tg = b * 0.55; tb = b * 1.15;
+              v = 0.5 + b * 0.6; // ocean — white
             }
-            colors[i3]   = b + (tr - b) * globeColorT;
-            colors[i3+1] = b + (tg - b) * globeColorT;
-            colors[i3+2] = b + (tb - b) * globeColorT;
+            colors[i3]   = b + (v - b) * globeColorT;
+            colors[i3+1] = colors[i3];
+            colors[i3+2] = colors[i3];
           } else {
             colors[i3] = colors[i3+1] = colors[i3+2] = b;
           }
