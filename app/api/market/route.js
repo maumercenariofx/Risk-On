@@ -5,7 +5,7 @@
 // regularMarketPrice + chartPreviousClose (de ahí derivamos el % de cambio).
 // FX: Frankfurter (gratis, sin clave).
 
-export const revalidate = 1200;
+export const revalidate = 60;
 
 const YAHOO_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
 
@@ -114,10 +114,11 @@ export async function GET() {
   const data = {
     asOf: new Date().toISOString(),
     delayed: false,
-    // FX — precio y cambio diario
-    usdmxn:    usdmxn ?? c.usdmxnChart?.price ?? 18.42,
+    // FX — precio y cambio diario (Yahoo primero: misma fuente que las gráficas
+    // de /api/history, así no hay discrepancia entre las tarjetas y el chart)
+    usdmxn:    c.usdmxnChart?.price ?? usdmxn ?? 18.42,
     usdmxnChg: c.usdmxnChart?.chgPct ?? null,
-    eurusd:    eurusd ?? c.eurusdChart?.price ?? 1.084,
+    eurusd:    c.eurusdChart?.price ?? eurusd ?? 1.084,
     eurusdChg: c.eurusdChart?.chgPct ?? null,
     eurmxn:    c.eurmxnChart?.price ?? null,
     eurmxnChg: c.eurmxnChart?.chgPct ?? null,
@@ -161,6 +162,6 @@ export async function GET() {
   };
 
   return Response.json(data, {
-    headers: { "Cache-Control": "s-maxage=1200, stale-while-revalidate=86400" },
+    headers: { "Cache-Control": "s-maxage=60, stale-while-revalidate=300" },
   });
 }

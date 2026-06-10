@@ -1,4 +1,4 @@
-export const revalidate = 21600;
+export const revalidate = 3600;
 
 // ─── AGENDAS OFICIALES 2026 ───────────────────────────────────────────────────
 
@@ -169,6 +169,6 @@ export async function GET(request) {
   const days  = parseInt(searchParams.get("days") || "14", 10);
   const today = new Date().toISOString().slice(0, 10);
   return Response.json(buildEvents(today, days), {
-    headers: { "Cache-Control": "s-maxage=21600, stale-while-revalidate=86400" },
+    headers: { "Cache-Control": "s-maxage=3600, stale-while-revalidate=86400" },
   });
 }

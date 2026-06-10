@@ -2,7 +2,7 @@
 // Histórico de cierres diarios via Yahoo Finance v8 chart API
 // Acepta: ?range=30|90|365  &symbol=USDMXN|EURMXN|CHFMXN|EURUSD|GBPUSD|USDJPY
 
-export const revalidate = 3600;
+export const revalidate = 60;
 
 const YAHOO_UA =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
@@ -52,7 +52,7 @@ export async function GET(request) {
     }
 
     return Response.json({ prices, labels }, {
-      headers: { "Cache-Control": "s-maxage=3600, stale-while-revalidate=86400" },
+      headers: { "Cache-Control": "s-maxage=60, stale-while-revalidate=300" },
     });
   } catch {
     return Response.json({ prices: [], labels: [] });
