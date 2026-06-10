@@ -1,5 +1,8 @@
 "use client";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, forwardRef, useImperativeHandle } from "react";
+import {
+  eio, genSphere, genVolSurface, genSaddle, genGridEdges, genGeodesic, makeDotTexture,
+} from "../lib/quantForms";
 
 const THREE_SRC = "https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js";
 
@@ -21,8 +24,10 @@ function loadThree() {
   });
 }
 
-const N          = 12000;
-const R          = 1.8;
+const COLS = 120, ROWS = 100;
+const N    = COLS * ROWS; // 12000 — same particle count for every form, enables morphing
+const R    = 1.8;
+const MORPH_S     = 1.2;
 const PULSE_SPEED = (2 * Math.PI) / 3;
 const IR          = 0.7;    // half the previous size
 const REPEL_F     = 0.52;
@@ -30,23 +35,14 @@ const ATTRACT_F   = 0.546;  // 30% stronger than before
 const IDLE_MS     = 600;
 const LERP_D      = 0.065;
 
-function genSphere(n, r) {
-  const pos = new Float32Array(n * 3);
-  const ga  = Math.PI * (3 - Math.sqrt(5));
-  for (let i = 0; i < n; i++) {
-    const y   = 1 - (i / (n - 1)) * 2;
-    const rad = Math.sqrt(Math.max(0, 1 - y * y));
-    const th  = ga * i;
-    pos[i*3]   = Math.cos(th) * rad * r;
-    pos[i*3+1] = y * r;
-    pos[i*3+2] = Math.sin(th) * rad * r;
-  }
-  return pos;
-}
+const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
+  const mountRef    = useRef(null);
+  const pointerRef  = useRef({ x: 0, y: 0 });
+  const selectRef   = useRef(null);
 
-export default function RiskSphere({ height = 274 }) {
-  const mountRef   = useRef(null);
-  const pointerRef = useRef({ x: 0, y: 0 });
+  useImperativeHandle(ref, () => ({
+    select: (idx) => selectRef.current?.(idx),
+  }), []);
 
   useEffect(() => {
     let destroyed = false;
@@ -67,20 +63,21 @@ export default function RiskSphere({ height = 274 }) {
       renderer.setSize(container.clientWidth, container.clientHeight);
       container.appendChild(renderer.domElement);
 
-      // Soft dot texture
-      const sz  = 48;
-      const cvs = document.createElement("canvas");
-      cvs.width = cvs.height = sz;
-      const ctx = cvs.getContext("2d");
-      const g   = ctx.createRadialGradient(24, 24, 0, 24, 24, 24);
-      g.addColorStop(0,   "rgba(255,255,255,1)");
-      g.addColorStop(0.4, "rgba(255,255,255,0.6)");
-      g.addColorStop(1,   "rgba(255,255,255,0)");
-      ctx.fillStyle = g; ctx.fillRect(0, 0, sz, sz);
-      const tex = new THREE.CanvasTexture(cvs);
+      const tex = makeDotTexture(THREE);
 
-      const home    = genSphere(N, R);
-      const pos     = home.slice();     // displaced positions
+      const HOMES = [
+        genSphere(N, R),
+        genVolSurface(N, COLS, ROWS),
+        genSaddle(N, COLS, ROWS),
+      ];
+
+      const prevHome = HOMES[0].slice();
+      const effHome  = HOMES[0].slice();
+      let currHome   = HOMES[0];
+      let currentIdx = 0;
+      let morphT     = 1;
+
+      const pos     = effHome.slice();   // displaced positions
       const disp    = new Float32Array(N * 3);
       const colors  = new Float32Array(N * 3).fill(1);
       const jPhase  = new Float32Array(N);
@@ -101,6 +98,31 @@ export default function RiskSphere({ height = 274 }) {
       group.add(new THREE.Points(geometry, material));
       group.scale.set(1.3, 1.3, 1.3);
       scene.add(group);
+
+      // Wireframe mesh over the grid — only meaningful (and shown) for the
+      // vol surface / saddle, where adjacent indices are spatial neighbors.
+      const wireGeom = new THREE.BufferGeometry();
+      wireGeom.setAttribute("position", posAttr);
+      wireGeom.setIndex(new THREE.BufferAttribute(genGridEdges(COLS, ROWS), 1));
+      const wireMat  = new THREE.LineBasicMaterial({ color: 0xF5F5F2, transparent: true, opacity: 0 });
+      const wireMesh = new THREE.LineSegments(wireGeom, wireMat);
+      group.add(wireMesh);
+
+      // Geodesic line — only relevant (and visible) for the SADDLE form
+      const geoPos  = genGeodesic(160);
+      const geoGeom = new THREE.BufferGeometry();
+      geoGeom.setAttribute("position", new THREE.BufferAttribute(geoPos, 3));
+      const geoMat  = new THREE.LineBasicMaterial({ color: 0xBA7517, transparent: true, opacity: 0 });
+      const geoLine = new THREE.Line(geoGeom, geoMat);
+      group.add(geoLine);
+
+      selectRef.current = (idx) => {
+        if (idx === currentIdx && morphT >= 1) return;
+        prevHome.set(effHome);
+        currHome   = HOMES[idx];
+        currentIdx = idx;
+        morphT     = 0;
+      };
 
       // Mouse state
       const mouse = { x: 0, y: 0, active: false, lastMove: 0, mode: "repel", attractStart: 0 };
@@ -163,9 +185,16 @@ export default function RiskSphere({ height = 274 }) {
           ? Math.min(3, (now - mouse.attractStart) / 400) : 0;
         const LD = mouse.mode === "attract" ? 0.08 : LERP_D;
 
+        // Morph effHome toward currHome
+        if (morphT < 1) morphT = Math.min(1, morphT + dt / MORPH_S);
+        const mt = eio(morphT);
+        for (let i = 0; i < N * 3; i++) {
+          effHome[i] = prevHome[i] + (currHome[i] - prevHome[i]) * mt;
+        }
+
         for (let i = 0; i < N; i++) {
           const i3 = i * 3;
-          const hx = home[i3], hy = home[i3+1], hz = home[i3+2];
+          const hx = effHome[i3], hy = effHome[i3+1], hz = effHome[i3+2];
 
           let tdx = 0, tdy = 0, tdz = 0;
           if (hasInf) {
@@ -211,6 +240,14 @@ export default function RiskSphere({ height = 274 }) {
           colors[i3] = colors[i3+1] = colors[i3+2] = b;
         }
 
+        // Wireframe: shown for the vol surface / saddle grids, hidden for the sphere
+        const wireTarget = currentIdx !== 0 ? 0.35 : 0;
+        wireMat.opacity += (wireTarget - wireMat.opacity) * 0.07;
+
+        // Geodesic line: only fades in once the saddle has mostly morphed in
+        const geoTarget = (currentIdx === 2 && morphT > 0.5) ? 0.9 : 0;
+        geoMat.opacity += (geoTarget - geoMat.opacity) * 0.07;
+
         material.opacity = 0.715 + Math.sin(elapsed * PULSE_SPEED) * 0.165;
         posAttr.needsUpdate                   = true;
         geometry.attributes.color.needsUpdate = true;
@@ -246,8 +283,11 @@ export default function RiskSphere({ height = 274 }) {
         container.removeEventListener("mousemove",  onMove);
         container.removeEventListener("mouseleave", onLeave);
         window.removeEventListener("resize",        onResize);
-        geometry.dispose(); tex.dispose(); material.dispose(); renderer.dispose();
+        geometry.dispose(); wireGeom.dispose(); geoGeom.dispose();
+        tex.dispose(); material.dispose(); wireMat.dispose(); geoMat.dispose();
+        renderer.dispose();
         if (renderer.domElement.parentNode === container) container.removeChild(renderer.domElement);
+        selectRef.current = null;
       };
     }).catch(err => console.error("RiskSphere:", err));
 
@@ -255,4 +295,6 @@ export default function RiskSphere({ height = 274 }) {
   }, []);
 
   return <div ref={mountRef} style={{ width: "100%", height }} />;
-}
+});
+
+export default RiskSphere;
