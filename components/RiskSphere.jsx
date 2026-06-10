@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, forwardRef, useImperativeHandle } from "react";
 import {
-  eio, genSphere, genLorenz, genThomas, genChainEdges, makeDotTexture,
+  eio, genSphere, genGlobe, genThomas, genChainEdges, makeDotTexture,
 } from "../lib/quantForms";
 
 const THREE_SRC = "https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js";
@@ -66,7 +66,7 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
 
       const HOMES = [
         genSphere(N, R),
-        genLorenz(N),
+        genGlobe(N, R),
         genThomas(N),
       ];
 
@@ -231,8 +231,8 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
           colors[i3] = colors[i3+1] = colors[i3+2] = b;
         }
 
-        // Wireframe: traces the attractor's path, hidden for the sphere
-        const wireTarget = currentIdx !== 0 ? 0.35 : 0;
+        // Wireframe: traces the attractor's path, only shown for the Thomas form
+        const wireTarget = currentIdx === 2 ? 0.35 : 0;
         wireMat.opacity += (wireTarget - wireMat.opacity) * 0.07;
 
         material.opacity = 0.715 + Math.sin(elapsed * PULSE_SPEED) * 0.165;

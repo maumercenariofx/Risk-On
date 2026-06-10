@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { T } from "./Lang";
 import {
-  eio, genSphere, genLorenz, genThomas, genChainEdges,
+  eio, genSphere, genGlobe, genThomas, genChainEdges,
   makeDotTexture, FORMS,
 } from "../lib/quantForms";
 
@@ -56,7 +56,7 @@ export default function QuantLab() {
 
       const HOMES = [
         genSphere(N, 1.8),
-        genLorenz(N),
+        genGlobe(N, 1.8),
         genThomas(N),
       ];
 
@@ -137,8 +137,8 @@ export default function QuantLab() {
           colors[i3] = colors[i3+1] = colors[i3+2] = b;
         }
 
-        // Wireframe: traces the attractor's path, hidden for the sphere
-        const wireTarget = currentIdx !== 0 ? 0.4 : 0;
+        // Wireframe: traces the attractor's path, only shown for the Thomas form
+        const wireTarget = currentIdx === 2 ? 0.4 : 0;
         wireMat.opacity += (wireTarget - wireMat.opacity) * 0.07;
 
         material.opacity = 0.55 + Math.sin(elapsed * (2 * Math.PI / 4)) * 0.1;
