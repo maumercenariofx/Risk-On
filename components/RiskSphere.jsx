@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, forwardRef, useImperativeHandle } from "react";
 import {
-  eio, genSphere, genGlobe, genBorders, genThomas, genChainEdges, makeDotTexture,
+  eio, genSphere, genGlobe, genThomas, genChainEdges, makeDotTexture,
 } from "../lib/quantForms";
 
 const THREE_SRC = "https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js";
@@ -24,7 +24,7 @@ function loadThree() {
   });
 }
 
-const N = 24000; // same particle count for every form, enables morphing
+const N = 36000; // same particle count for every form, enables morphing
 const R = 1.8;
 const MORPH_S     = 1.2;
 const PULSE_SPEED = (2 * Math.PI) / 3;
@@ -108,15 +108,6 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
       const wireMat  = new THREE.LineBasicMaterial({ color: 0xF5F5F2, transparent: true, opacity: 0 });
       const wireMesh = new THREE.LineSegments(wireGeom, wireMat);
       group.add(wireMesh);
-
-      // Country borders — bright amber lines, only shown for the GLOBE form
-      const borders     = genBorders(R);
-      const borderGeom  = new THREE.BufferGeometry();
-      borderGeom.setAttribute("position", new THREE.BufferAttribute(borders.positions, 3));
-      borderGeom.setIndex(new THREE.BufferAttribute(borders.edges, 1));
-      const borderMat   = new THREE.LineBasicMaterial({ color: 0xFFC15E, transparent: true, opacity: 0, linewidth: 2 });
-      const borderMesh  = new THREE.LineSegments(borderGeom, borderMat);
-      group.add(borderMesh);
 
       let globeColorT = 0;
 
@@ -243,10 +234,16 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
           const b = Math.max(0, 0.22 + (facing * 0.5 + 0.5) * 0.72 + shimmer);
 
           if (globeColorT > 0.001) {
-            const isLand = globeKind[i];
-            const tr = isLand ? b * 1.25 : b * 0.30;
-            const tg = isLand ? b * 1.05 : b * 0.55;
-            const tb = isLand ? b * 0.55 : b * 1.15;
+            const k = globeKind[i];
+            let tr, tg, tb;
+            if (k === 2) {
+              const bf = 0.65 + b * 0.5;
+              tr = 1.6 * bf; tg = 1.25 * bf; tb = 0.55 * bf;
+            } else if (k === 1) {
+              tr = b * 1.25; tg = b * 1.05; tb = b * 0.55;
+            } else {
+              tr = b * 0.30; tg = b * 0.55; tb = b * 1.15;
+            }
             colors[i3]   = b + (tr - b) * globeColorT;
             colors[i3+1] = b + (tg - b) * globeColorT;
             colors[i3+2] = b + (tb - b) * globeColorT;
@@ -259,11 +256,9 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
         const wireTarget = currentIdx === 2 ? 0.35 : 0;
         wireMat.opacity += (wireTarget - wireMat.opacity) * 0.07;
 
-        // Country borders + land/ocean tinting, only shown for the GLOBE form
+        // Land/ocean/border tinting, only shown for the GLOBE form
         const globeTarget = currentIdx === 1 ? 1 : 0;
         globeColorT += (globeTarget - globeColorT) * 0.07;
-        const borderTarget = currentIdx === 1 ? 0.9 : 0;
-        borderMat.opacity += (borderTarget - borderMat.opacity) * 0.07;
 
         material.opacity = 0.715 + Math.sin(elapsed * PULSE_SPEED) * 0.165;
         posAttr.needsUpdate                   = true;
@@ -300,8 +295,8 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
         container.removeEventListener("mousemove",  onMove);
         container.removeEventListener("mouseleave", onLeave);
         window.removeEventListener("resize",        onResize);
-        geometry.dispose(); wireGeom.dispose(); borderGeom.dispose();
-        tex.dispose(); material.dispose(); wireMat.dispose(); borderMat.dispose();
+        geometry.dispose(); wireGeom.dispose();
+        tex.dispose(); material.dispose(); wireMat.dispose();
         renderer.dispose();
         if (renderer.domElement.parentNode === container) container.removeChild(renderer.domElement);
         selectRef.current = null;
