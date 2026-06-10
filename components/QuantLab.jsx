@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { T } from "./Lang";
 import {
-  eio, genSphere, genGlobe, genThomas, genChainEdges,
+  eio, genSphere, genGlobe, genBorders, genThomas, genChainEdges,
   makeDotTexture, FORMS,
 } from "../lib/quantForms";
 
@@ -54,11 +54,13 @@ export default function QuantLab() {
       renderer.setSize(container.clientWidth, container.clientHeight);
       container.appendChild(renderer.domElement);
 
+      const globe = genGlobe(N, 1.8);
       const HOMES = [
         genSphere(N, 1.8),
-        genGlobe(N, 1.8),
+        globe.pos,
         genThomas(N),
       ];
+      const globeKind = globe.kind;
 
       const positions = HOMES[0].slice();
       const colors    = new Float32Array(N * 3).fill(1);
@@ -97,6 +99,16 @@ export default function QuantLab() {
       const wireMesh = new THREE.LineSegments(wireGeom, wireMat);
       group.add(wireMesh);
 
+      // Country borders — bright amber lines, only shown for the GLOBE form
+      const borders     = genBorders(1.8);
+      const borderGeom  = new THREE.BufferGeometry();
+      borderGeom.setAttribute("position", new THREE.BufferAttribute(borders.positions, 3));
+      borderGeom.setIndex(new THREE.BufferAttribute(borders.edges, 1));
+      const borderMat   = new THREE.LineBasicMaterial({ color: 0xFFC15E, transparent: true, opacity: 0, linewidth: 2 });
+      const borderMesh  = new THREE.LineSegments(borderGeom, borderMat);
+      group.add(borderMesh);
+
+      let globeColorT = 0;
       let elapsed = 0, animId, lastFrame = 0;
 
       selectFnRef.current = (idx) => {
@@ -134,12 +146,29 @@ export default function QuantLab() {
           const facing  = (hx/len)*0 + (hy/len)*0.4 + (hz/len)*0.6;
           const shimmer = 0.12 * Math.sin(elapsed * 1.6 + jPhase[i]);
           const b = Math.max(0, 0.25 + (facing * 0.5 + 0.5) * 0.7 + shimmer);
-          colors[i3] = colors[i3+1] = colors[i3+2] = b;
+
+          if (globeColorT > 0.001) {
+            const isLand = globeKind[i];
+            const tr = isLand ? b * 1.25 : b * 0.30;
+            const tg = isLand ? b * 1.05 : b * 0.55;
+            const tb = isLand ? b * 0.55 : b * 1.15;
+            colors[i3]   = b + (tr - b) * globeColorT;
+            colors[i3+1] = b + (tg - b) * globeColorT;
+            colors[i3+2] = b + (tb - b) * globeColorT;
+          } else {
+            colors[i3] = colors[i3+1] = colors[i3+2] = b;
+          }
         }
 
         // Wireframe: traces the attractor's path, only shown for the Thomas form
         const wireTarget = currentIdx === 2 ? 0.4 : 0;
         wireMat.opacity += (wireTarget - wireMat.opacity) * 0.07;
+
+        // Country borders + land/ocean tinting, only shown for the GLOBE form
+        const globeTarget = currentIdx === 1 ? 1 : 0;
+        globeColorT += (globeTarget - globeColorT) * 0.07;
+        const borderTarget = currentIdx === 1 ? 0.9 : 0;
+        borderMat.opacity += (borderTarget - borderMat.opacity) * 0.07;
 
         material.opacity = 0.55 + Math.sin(elapsed * (2 * Math.PI / 4)) * 0.1;
         posAttr.needsUpdate = true;
@@ -158,8 +187,8 @@ export default function QuantLab() {
       cleanup = () => {
         cancelAnimationFrame(animId);
         window.removeEventListener("resize", onResize);
-        geometry.dispose(); wireGeom.dispose();
-        material.map?.dispose(); material.dispose(); wireMat.dispose();
+        geometry.dispose(); wireGeom.dispose(); borderGeom.dispose();
+        material.map?.dispose(); material.dispose(); wireMat.dispose(); borderMat.dispose();
         renderer.dispose();
         if (renderer.domElement.parentNode === container) container.removeChild(renderer.domElement);
         selectFnRef.current = null;
