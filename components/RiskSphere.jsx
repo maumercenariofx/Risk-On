@@ -24,7 +24,7 @@ function loadThree() {
   });
 }
 
-const N = 72000; // same particle count for every form, enables morphing
+const N = 144000; // same particle count for every form, enables morphing
 const R = 1.8;
 const MORPH_S     = 1.2;
 const PULSE_SPEED = (2 * Math.PI) / 3;
