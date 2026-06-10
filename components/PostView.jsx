@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useLang, T } from "./Lang";
 import { riskLabel } from "../lib/riskIndex";
 
-export default function PostView({ post }) {
+export default function PostView({ post, prev, next }) {
   const { lang } = useLang();
   const label = riskLabel(post.score || 50);
   return (
@@ -29,6 +29,27 @@ export default function PostView({ post }) {
         style={{ animationDelay: "0.1s" }}
         dangerouslySetInnerHTML={{ __html: post.html }}
       />
+      <p className="text-xs text-muted/60">
+        <T
+          es={`Índice al momento de esta nota (${post.date}) — el valor en vivo en la portada puede haber cambiado.`}
+          en={`Index at the time of this note (${post.date}) — the live value on the homepage may have changed.`}
+        />
+      </p>
+
+      {(prev || next) && (
+        <div className="reveal flex items-center justify-between border-t border-edge pt-4 text-sm">
+          {prev ? (
+            <Link href={`/archive/${prev.slug}`} className="text-muted hover:text-bone transition-colors">
+              ← {lang === "en" ? prev.title_en : prev.title_es}
+            </Link>
+          ) : <span />}
+          {next ? (
+            <Link href={`/archive/${next.slug}`} className="text-right text-muted hover:text-bone transition-colors">
+              {lang === "en" ? next.title_en : next.title_es} →
+            </Link>
+          ) : <span />}
+        </div>
+      )}
     </article>
   );
 }
