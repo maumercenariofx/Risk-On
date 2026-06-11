@@ -2,6 +2,7 @@
 import { useEffect, useRef, forwardRef, useImperativeHandle } from "react";
 import {
   eio, genSphere, genGlobe, genThomas, genChainEdges, makeDotTexture,
+  makeGeoTexture, makeTensionTexture, GLOBE_VERTEX_SHADER, GLOBE_FRAGMENT_SHADER,
 } from "../lib/quantForms";
 
 const THREE_SRC = "https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js";
@@ -63,14 +64,14 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
       container.appendChild(renderer.domElement);
 
       const tex = makeDotTexture(THREE);
+      const geoTex = makeGeoTexture(THREE);
+      const tensionTex = makeTensionTexture(THREE);
 
-      const globe = genGlobe(N, R);
       const HOMES = [
         genSphere(N, R),
-        globe.pos,
+        genGlobe(N, R),
         genThomas(N),
       ];
-      const globeKind = globe.kind;
 
       const prevHome = HOMES[0].slice();
       const effHome  = HOMES[0].slice();
@@ -89,11 +90,27 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
       geometry.setAttribute("position", posAttr);
       geometry.setAttribute("color",    new THREE.BufferAttribute(colors, 3));
 
-      const material = new THREE.PointsMaterial({
-        size: 0.055, map: tex, transparent: true, opacity: 0.75,
-        vertexColors: true, sizeAttenuation: true,
-        depthWrite: false, blending: THREE.AdditiveBlending,
+      const material = new THREE.ShaderMaterial({
+        uniforms: {
+          uMap:           { value: geoTex },
+          uTensionMap:    { value: tensionTex },
+          uDot:           { value: tex },
+          uColorT:        { value: 0 },
+          uOpacity:       { value: 0.75 },
+          uPixelsPerUnit: { value: 1 },
+          uPixelRatio:    { value: Math.min(window.devicePixelRatio, 2) },
+          uSize:          { value: 0.055 },
+        },
+        vertexShader: GLOBE_VERTEX_SHADER,
+        fragmentShader: GLOBE_FRAGMENT_SHADER,
+        transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
       });
+
+      const updatePixelsPerUnit = () => {
+        const fovRad = THREE.MathUtils.degToRad(camera.fov);
+        material.uniforms.uPixelsPerUnit.value = (container.clientHeight / 2) / Math.tan(fovRad / 2);
+      };
+      updatePixelsPerUnit();
 
       const group = new THREE.Group();
       group.add(new THREE.Points(geometry, material));
@@ -233,24 +250,7 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
           const shimmer = 0.12 * Math.sin(elapsed * 1.8 + jPhase[i]);
           const b = Math.max(0, 0.22 + (facing * 0.5 + 0.5) * 0.72 + shimmer);
 
-          if (globeColorT > 0.001) {
-            const k = globeKind[i];
-            let tr, tg, tb;
-            if (k === 2) {
-              tr = tg = 0.75 + b * 0.5; tb = (0.75 + b * 0.5) * 0.97; // border — bright bone
-            } else if (k === 1) {
-              const base = 0.18 + b * 0.3;
-              tr = base * 1.588; tg = base; tb = base * 0.196; // land — amber
-            } else {
-              const oc = 0.5 + b * 0.6;
-              tr = tg = oc * 0.961; tb = oc * 0.949; // ocean — bone
-            }
-            colors[i3]   = b + (tr - b) * globeColorT;
-            colors[i3+1] = b + (tg - b) * globeColorT;
-            colors[i3+2] = b + (tb - b) * globeColorT;
-          } else {
-            colors[i3] = colors[i3+1] = colors[i3+2] = b;
-          }
+          colors[i3] = colors[i3+1] = colors[i3+2] = b;
         }
 
         // Wireframe: traces the attractor's path, only shown for the Thomas form
@@ -260,8 +260,9 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
         // Land/ocean/border tinting, only shown for the GLOBE form
         const globeTarget = currentIdx === 1 ? 1 : 0;
         globeColorT += (globeTarget - globeColorT) * 0.07;
+        material.uniforms.uColorT.value = globeColorT;
 
-        material.opacity = 0.715 + Math.sin(elapsed * PULSE_SPEED) * 0.165;
+        material.uniforms.uOpacity.value = 0.715 + Math.sin(elapsed * PULSE_SPEED) * 0.165;
         posAttr.needsUpdate                   = true;
         geometry.attributes.color.needsUpdate = true;
         renderer.render(scene, camera);
@@ -288,6 +289,7 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
         camera.aspect = container.clientWidth / container.clientHeight;
         camera.updateProjectionMatrix();
         renderer.setSize(container.clientWidth, container.clientHeight);
+        updatePixelsPerUnit();
       };
       window.addEventListener("resize", onResize);
 
@@ -297,7 +299,8 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
         container.removeEventListener("mouseleave", onLeave);
         window.removeEventListener("resize",        onResize);
         geometry.dispose(); wireGeom.dispose();
-        tex.dispose(); material.dispose(); wireMat.dispose();
+        tex.dispose(); geoTex.dispose(); tensionTex.dispose();
+        material.dispose(); wireMat.dispose();
         renderer.dispose();
         if (renderer.domElement.parentNode === container) container.removeChild(renderer.domElement);
         selectRef.current = null;

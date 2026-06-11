@@ -4,6 +4,7 @@ import { T } from "./Lang";
 import {
   eio, genSphere, genGlobe, genThomas, genChainEdges,
   makeDotTexture, FORMS,
+  makeGeoTexture, makeTensionTexture, GLOBE_VERTEX_SHADER, GLOBE_FRAGMENT_SHADER,
 } from "../lib/quantForms";
 
 const THREE_SRC = "https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js";
@@ -54,13 +55,11 @@ export default function QuantLab() {
       renderer.setSize(container.clientWidth, container.clientHeight);
       container.appendChild(renderer.domElement);
 
-      const globe = genGlobe(N, 1.8);
       const HOMES = [
         genSphere(N, 1.8),
-        globe.pos,
+        genGlobe(N, 1.8),
         genThomas(N),
       ];
-      const globeKind = globe.kind;
 
       const positions = HOMES[0].slice();
       const colors    = new Float32Array(N * 3).fill(1);
@@ -77,12 +76,31 @@ export default function QuantLab() {
       geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
       geometry.setAttribute("color",    new THREE.BufferAttribute(colors, 3));
 
-      const material = new THREE.PointsMaterial({
-        size: 0.05, map: makeDotTexture(THREE),
-        transparent: true, opacity: 0.7,
-        vertexColors: true, sizeAttenuation: true,
-        depthWrite: false, blending: THREE.AdditiveBlending,
+      const dotTex     = makeDotTexture(THREE);
+      const geoTex     = makeGeoTexture(THREE);
+      const tensionTex = makeTensionTexture(THREE);
+
+      const material = new THREE.ShaderMaterial({
+        uniforms: {
+          uMap:           { value: geoTex },
+          uTensionMap:    { value: tensionTex },
+          uDot:           { value: dotTex },
+          uColorT:        { value: 0 },
+          uOpacity:       { value: 0.7 },
+          uPixelsPerUnit: { value: 1 },
+          uPixelRatio:    { value: Math.min(window.devicePixelRatio, 2) },
+          uSize:          { value: 0.05 },
+        },
+        vertexShader: GLOBE_VERTEX_SHADER,
+        fragmentShader: GLOBE_FRAGMENT_SHADER,
+        transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
       });
+
+      const updatePixelsPerUnit = () => {
+        const fovRad = THREE.MathUtils.degToRad(camera.fov);
+        material.uniforms.uPixelsPerUnit.value = (container.clientHeight / 2) / Math.tan(fovRad / 2);
+      };
+      updatePixelsPerUnit();
 
       const group = new THREE.Group();
       group.add(new THREE.Points(geometry, material));
@@ -138,24 +156,7 @@ export default function QuantLab() {
           const shimmer = 0.12 * Math.sin(elapsed * 1.6 + jPhase[i]);
           const b = Math.max(0, 0.25 + (facing * 0.5 + 0.5) * 0.7 + shimmer);
 
-          if (globeColorT > 0.001) {
-            const k = globeKind[i];
-            let tr, tg, tb;
-            if (k === 2) {
-              tr = tg = 0.75 + b * 0.5; tb = (0.75 + b * 0.5) * 0.97; // border — bright bone
-            } else if (k === 1) {
-              const base = 0.18 + b * 0.3;
-              tr = base * 1.588; tg = base; tb = base * 0.196; // land — amber
-            } else {
-              const oc = 0.5 + b * 0.6;
-              tr = tg = oc * 0.961; tb = oc * 0.949; // ocean — bone
-            }
-            colors[i3]   = b + (tr - b) * globeColorT;
-            colors[i3+1] = b + (tg - b) * globeColorT;
-            colors[i3+2] = b + (tb - b) * globeColorT;
-          } else {
-            colors[i3] = colors[i3+1] = colors[i3+2] = b;
-          }
+          colors[i3] = colors[i3+1] = colors[i3+2] = b;
         }
 
         // Wireframe: traces the attractor's path, only shown for the Thomas form
@@ -165,8 +166,9 @@ export default function QuantLab() {
         // Land/ocean/border tinting, only shown for the GLOBE form
         const globeTarget = currentIdx === 1 ? 1 : 0;
         globeColorT += (globeTarget - globeColorT) * 0.07;
+        material.uniforms.uColorT.value = globeColorT;
 
-        material.opacity = 0.55 + Math.sin(elapsed * (2 * Math.PI / 4)) * 0.1;
+        material.uniforms.uOpacity.value = 0.55 + Math.sin(elapsed * (2 * Math.PI / 4)) * 0.1;
         posAttr.needsUpdate = true;
         geometry.attributes.color.needsUpdate = true;
         renderer.render(scene, camera);
@@ -177,6 +179,7 @@ export default function QuantLab() {
         camera.aspect = container.clientWidth / container.clientHeight;
         camera.updateProjectionMatrix();
         renderer.setSize(container.clientWidth, container.clientHeight);
+        updatePixelsPerUnit();
       };
       window.addEventListener("resize", onResize);
 
@@ -184,7 +187,8 @@ export default function QuantLab() {
         cancelAnimationFrame(animId);
         window.removeEventListener("resize", onResize);
         geometry.dispose(); wireGeom.dispose();
-        material.map?.dispose(); material.dispose(); wireMat.dispose();
+        dotTex.dispose(); geoTex.dispose(); tensionTex.dispose();
+        material.dispose(); wireMat.dispose();
         renderer.dispose();
         if (renderer.domElement.parentNode === container) container.removeChild(renderer.domElement);
         selectFnRef.current = null;
