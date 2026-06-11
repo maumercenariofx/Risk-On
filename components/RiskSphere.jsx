@@ -99,7 +99,7 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
           uOpacity:       { value: 0.75 },
           uPixelsPerUnit: { value: 1 },
           uPixelRatio:    { value: Math.min(window.devicePixelRatio, 2) },
-          uSize:          { value: 0.055 },
+          uSize:          { value: 0.038 },
         },
         vertexShader: GLOBE_VERTEX_SHADER,
         fragmentShader: GLOBE_FRAGMENT_SHADER,

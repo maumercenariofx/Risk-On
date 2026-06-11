@@ -89,7 +89,7 @@ export default function QuantLab() {
           uOpacity:       { value: 0.7 },
           uPixelsPerUnit: { value: 1 },
           uPixelRatio:    { value: Math.min(window.devicePixelRatio, 2) },
-          uSize:          { value: 0.05 },
+          uSize:          { value: 0.035 },
         },
         vertexShader: GLOBE_VERTEX_SHADER,
         fragmentShader: GLOBE_FRAGMENT_SHADER,
