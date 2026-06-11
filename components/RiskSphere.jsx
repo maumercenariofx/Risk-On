@@ -2,7 +2,8 @@
 import { useEffect, useRef, forwardRef, useImperativeHandle } from "react";
 import {
   eio, genSphere, genGlobe, genThomas, genChainEdges, makeDotTexture,
-  makeGeoTexture, makeTensionTexture, GLOBE_VERTEX_SHADER, GLOBE_FRAGMENT_SHADER,
+  makeGeoTexture, makeTensionTexture, applyRiskTension, latLonToDir,
+  GLOBE_VERTEX_SHADER, GLOBE_FRAGMENT_SHADER,
 } from "../lib/quantForms";
 
 const THREE_SRC = "https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js";
@@ -27,21 +28,19 @@ function loadThree() {
 
 const N = 144000; // same particle count for every form, enables morphing
 const R = 1.8;
-const MORPH_S     = 1.2;
-const PULSE_SPEED = (2 * Math.PI) / 3;
-const IR          = 0.7;    // half the previous size
-const REPEL_F     = 0.52;
-const ATTRACT_F   = 0.546;  // 30% stronger than before
-const IDLE_MS     = 600;
-const LERP_D      = 0.065;
+const MORPH_S       = 1.2;
+const PULSE_SPEED   = (2 * Math.PI) / 3;
+const TENSION_SPEED = 2.4; // blink rate for the top-5 risk countries
+const DRAG_SENS     = 0.005;
+const FOCUS_LERP    = 0.06;
 
 const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
   const mountRef    = useRef(null);
-  const pointerRef  = useRef({ x: 0, y: 0 });
   const selectRef   = useRef(null);
 
   useImperativeHandle(ref, () => ({
-    select: (idx) => selectRef.current?.(idx),
+    select:       (idx)        => selectRef.current?.select(idx),
+    focusCountry: (lat, lon)   => selectRef.current?.focusCountry(lat, lon),
   }), []);
 
   useEffect(() => {
@@ -66,6 +65,7 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
       const tex = makeDotTexture(THREE);
       const geoTex = makeGeoTexture(THREE);
       const tensionTex = makeTensionTexture(THREE);
+      applyRiskTension(tensionTex);
 
       const HOMES = [
         genSphere(N, R),
@@ -79,14 +79,12 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
       let currentIdx = 0;
       let morphT     = 1;
 
-      const pos     = effHome.slice();   // displaced positions
-      const disp    = new Float32Array(N * 3);
       const colors  = new Float32Array(N * 3).fill(1);
       const jPhase  = new Float32Array(N);
       for (let i = 0; i < N; i++) jPhase[i] = Math.random() * Math.PI * 2;
 
       const geometry = new THREE.BufferGeometry();
-      const posAttr  = new THREE.BufferAttribute(pos, 3);
+      const posAttr  = new THREE.BufferAttribute(effHome, 3);
       geometry.setAttribute("position", posAttr);
       geometry.setAttribute("color",    new THREE.BufferAttribute(colors, 3));
 
@@ -97,6 +95,7 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
           uDot:           { value: tex },
           uColorT:        { value: 0 },
           uOpacity:       { value: 0.75 },
+          uTensionPulse:  { value: 1 },
           uPixelsPerUnit: { value: 1 },
           uPixelRatio:    { value: Math.min(window.devicePixelRatio, 2) },
           uSize:          { value: 0.019 },
@@ -128,26 +127,31 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
 
       let globeColorT = 0;
 
-      selectRef.current = (idx) => {
-        if (idx === currentIdx && morphT >= 1) return;
-        prevHome.set(effHome);
-        currHome   = HOMES[idx];
-        currentIdx = idx;
-        morphT     = 0;
+      // Drag-to-rotate state and country-focus animation target (radians,
+      // group.rotation.y). When dragging, auto-rotation/wobble pause; on
+      // release the globe simply keeps spinning from wherever it was left.
+      const drag = { active: false, lastX: 0, lastY: 0 };
+      let focusTarget = null;
+
+      selectRef.current = {
+        select: (idx) => {
+          if (idx === currentIdx && morphT >= 1) return;
+          prevHome.set(effHome);
+          currHome   = HOMES[idx];
+          currentIdx = idx;
+          morphT     = 0;
+        },
+        focusCountry: (lat, lon) => {
+          if (currentIdx !== 1) selectRef.current.select(1);
+          const d = latLonToDir(lat, lon);
+          focusTarget = -Math.atan2(d.x, d.z);
+        },
       };
 
-      // Mouse state
-      const mouse = { x: 0, y: 0, active: false, lastMove: 0, mode: "repel", attractStart: 0 };
-
       // Pre-allocated vectors
-      const invMat    = new THREE.Matrix4();
-      const localCam  = new THREE.Vector3();
-      const viewDir   = new THREE.Vector3();
-      const raycaster = new THREE.Raycaster();
-      const ndc       = new THREE.Vector2();
-      const localO    = new THREE.Vector3();
-      const localD    = new THREE.Vector3();
-      const infPt     = new THREE.Vector3();
+      const invMat   = new THREE.Matrix4();
+      const localCam = new THREE.Vector3();
+      const viewDir  = new THREE.Vector3();
 
       let elapsed = 0, animId, lastFrame = 0;
 
@@ -157,45 +161,29 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
         const dt = Math.min((ts - lastFrame) / 1000, 0.05);
         lastFrame = ts; elapsed += dt;
 
-        group.rotation.y += 0.003;
-        group.rotation.x += (Math.sin(elapsed * 0.2) * 0.07 - group.rotation.x) * 0.03;
+        if (focusTarget !== null) {
+          // Shortest-path turn toward the selected country, recentering tilt.
+          let dyaw = (focusTarget - group.rotation.y) % (2 * Math.PI);
+          if (dyaw > Math.PI) dyaw -= 2 * Math.PI;
+          if (dyaw < -Math.PI) dyaw += 2 * Math.PI;
+          group.rotation.y += dyaw * FOCUS_LERP;
+          group.rotation.x += (0 - group.rotation.x) * FOCUS_LERP;
+          if (Math.abs(dyaw) < 0.003 && Math.abs(group.rotation.x) < 0.003) {
+            group.rotation.y = focusTarget;
+            group.rotation.x = 0;
+            focusTarget = null;
+          }
+        } else if (!drag.active) {
+          group.rotation.y += 0.003;
+          group.rotation.x += (Math.sin(elapsed * 0.2) * 0.07 - group.rotation.x) * 0.03;
+        }
 
         group.updateMatrixWorld();
         invMat.copy(group.matrixWorld).invert();
         localCam.copy(camera.position).applyMatrix4(invMat);
         viewDir.copy(localCam).normalize();
 
-        // Idle → attract transition
-        const now = Date.now();
-        if (mouse.active && now - mouse.lastMove >= IDLE_MS && mouse.mode === "repel") {
-          mouse.mode = "attract";
-          mouse.attractStart = now;
-        }
-
-        // Ray → sphere intersection in local space (for influence center)
-        let hasInf = false, ix = 0, iy = 0, iz = 0;
-        if (mouse.active) {
-          ndc.set(mouse.x, mouse.y);
-          raycaster.setFromCamera(ndc, camera);
-          localO.copy(raycaster.ray.origin).applyMatrix4(invMat);
-          localD.copy(raycaster.ray.direction).transformDirection(invMat).normalize();
-          const b    = 2 * localO.dot(localD);
-          const c    = localO.lengthSq() - R * R;
-          const disc = b * b - 4 * c;
-          if (disc >= 0) {
-            const sq = Math.sqrt(disc);
-            const t  = (-b - sq) / 2 > 0 ? (-b - sq) / 2 : (-b + sq) / 2;
-            if (t > 0) {
-              infPt.copy(localD).multiplyScalar(t).add(localO);
-              hasInf = true; ix = infPt.x; iy = infPt.y; iz = infPt.z;
-            }
-          }
-        }
-
         const vx = viewDir.x, vy = viewDir.y, vz = viewDir.z;
-        const attractAccum = mouse.mode === "attract" && mouse.attractStart > 0
-          ? Math.min(3, (now - mouse.attractStart) / 400) : 0;
-        const LD = mouse.mode === "attract" ? 0.08 : LERP_D;
 
         // Land/ocean/border tinting, only shown for the GLOBE form. Computed
         // before the per-particle loop so the shimmer/pulse damping below
@@ -204,6 +192,9 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
         const globeTarget = currentIdx === 1 ? 1 : 0;
         globeColorT += (globeTarget - globeColorT) * 0.07;
         material.uniforms.uColorT.value = globeColorT;
+
+        // Blink for the top-5 risk countries lit up via the tension texture.
+        material.uniforms.uTensionPulse.value = 0.35 + 0.65 * (0.5 + 0.5 * Math.sin(elapsed * TENSION_SPEED));
 
         // Morph effHome toward currHome
         if (morphT < 1) morphT = Math.min(1, morphT + dt / MORPH_S);
@@ -215,42 +206,6 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
         for (let i = 0; i < N; i++) {
           const i3 = i * 3;
           const hx = effHome[i3], hy = effHome[i3+1], hz = effHome[i3+2];
-
-          let tdx = 0, tdy = 0, tdz = 0;
-          if (hasInf) {
-            const dx = hx - ix, dy = hy - iy, dz = hz - iz;
-            const d2 = dx*dx + dy*dy + dz*dz;
-            if (d2 < IR * IR) {
-              const dist = Math.sqrt(d2);
-              const t = 1 - dist / IR;
-              const s = t * t * (3 - 2 * t); // smoothstep
-
-              if (mouse.mode === "repel") {
-                // Wave ripple pushing particles outward
-                const len = Math.max(0.01, dist);
-                const j   = Math.sin(elapsed * 4 + jPhase[i]) * 0.1 * s;
-                tdx = (dx/len) * s * REPEL_F + j;
-                tdy = (dy/len) * s * REPEL_F;
-                tdz = (dz/len) * s * REPEL_F;
-              } else {
-                // Vortex: pull inward + circular orbit (the "black hole" swirl)
-                const af      = s * ATTRACT_F * Math.min(attractAccum, 2) * 0.22;
-                const swirl   = s * 0.38;
-                const orbitT  = elapsed * 2.5 + jPhase[i];
-                tdx = -dx * af + swirl * Math.cos(orbitT);
-                tdy = -dy * af * 0.28;
-                tdz = -dz * af + swirl * Math.sin(orbitT);
-              }
-            }
-          }
-
-          disp[i3]   += (tdx - disp[i3])   * LD;
-          disp[i3+1] += (tdy - disp[i3+1]) * LD;
-          disp[i3+2] += (tdz - disp[i3+2]) * LD;
-
-          pos[i3]   = hx + disp[i3];
-          pos[i3+1] = hy + disp[i3+1];
-          pos[i3+2] = hz + disp[i3+2];
 
           // Lighting using home position for stable normals
           const len    = Math.sqrt(hx*hx + hy*hy + hz*hz) || 1;
@@ -275,20 +230,37 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
 
       animate();
 
-      // ── Mouse tracking ──
-      const onMove = (e) => {
-        const rect = container.getBoundingClientRect();
-        mouse.x        = ((e.clientX - rect.left) / rect.width)  * 2 - 1;
-        mouse.y        = -((e.clientY - rect.top)  / rect.height) * 2 + 1;
-        mouse.lastMove = Date.now();
-        if (mouse.mode === "attract") { mouse.mode = "repel"; mouse.attractStart = 0; }
-        mouse.active   = true;
-        pointerRef.current = { x: mouse.x, y: mouse.y };
-      };
-      const onLeave = () => { mouse.active = false; mouse.mode = "repel"; mouse.attractStart = 0; };
+      // ── Drag-to-rotate ──
+      // Press and hold (mouse or touch) to spin the globe by hand; on
+      // release it keeps rotating from wherever it was left.
+      container.style.cursor     = "grab";
+      container.style.touchAction = "none";
 
-      container.addEventListener("mousemove",  onMove);
-      container.addEventListener("mouseleave", onLeave);
+      const onPointerDown = (e) => {
+        drag.active = true;
+        drag.lastX  = e.clientX;
+        drag.lastY  = e.clientY;
+        focusTarget = null;
+        container.style.cursor = "grabbing";
+      };
+      const onPointerMove = (e) => {
+        if (!drag.active) return;
+        const dx = e.clientX - drag.lastX;
+        const dy = e.clientY - drag.lastY;
+        drag.lastX = e.clientX;
+        drag.lastY = e.clientY;
+        group.rotation.y += dx * DRAG_SENS;
+        group.rotation.x = Math.max(-1.2, Math.min(1.2, group.rotation.x - dy * DRAG_SENS));
+      };
+      const onPointerUp = () => {
+        drag.active = false;
+        container.style.cursor = "grab";
+      };
+
+      container.addEventListener("pointerdown", onPointerDown);
+      window.addEventListener("pointermove", onPointerMove);
+      window.addEventListener("pointerup",   onPointerUp);
+      window.addEventListener("pointercancel", onPointerUp);
 
       const onResize = () => {
         camera.aspect = container.clientWidth / container.clientHeight;
@@ -300,8 +272,10 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
 
       cleanup = () => {
         cancelAnimationFrame(animId);
-        container.removeEventListener("mousemove",  onMove);
-        container.removeEventListener("mouseleave", onLeave);
+        container.removeEventListener("pointerdown", onPointerDown);
+        window.removeEventListener("pointermove",   onPointerMove);
+        window.removeEventListener("pointerup",     onPointerUp);
+        window.removeEventListener("pointercancel", onPointerUp);
         window.removeEventListener("resize",        onResize);
         geometry.dispose(); wireGeom.dispose();
         tex.dispose(); geoTex.dispose(); tensionTex.dispose();

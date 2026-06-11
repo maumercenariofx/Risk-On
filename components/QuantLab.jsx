@@ -4,7 +4,8 @@ import { T } from "./Lang";
 import {
   eio, genSphere, genGlobe, genThomas, genChainEdges,
   makeDotTexture, FORMS,
-  makeGeoTexture, makeTensionTexture, GLOBE_VERTEX_SHADER, GLOBE_FRAGMENT_SHADER,
+  makeGeoTexture, makeTensionTexture, applyRiskTension,
+  GLOBE_VERTEX_SHADER, GLOBE_FRAGMENT_SHADER,
 } from "../lib/quantForms";
 
 const THREE_SRC = "https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js";
@@ -29,6 +30,7 @@ function loadThree() {
 
 const N = 144000; // same particle count for every form, enables morphing
 const MORPH_S = 1.2;
+const TENSION_SPEED = 2.4; // blink rate for the top-5 risk countries
 
 export default function QuantLab() {
   const mountRef = useRef(null);
@@ -79,6 +81,7 @@ export default function QuantLab() {
       const dotTex     = makeDotTexture(THREE);
       const geoTex     = makeGeoTexture(THREE);
       const tensionTex = makeTensionTexture(THREE);
+      applyRiskTension(tensionTex);
 
       const material = new THREE.ShaderMaterial({
         uniforms: {
@@ -87,6 +90,7 @@ export default function QuantLab() {
           uDot:           { value: dotTex },
           uColorT:        { value: 0 },
           uOpacity:       { value: 0.7 },
+          uTensionPulse:  { value: 1 },
           uPixelsPerUnit: { value: 1 },
           uPixelRatio:    { value: Math.min(window.devicePixelRatio, 2) },
           uSize:          { value: 0.0175 },
@@ -151,6 +155,9 @@ export default function QuantLab() {
         const globeTarget = currentIdx === 1 ? 1 : 0;
         globeColorT += (globeTarget - globeColorT) * 0.07;
         material.uniforms.uColorT.value = globeColorT;
+
+        // Blink for the top-5 risk countries lit up via the tension texture.
+        material.uniforms.uTensionPulse.value = 0.35 + 0.65 * (0.5 + 0.5 * Math.sin(elapsed * TENSION_SPEED));
 
         for (let i = 0; i < N; i++) {
           const i3 = i * 3;

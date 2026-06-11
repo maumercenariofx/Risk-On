@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLang, T } from "./Lang";
 import { computeRiskIndex, riskLabel, componentMeta } from "../lib/riskIndex";
-import { FORMS } from "../lib/quantForms";
+import { FORMS, RISK_COUNTRIES } from "../lib/quantForms";
 import RiskSphere from "./RiskSphere";
 import MarketsClient from "./MarketsClient";
 import VoronoiBackground from "./VoronoiBackground";
@@ -102,24 +102,53 @@ export default function RiskGauge() {
           <div style={{ color: "#2E2E34" }}>RISK?</div>
         </div>
 
-        {/* Bottom-right: score + label — score-blink starts after counter settles */}
+        {/* Bottom-right: alert countries + score + label — score-blink starts after counter settles */}
         {result && (
           <div style={{
             position: "absolute",
             bottom: 28,
             right: 0,
-            textAlign: "right",
-            lineHeight: 0.9,
-            textTransform: "uppercase",
-            fontFamily: "var(--font-sans)",
-            fontWeight: 800,
-            fontSize: "clamp(30px, 6.5vw, 80px)",
-            letterSpacing: "-0.03em",
-            pointerEvents: "none",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "flex-end",
+            gap: 10,
           }}>
-            <div className="score-blink" style={{ color: accentColor }}>{display}.</div>
-            <div style={{ color: "#2E2E34" }}>
-              <T es={label.es} en={label.en} />
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 5 }}>
+              <div style={{ fontSize: 9, letterSpacing: 2, textTransform: "uppercase", color: "#4A4A50", pointerEvents: "none" }}>
+                <T es="Países en alerta" en="Countries on alert" />
+              </div>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                {RISK_COUNTRIES.map((c) => (
+                  <button
+                    key={c.id}
+                    onClick={() => { sphereRef.current?.focusCountry(c.lat, c.lon); setFormIdx(1); }}
+                    style={{
+                      fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: 1, textTransform: "uppercase",
+                      padding: "3px 8px", borderRadius: 5, cursor: "pointer",
+                      background: "rgba(163,45,45,0.12)", border: "1px solid rgba(163,45,45,0.4)",
+                      color: "#C77B7B", transition: "all .2s",
+                    }}
+                  >
+                    {lang === "es" ? c.name_es : c.name_en}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div style={{
+              textAlign: "right",
+              lineHeight: 0.9,
+              textTransform: "uppercase",
+              fontFamily: "var(--font-sans)",
+              fontWeight: 800,
+              fontSize: "clamp(30px, 6.5vw, 80px)",
+              letterSpacing: "-0.03em",
+              pointerEvents: "none",
+            }}>
+              <div className="score-blink" style={{ color: accentColor }}>{display}.</div>
+              <div style={{ color: "#2E2E34" }}>
+                <T es={label.es} en={label.en} />
+              </div>
             </div>
           </div>
         )}
