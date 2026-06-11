@@ -144,6 +144,14 @@ export default function QuantLab() {
           effHome[i] = prevHome[i] + (currHome[i] - prevHome[i]) * mt;
         }
 
+        // Land/ocean/border tinting, only shown for the GLOBE form. Computed
+        // before the per-particle loop so the shimmer/pulse damping below
+        // (which fades to a calmer look while the globe tint is active) uses
+        // the up-to-date value.
+        const globeTarget = currentIdx === 1 ? 1 : 0;
+        globeColorT += (globeTarget - globeColorT) * 0.07;
+        material.uniforms.uColorT.value = globeColorT;
+
         for (let i = 0; i < N; i++) {
           const i3 = i * 3;
           const hx = effHome[i3], hy = effHome[i3+1], hz = effHome[i3+2];
@@ -153,7 +161,7 @@ export default function QuantLab() {
 
           const len = Math.sqrt(hx*hx + hy*hy + hz*hz) || 1;
           const facing  = (hx/len)*0 + (hy/len)*0.4 + (hz/len)*0.6;
-          const shimmer = 0.12 * Math.sin(elapsed * 1.6 + jPhase[i]);
+          const shimmer = 0.12 * Math.sin(elapsed * 1.6 + jPhase[i]) * (1 - globeColorT);
           const b = Math.max(0, 0.25 + (facing * 0.5 + 0.5) * 0.7 + shimmer);
 
           colors[i3] = colors[i3+1] = colors[i3+2] = b;
@@ -163,12 +171,9 @@ export default function QuantLab() {
         const wireTarget = currentIdx === 2 ? 0.4 : 0;
         wireMat.opacity += (wireTarget - wireMat.opacity) * 0.07;
 
-        // Land/ocean/border tinting, only shown for the GLOBE form
-        const globeTarget = currentIdx === 1 ? 1 : 0;
-        globeColorT += (globeTarget - globeColorT) * 0.07;
-        material.uniforms.uColorT.value = globeColorT;
-
-        material.uniforms.uOpacity.value = 0.55 + Math.sin(elapsed * (2 * Math.PI / 4)) * 0.1;
+        // Pulse fades out while the GLOBE tint is active so the map doesn't
+        // flicker in and out of brightness.
+        material.uniforms.uOpacity.value = 0.55 + Math.sin(elapsed * (2 * Math.PI / 4)) * 0.1 * (1 - globeColorT);
         posAttr.needsUpdate = true;
         geometry.attributes.color.needsUpdate = true;
         renderer.render(scene, camera);

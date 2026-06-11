@@ -197,6 +197,14 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
           ? Math.min(3, (now - mouse.attractStart) / 400) : 0;
         const LD = mouse.mode === "attract" ? 0.08 : LERP_D;
 
+        // Land/ocean/border tinting, only shown for the GLOBE form. Computed
+        // before the per-particle loop so the shimmer/pulse damping below
+        // (which fades to a calmer look while the globe tint is active) uses
+        // the up-to-date value.
+        const globeTarget = currentIdx === 1 ? 1 : 0;
+        globeColorT += (globeTarget - globeColorT) * 0.07;
+        material.uniforms.uColorT.value = globeColorT;
+
         // Morph effHome toward currHome
         if (morphT < 1) morphT = Math.min(1, morphT + dt / MORPH_S);
         const mt = eio(morphT);
@@ -247,7 +255,7 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
           // Lighting using home position for stable normals
           const len    = Math.sqrt(hx*hx + hy*hy + hz*hz) || 1;
           const facing = (hx/len)*vx + (hy/len)*vy + (hz/len)*vz;
-          const shimmer = 0.12 * Math.sin(elapsed * 1.8 + jPhase[i]);
+          const shimmer = 0.12 * Math.sin(elapsed * 1.8 + jPhase[i]) * (1 - globeColorT);
           const b = Math.max(0, 0.22 + (facing * 0.5 + 0.5) * 0.72 + shimmer);
 
           colors[i3] = colors[i3+1] = colors[i3+2] = b;
@@ -257,12 +265,9 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
         const wireTarget = currentIdx === 2 ? 0.35 : 0;
         wireMat.opacity += (wireTarget - wireMat.opacity) * 0.07;
 
-        // Land/ocean/border tinting, only shown for the GLOBE form
-        const globeTarget = currentIdx === 1 ? 1 : 0;
-        globeColorT += (globeTarget - globeColorT) * 0.07;
-        material.uniforms.uColorT.value = globeColorT;
-
-        material.uniforms.uOpacity.value = 0.715 + Math.sin(elapsed * PULSE_SPEED) * 0.165;
+        // Pulse fades out while the GLOBE tint is active so the map doesn't
+        // flicker in and out of brightness.
+        material.uniforms.uOpacity.value = 0.715 + Math.sin(elapsed * PULSE_SPEED) * 0.165 * (1 - globeColorT);
         posAttr.needsUpdate                   = true;
         geometry.attributes.color.needsUpdate = true;
         renderer.render(scene, camera);
