@@ -27,7 +27,7 @@ function loadThree() {
   });
 }
 
-const N = 72000; // same particle count for every form, enables morphing
+const N = 144000; // same particle count for every form, enables morphing
 const MORPH_S = 1.2;
 
 export default function QuantLab() {
@@ -89,7 +89,7 @@ export default function QuantLab() {
           uOpacity:       { value: 0.7 },
           uPixelsPerUnit: { value: 1 },
           uPixelRatio:    { value: Math.min(window.devicePixelRatio, 2) },
-          uSize:          { value: 0.035 },
+          uSize:          { value: 0.0175 },
         },
         vertexShader: GLOBE_VERTEX_SHADER,
         fragmentShader: GLOBE_FRAGMENT_SHADER,
