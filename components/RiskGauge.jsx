@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLang, T } from "./Lang";
 import { computeRiskIndex, riskLabel, componentMeta } from "../lib/riskIndex";
-import { FORMS, RISK_COUNTRIES } from "../lib/quantForms";
+import { RISK_COUNTRIES } from "../lib/quantForms";
 import RiskSphere from "./RiskSphere";
 import MarketsClient from "./MarketsClient";
 import VoronoiBackground from "./VoronoiBackground";
@@ -36,7 +36,6 @@ export default function RiskGauge() {
   const [display, setDisplay]   = useState(0);
   const [sel, setSel]           = useState("vix");
   const [methOpen, setMethOpen] = useState(false);
-  const [formIdx, setFormIdx]   = useState(0);
   const [newsCountry, setNewsCountry] = useState(null);
   const [news, setNews]               = useState([]);
   const [newsLoading, setNewsLoading] = useState(false);
@@ -145,7 +144,6 @@ export default function RiskGauge() {
                     key={c.id}
                     onClick={() => {
                       sphereRef.current?.focusCountry(c.lat, c.lon);
-                      setFormIdx(1);
                       setNewsCountry((cur) => (cur === c.id ? null : c.id));
                     }}
                     style={{
@@ -265,49 +263,6 @@ export default function RiskGauge() {
           </div>
         );
       })()}
-
-      {/* ── Quant figure switcher ── */}
-      <div style={{ marginBottom: 28 }}>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
-          {FORMS.map((f, i) => (
-            <button
-              key={f.id}
-              onClick={() => { sphereRef.current?.select(i); setFormIdx(i); }}
-              style={{
-                fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: 1.5, textTransform: "uppercase",
-                padding: "7px 11px", borderRadius: 7, cursor: "pointer",
-                background: i === formIdx ? "rgba(245,245,242,0.08)" : "rgba(11,11,12,0.92)",
-                border: `1px solid ${i === formIdx ? "#3A3A3E" : "#1E1E20"}`,
-                color: i === formIdx ? "#F5F5F2" : "#8A8A8E",
-                transition: "all .2s",
-              }}
-            >
-              <T es={f.label_es} en={f.label_en} />
-            </button>
-          ))}
-        </div>
-
-        <div
-          className="card-glass"
-          style={{ background: "rgba(11,11,12,0.92)", border: "1px solid #1E1E20", borderRadius: 12, padding: "14px 16px" }}
-        >
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8, marginBottom: 8 }}>
-            <div style={{ fontSize: 9, letterSpacing: 1.5, textTransform: "uppercase", color: "#4A4A50" }}>
-              <T es={FORMS[formIdx].label_es} en={FORMS[formIdx].label_en} />
-            </div>
-            <div style={{
-              fontFamily: "var(--font-mono)", fontSize: 13, color: "#F5F5F2",
-              background: "rgba(255,255,255,0.04)", border: "1px solid #1E1E20",
-              borderRadius: 6, padding: "3px 9px",
-            }}>
-              {FORMS[formIdx].formula}
-            </div>
-          </div>
-          <p style={{ fontSize: 12, color: "#8A8A8E", lineHeight: 1.7 }}>
-            <T es={FORMS[formIdx].es} en={FORMS[formIdx].en} />
-          </p>
-        </div>
-      </div>
 
       {/* ── Component cards ── */}
       {meta && (

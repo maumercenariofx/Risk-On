@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, forwardRef, useImperativeHandle } from "react";
 import {
-  eio, genSphere, genGlobe, genThomas, genChainEdges, makeDotTexture,
+  genGlobe, makeDotTexture,
   makeGeoTexture, makeCountryDataUniform, latLonToDir,
   GLOBE_VERTEX_SHADER, GLOBE_FRAGMENT_SHADER,
 } from "../lib/quantForms";
@@ -26,19 +26,26 @@ function loadThree() {
   });
 }
 
-const N = 144000; // same particle count for every form, enables morphing
+const N = 144000;
 const R = 1.8;
-const MORPH_S       = 1.2;
-const PULSE_SPEED   = (2 * Math.PI) / 3;
-const FOCUS_LERP    = 0.06;
+const FOCUS_LERP = 0.06;
+
+// "Black hole" hover effect — particles near the cursor spiral inward
+// (radial pull + tangential swirl), then spring back outward with
+// inertia once the cursor leaves. Overdamped so the globe is firm at rest.
+const HOVER_RADIUS  = 0.65;
+const HOVER_RADIUS2 = HOVER_RADIUS * HOVER_RADIUS;
+const ATTRACT_ACCEL = 14;
+const SWIRL_FRAC    = 0.4;
+const SPRING_K      = 9;
+const DAMPING       = 0.88;
 
 const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
   const mountRef    = useRef(null);
   const selectRef   = useRef(null);
 
   useImperativeHandle(ref, () => ({
-    select:       (idx)        => selectRef.current?.select(idx),
-    focusCountry: (lat, lon)   => selectRef.current?.focusCountry(lat, lon),
+    focusCountry: (lat, lon) => selectRef.current?.focusCountry(lat, lon),
   }), []);
 
   useEffect(() => {
@@ -63,17 +70,12 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
       const tex = makeDotTexture(THREE);
       const geoTex = makeGeoTexture(THREE);
 
-      const HOMES = [
-        genSphere(N, R),
-        genGlobe(N, R),
-        genThomas(N),
-      ];
+      const home    = genGlobe(N, R);
+      const effHome = home.slice();
 
-      const prevHome = HOMES[0].slice();
-      const effHome  = HOMES[0].slice();
-      let currHome   = HOMES[0];
-      let currentIdx = 0;
-      let morphT     = 1;
+      // Per-particle hover-displacement state (local space, pre-group-scale).
+      const dispX = new Float32Array(N), dispY = new Float32Array(N), dispZ = new Float32Array(N);
+      const velX  = new Float32Array(N), velY  = new Float32Array(N), velZ  = new Float32Array(N);
 
       const jPhase  = new Float32Array(N);
       for (let i = 0; i < N; i++) jPhase[i] = Math.random() * Math.PI * 2;
@@ -87,8 +89,8 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
         uniforms: {
           uMap:           { value: geoTex },
           uDot:           { value: tex },
-          uColorT:        { value: 0 },
-          uOpacity:       { value: 0.75 },
+          uColorT:        { value: 1 },
+          uOpacity:       { value: 0.715 },
           uCountryData:   { value: makeCountryDataUniform(THREE) },
           uPixelsPerUnit: { value: 1 },
           uPixelRatio:    { value: Math.min(window.devicePixelRatio, 2) },
@@ -116,34 +118,34 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
       group.scale.set(1.3, 1.3, 1.3);
       scene.add(group);
 
-      // Wireframe — draws the attractor's trajectory as a continuous curve
-      // through phase space. Only shown (and meaningful) for the attractors.
-      const wireGeom = new THREE.BufferGeometry();
-      wireGeom.setAttribute("position", posAttr);
-      wireGeom.setIndex(new THREE.BufferAttribute(genChainEdges(N), 1));
-      const wireMat  = new THREE.LineBasicMaterial({ color: 0xF5F5F2, transparent: true, opacity: 0 });
-      const wireMesh = new THREE.LineSegments(wireGeom, wireMat);
-      group.add(wireMesh);
-
-      let globeColorT = 0;
-
       // Country-focus animation target (radians, group.rotation.y).
       let focusTarget = null;
 
       selectRef.current = {
-        select: (idx) => {
-          if (idx === currentIdx && morphT >= 1) return;
-          prevHome.set(effHome);
-          currHome   = HOMES[idx];
-          currentIdx = idx;
-          morphT     = 0;
-        },
         focusCountry: (lat, lon) => {
-          if (currentIdx !== 1) selectRef.current.select(1);
           const d = latLonToDir(lat, lon);
           focusTarget = -Math.atan2(d.x, d.z);
         },
       };
+
+      // ── "Black hole" hover effect ──
+      let mouseActive = false;
+      const mouseNDC    = new THREE.Vector2();
+      const mouseLocal  = new THREE.Vector3();
+      const raycaster   = new THREE.Raycaster();
+      const hitSphere   = new THREE.Sphere(new THREE.Vector3(0, 0, 0), R);
+      const hitPoint    = new THREE.Vector3();
+      const localMatrix = new THREE.Matrix4();
+
+      const onPointerMove = (e) => {
+        const rect = container.getBoundingClientRect();
+        mouseNDC.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+        mouseNDC.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+        mouseActive = true;
+      };
+      const onPointerLeave = () => { mouseActive = false; };
+      container.addEventListener("pointermove", onPointerMove);
+      container.addEventListener("pointerleave", onPointerLeave);
 
       let elapsed = 0, animId, lastFrame = 0;
 
@@ -173,28 +175,65 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
 
         material.uniforms.uTime.value = elapsed;
 
-        // Land/ocean/border tinting, only shown for the GLOBE form. Computed
-        // before the per-particle loop so the shimmer/pulse damping below
-        // (which fades to a calmer look while the globe tint is active) uses
-        // the up-to-date value.
-        const globeTarget = currentIdx === 1 ? 1 : 0;
-        globeColorT += (globeTarget - globeColorT) * 0.07;
-        material.uniforms.uColorT.value = globeColorT;
-
-        // Morph effHome toward currHome
-        if (morphT < 1) morphT = Math.min(1, morphT + dt / MORPH_S);
-        const mt = eio(morphT);
-        for (let i = 0; i < N * 3; i++) {
-          effHome[i] = prevHome[i] + (currHome[i] - prevHome[i]) * mt;
+        // Re-project the cursor onto the globe's surface every frame, so the
+        // attraction point tracks the cursor even while the group rotates.
+        if (mouseActive) {
+          raycaster.setFromCamera(mouseNDC, camera);
+          const rayLocal = raycaster.ray.clone().applyMatrix4(localMatrix.copy(group.matrixWorld).invert());
+          if (rayLocal.intersectSphere(hitSphere, hitPoint)) {
+            mouseLocal.copy(hitPoint);
+          } else {
+            mouseActive = false;
+          }
         }
 
-        // Wireframe: traces the attractor's path, only shown for the Thomas form
-        const wireTarget = currentIdx === 2 ? 0.35 : 0;
-        wireMat.opacity += (wireTarget - wireMat.opacity) * 0.07;
+        for (let i = 0; i < N; i++) {
+          const ix = i * 3, iy = ix + 1, iz = ix + 2;
+          const bx = home[ix], by = home[iy], bz = home[iz];
+          const px = bx + dispX[i], py = by + dispY[i], pz = bz + dispZ[i];
 
-        // Pulse fades out while the GLOBE tint is active so the map doesn't
-        // flicker in and out of brightness.
-        material.uniforms.uOpacity.value = 0.715 + Math.sin(elapsed * PULSE_SPEED) * 0.165 * (1 - globeColorT);
+          let fx, fy, fz;
+
+          if (mouseActive) {
+            const dx = mouseLocal.x - px, dy = mouseLocal.y - py, dz = mouseLocal.z - pz;
+            const d2 = dx * dx + dy * dy + dz * dz;
+            if (d2 < HOVER_RADIUS2 && d2 > 1e-8) {
+              const d = Math.sqrt(d2);
+              const falloff = 1 - d / HOVER_RADIUS;
+              const invD = 1 / d;
+              const rx = dx * invD, ry = dy * invD, rz = dz * invD;
+              // Tangential swirl around the local z-axis.
+              const tx = -ry, ty = rx, tz = 0;
+              const accel = falloff * ATTRACT_ACCEL;
+              fx = (rx + tx * SWIRL_FRAC) * accel;
+              fy = (ry + ty * SWIRL_FRAC) * accel;
+              fz = (rz + tz * SWIRL_FRAC) * accel;
+            } else {
+              fx = -dispX[i] * SPRING_K;
+              fy = -dispY[i] * SPRING_K;
+              fz = -dispZ[i] * SPRING_K;
+            }
+          } else {
+            fx = -dispX[i] * SPRING_K;
+            fy = -dispY[i] * SPRING_K;
+            fz = -dispZ[i] * SPRING_K;
+          }
+
+          const vx = (velX[i] + fx * dt) * DAMPING;
+          const vy = (velY[i] + fy * dt) * DAMPING;
+          const vz = (velZ[i] + fz * dt) * DAMPING;
+          velX[i] = vx; velY[i] = vy; velZ[i] = vz;
+
+          const ndx = dispX[i] + vx * dt;
+          const ndy = dispY[i] + vy * dt;
+          const ndz = dispZ[i] + vz * dt;
+          dispX[i] = ndx; dispY[i] = ndy; dispZ[i] = ndz;
+
+          effHome[ix] = bx + ndx;
+          effHome[iy] = by + ndy;
+          effHome[iz] = bz + ndz;
+        }
+
         posAttr.needsUpdate = true;
         renderer.render(scene, camera);
       }
@@ -212,9 +251,11 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
       cleanup = () => {
         cancelAnimationFrame(animId);
         window.removeEventListener("resize", onResize);
-        geometry.dispose(); wireGeom.dispose();
+        container.removeEventListener("pointermove", onPointerMove);
+        container.removeEventListener("pointerleave", onPointerLeave);
+        geometry.dispose();
         tex.dispose(); geoTex.dispose();
-        material.dispose(); wireMat.dispose();
+        material.dispose();
         renderer.dispose();
         if (renderer.domElement.parentNode === container) container.removeChild(renderer.domElement);
         selectRef.current = null;
