@@ -33,7 +33,7 @@ const FOCUS_LERP = 0.06;
 // "Black hole" hover effect — particles near the cursor spiral inward
 // (radial pull + tangential swirl), then spring back outward with
 // inertia once the cursor leaves. Overdamped so the globe is firm at rest.
-const HOVER_RADIUS  = 0.65;
+const HOVER_RADIUS  = 0.455;
 const HOVER_RADIUS2 = HOVER_RADIUS * HOVER_RADIUS;
 const ATTRACT_ACCEL = 14;
 const SWIRL_FRAC    = 0.4;
