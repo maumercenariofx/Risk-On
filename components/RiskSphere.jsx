@@ -156,8 +156,14 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
         mouseActive = true;
       };
       const onPointerLeave = () => { mouseActive = false; };
+      const onPointerDown  = (e) => { onPointerMove(e); lastMoveAt = elapsed; };
       container.addEventListener("pointermove", onPointerMove);
       container.addEventListener("pointerleave", onPointerLeave);
+      // Touch has no hover/leave — track the finger while down and release
+      // on lift/cancel so the effect works the same way on mobile.
+      container.addEventListener("pointerdown",   onPointerDown);
+      container.addEventListener("pointerup",     onPointerLeave);
+      container.addEventListener("pointercancel", onPointerLeave);
 
       function animate(ts = 0) {
         animId = requestAnimationFrame(animate);
@@ -278,6 +284,9 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
         window.removeEventListener("resize", onResize);
         container.removeEventListener("pointermove", onPointerMove);
         container.removeEventListener("pointerleave", onPointerLeave);
+        container.removeEventListener("pointerdown", onPointerDown);
+        container.removeEventListener("pointerup", onPointerLeave);
+        container.removeEventListener("pointercancel", onPointerLeave);
         geometry.dispose();
         tex.dispose(); geoTex.dispose();
         material.dispose();
