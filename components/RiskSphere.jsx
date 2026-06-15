@@ -101,20 +101,36 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
         }
       });
 
-      // Intro: particles start scattered across the screen and converge
-      // into the default Global Risk Map on load.
+      // Intro: particles start as a dense star-field cloud covering the
+      // whole screen (denser center, fading at the edges) and converge
+      // into the default Global Risk Map on load. Sigma is derived from
+      // the camera's visible extent so the cloud fills the viewport on
+      // any aspect ratio (desktop or mobile portrait) without clipping.
+      const gauss = () => {
+        let u = 0, v = 0;
+        while (u === 0) u = Math.random();
+        while (v === 0) v = Math.random();
+        return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+      };
+      const fovRad   = THREE.MathUtils.degToRad(camera.fov);
+      const visibleH = (2 * Math.tan(fovRad / 2) * camera.position.z) / 1.3;
+      const visibleW = visibleH * (container.clientWidth / container.clientHeight);
+      const sigmaX = visibleW * 0.5;
+      const sigmaY = visibleH * 0.5;
+      const sigmaZ = 1.5;
       const scatter = new Float32Array(N * 3);
       for (let i = 0; i < N; i++) {
-        scatter[i*3]   = (Math.random() - 0.5) * 12;
-        scatter[i*3+1] = (Math.random() - 0.5) * 6;
-        scatter[i*3+2] = (Math.random() - 0.5) * 5;
+        scatter[i*3]   = gauss() * sigmaX;
+        scatter[i*3+1] = gauss() * sigmaY;
+        scatter[i*3+2] = gauss() * sigmaZ;
       }
 
-      let currentIdx = GLOBE_IDX;
-      let prevHome   = scatter;
-      let currHome   = HOMES[GLOBE_IDX];
-      let morphT     = 0;
-      let morphDur   = INTRO_MORPH_S;
+      let currentIdx  = GLOBE_IDX;
+      let prevHome    = scatter;
+      let currHome    = HOMES[GLOBE_IDX];
+      let morphT      = 0;
+      let morphDur    = INTRO_MORPH_S;
+      let introActive = true;
       const baseNow  = scatter.slice();
       const effHome  = scatter.slice();
 
@@ -239,7 +255,7 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
         material.uniforms.uTime.value = elapsed;
 
         // Fade the globe-only tint/country highlight in or out as forms change.
-        const colorTarget = currentIdx === GLOBE_IDX ? 1 : 0;
+        const colorTarget = currentIdx === GLOBE_IDX && !introActive ? 1 : 0;
         material.uniforms.uColorT.value += (colorTarget - material.uniforms.uColorT.value) * 0.05;
 
         // Re-project the cursor onto the globe's surface every frame, so the
@@ -266,6 +282,7 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
         }
 
         if (morphT < 1) morphT = Math.min(1, morphT + dt / morphDur);
+        else introActive = false;
         const mt = morphT < 1 ? eio(morphT) : 1;
 
         for (let i = 0; i < N; i++) {
