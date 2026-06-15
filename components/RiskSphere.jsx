@@ -30,15 +30,21 @@ const N = 144000;
 const R = 1.8;
 const FOCUS_LERP = 0.06;
 
-// "Black hole" hover effect — particles near the cursor spiral inward
-// (radial pull + tangential swirl), then spring back outward with
-// inertia once the cursor leaves. Overdamped so the globe is firm at rest.
-const HOVER_RADIUS  = 0.455;
-const HOVER_RADIUS2 = HOVER_RADIUS * HOVER_RADIUS;
-const ATTRACT_ACCEL = 14;
-const SWIRL_FRAC    = 0.4;
-const SPRING_K      = 9;
-const DAMPING       = 0.88;
+// Hover effect: while the cursor is MOVING, nearby particles are pushed
+// outward (repel/crater). If the cursor stays still for IDLE_THRESHOLD,
+// it flips to "black hole" mode — particles get sucked inward with
+// growing force + a swirl, forming a void. Moving again snaps back to
+// repel and everything springs home with inertia (overdamped, no bounce).
+const HOVER_RADIUS       = 0.455;
+const HOVER_RADIUS2      = HOVER_RADIUS * HOVER_RADIUS;
+const IDLE_THRESHOLD     = 0.6;
+const REPEL_ACCEL        = 14;
+const ATTRACT_ACCEL_BASE = 6;
+const ATTRACT_ACCEL_GROWTH = 18;
+const ATTRACT_RAMP       = 1.5;
+const SWIRL_FRAC         = 0.4;
+const SPRING_K           = 9;
+const DAMPING            = 0.88;
 
 const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
   const mountRef    = useRef(null);
@@ -128,8 +134,10 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
         },
       };
 
-      // ── "Black hole" hover effect ──
+      // ── Hover effect state ──
+      let elapsed = 0, animId, lastFrame = 0;
       let mouseActive = false;
+      let lastMoveAt  = 0;
       const mouseNDC    = new THREE.Vector2();
       const mouseLocal  = new THREE.Vector3();
       const raycaster   = new THREE.Raycaster();
@@ -139,15 +147,17 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
 
       const onPointerMove = (e) => {
         const rect = container.getBoundingClientRect();
-        mouseNDC.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-        mouseNDC.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+        const nx = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+        const ny = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+        if (Math.abs(nx - mouseNDC.x) > 1e-4 || Math.abs(ny - mouseNDC.y) > 1e-4) {
+          lastMoveAt = elapsed;
+        }
+        mouseNDC.x = nx; mouseNDC.y = ny;
         mouseActive = true;
       };
       const onPointerLeave = () => { mouseActive = false; };
       container.addEventListener("pointermove", onPointerMove);
       container.addEventListener("pointerleave", onPointerLeave);
-
-      let elapsed = 0, animId, lastFrame = 0;
 
       function animate(ts = 0) {
         animId = requestAnimationFrame(animate);
@@ -187,6 +197,12 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
           }
         }
 
+        const idleTime = elapsed - lastMoveAt;
+        const isAttract = mouseActive && idleTime >= IDLE_THRESHOLD;
+        const attractAccel = isAttract
+          ? ATTRACT_ACCEL_BASE + Math.min(idleTime - IDLE_THRESHOLD, ATTRACT_RAMP) * ATTRACT_ACCEL_GROWTH
+          : 0;
+
         for (let i = 0; i < N; i++) {
           const ix = i * 3, iy = ix + 1, iz = ix + 2;
           const bx = home[ix], by = home[iy], bz = home[iz];
@@ -202,12 +218,21 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
               const falloff = 1 - d / HOVER_RADIUS;
               const invD = 1 / d;
               const rx = dx * invD, ry = dy * invD, rz = dz * invD;
-              // Tangential swirl around the local z-axis.
-              const tx = -ry, ty = rx, tz = 0;
-              const accel = falloff * ATTRACT_ACCEL;
-              fx = (rx + tx * SWIRL_FRAC) * accel;
-              fy = (ry + ty * SWIRL_FRAC) * accel;
-              fz = (rz + tz * SWIRL_FRAC) * accel;
+              if (isAttract) {
+                // Black hole: pull toward the cursor with a spiral swirl,
+                // growing stronger the longer the cursor stays still.
+                const tx = -ry, ty = rx, tz = 0;
+                const accel = falloff * attractAccel;
+                fx = (rx + tx * SWIRL_FRAC) * accel;
+                fy = (ry + ty * SWIRL_FRAC) * accel;
+                fz = (rz + tz * SWIRL_FRAC) * accel;
+              } else {
+                // Repel: push away from the cursor (crater follows the mouse).
+                const accel = falloff * REPEL_ACCEL;
+                fx = -rx * accel;
+                fy = -ry * accel;
+                fz = -rz * accel;
+              }
             } else {
               fx = -dispX[i] * SPRING_K;
               fy = -dispY[i] * SPRING_K;
