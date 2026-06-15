@@ -2,6 +2,7 @@
 // components/DailyRead.jsx
 import Link from "next/link";
 import { useLang, T } from "./Lang";
+import SubscribeForm from "./SubscribeForm";
 
 export default function DailyRead({ post }) {
   const { lang } = useLang();
@@ -12,11 +13,15 @@ export default function DailyRead({ post }) {
     <section className="reveal" style={{ animationDelay: "0.2s" }}>
       <div className="mb-2.5 flex items-center gap-2">
         <span className="rounded-md border border-edge bg-white/5 px-2.5 py-1 text-[11px] font-medium uppercase tracking-wide text-muted">
-          <T es="La lectura del día" en="Today's read" />
+          El Pre
         </span>
         <span className="text-xs text-muted">{post.date}</span>
       </div>
-      <h2 className="mb-2 font-serif text-2xl font-medium leading-tight text-bone">{title}</h2>
+      <h2 className="mb-1 font-serif text-2xl font-medium leading-tight text-bone">{title}</h2>
+      <p className="mb-2 text-xs text-muted">
+        <T es="El briefing matutino de mercados, antes de que abra Wall Street."
+           en="The morning markets briefing, before Wall Street opens." />
+      </p>
       <p className="text-[15px] leading-relaxed text-bone/80">{summary}</p>
       <Link
         href={`/archive/${post.slug}`}
@@ -24,6 +29,8 @@ export default function DailyRead({ post }) {
       >
         <T es="Leer completa" en="Read full note" /> →
       </Link>
+
+      <SubscribeForm />
     </section>
   );
 }
