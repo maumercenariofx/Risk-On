@@ -71,7 +71,13 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
       renderer.setClearColor(0x000000, 0);
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
       renderer.setSize(container.clientWidth, container.clientHeight);
-      container.appendChild(renderer.domElement);
+      const canvas = renderer.domElement;
+      canvas.style.touchAction = "pan-y";
+      canvas.style.userSelect = "none";
+      canvas.style.webkitUserSelect = "none";
+      canvas.style.webkitTouchCallout = "none";
+      canvas.style.webkitTapHighlightColor = "transparent";
+      container.appendChild(canvas);
 
       const tex = makeDotTexture(THREE);
       const geoTex = makeGeoTexture(THREE);
@@ -299,7 +305,20 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
     return () => { destroyed = true; cleanup(); };
   }, []);
 
-  return <div ref={mountRef} style={{ width: "100%", height }} />;
+  return (
+    <div
+      ref={mountRef}
+      style={{
+        width: "100%",
+        height,
+        touchAction: "pan-y",
+        WebkitUserSelect: "none",
+        userSelect: "none",
+        WebkitTouchCallout: "none",
+        WebkitTapHighlightColor: "transparent",
+      }}
+    />
+  );
 });
 
 export default RiskSphere;
