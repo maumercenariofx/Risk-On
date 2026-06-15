@@ -13,7 +13,7 @@ const PROJECTS = [
       "Banxico sigue con tasas altas mientras la Fed ya empieza a bajarle. ¿Cuánto tiempo más le conviene esa diferencia al peso? Te explicamos el carry trade del MXN sin tecnicismos.",
     desc_en:
       "Banxico's holding rates high while the Fed starts cutting. How much longer can that gap keep favoring the peso? We break down the MXN carry trade in plain English.",
-    href: "/archive",
+    href: "/casos/fx-banxico-carry",
   },
   {
     tags: "RIESGO · VIX · VOLATILIDAD",
@@ -23,7 +23,7 @@ const PROJECTS = [
       "El VIX y el MOVE son el termómetro del miedo en los mercados. Aquí te decimos cómo leerlos juntos para no agarrarte en curva cuando viene una sacudida.",
     desc_en:
       "VIX and MOVE are basically the market's fear gauge. Here's how to read them together so a sell-off doesn't catch you off guard.",
-    href: "/archive",
+    href: "/casos/vix-move-fear",
   },
   {
     tags: "MACRO · FED · TASAS",
@@ -33,7 +33,7 @@ const PROJECTS = [
       "Cada vez que la Fed mueve un cuarto de punto, se siente en el peso, en los bonos y en todo lo que diga 'mercado emergente'. Te explicamos esa cadena, paso a paso y sin rollo.",
     desc_en:
       "Every quarter-point move from the Fed ripples through MXN, bonds, and basically anything labeled 'emerging market.' Here's that chain reaction, explained simply.",
-    href: "/archive",
+    href: "/casos/fed-rate-game",
   },
   {
     tags: "DERIVADOS · OPCIONES · COBERTURA",
@@ -43,7 +43,7 @@ const PROJECTS = [
       "Opciones explicadas desde cero, en español de a pie: qué es delta, qué es theta, y cuándo realmente conviene cubrirte si tienes exposición en divisas o materias primas.",
     desc_en:
       "Options 101 for normal people: what delta and theta actually mean, and when hedging your FX or commodity exposure is genuinely worth it.",
-    href: "/archive",
+    href: "/casos/options-hedging",
   },
 ];
 
