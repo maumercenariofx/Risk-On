@@ -35,7 +35,7 @@ const FOCUS_LERP = 0.06;
 // it flips to "black hole" mode — particles get sucked inward with
 // growing force + a swirl, forming a void. Moving again snaps back to
 // repel and everything springs home with inertia (overdamped, no bounce).
-const HOVER_RADIUS       = 0.455;
+const HOVER_RADIUS       = 0.2275;
 const HOVER_RADIUS2      = HOVER_RADIUS * HOVER_RADIUS;
 const IDLE_THRESHOLD     = 0.6;
 const REPEL_ACCEL        = 14;
