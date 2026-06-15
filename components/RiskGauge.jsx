@@ -15,6 +15,15 @@ function minutesAgo(isoStr) {
   return `${Math.round(mins / 60)}h`;
 }
 
+function hoursAgo(pubDate) {
+  const t = new Date(pubDate).getTime();
+  if (isNaN(t)) return null;
+  const hrs = Math.round((Date.now() - t) / 3600000);
+  if (hrs < 1) return "now";
+  if (hrs < 24) return `${hrs}h`;
+  return `${Math.round(hrs / 24)}d`;
+}
+
 function accent(score) {
   if (score >= 58) return "#3FA77E";
   if (score < 42)  return "#A32D2D";
@@ -28,7 +37,20 @@ export default function RiskGauge() {
   const [sel, setSel]           = useState("vix");
   const [methOpen, setMethOpen] = useState(false);
   const [formIdx, setFormIdx]   = useState(0);
+  const [newsCountry, setNewsCountry] = useState(null);
+  const [news, setNews]               = useState([]);
+  const [newsLoading, setNewsLoading] = useState(false);
   const sphereRef = useRef(null);
+
+  useEffect(() => {
+    if (!newsCountry) return;
+    setNewsLoading(true);
+    fetch(`/api/news?country=${newsCountry}&lang=${lang}`)
+      .then((r) => r.json())
+      .then((d) => setNews(d.items || []))
+      .catch(() => setNews([]))
+      .finally(() => setNewsLoading(false));
+  }, [newsCountry, lang]);
 
   useEffect(() => {
     fetch("/api/market")
@@ -121,11 +143,16 @@ export default function RiskGauge() {
                 {RISK_COUNTRIES.map((c) => (
                   <button
                     key={c.id}
-                    onClick={() => { sphereRef.current?.focusCountry(c.lat, c.lon); setFormIdx(1); }}
+                    onClick={() => {
+                      sphereRef.current?.focusCountry(c.lat, c.lon);
+                      setFormIdx(1);
+                      setNewsCountry((cur) => (cur === c.id ? null : c.id));
+                    }}
                     style={{
                       fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: 1, textTransform: "uppercase",
                       padding: "3px 8px", borderRadius: 5, cursor: "pointer",
-                      background: "rgba(163,45,45,0.12)", border: "1px solid rgba(163,45,45,0.4)",
+                      background: newsCountry === c.id ? "rgba(163,45,45,0.28)" : "rgba(163,45,45,0.12)",
+                      border: "1px solid rgba(163,45,45,0.4)",
                       color: "#C77B7B", transition: "all .2s",
                     }}
                   >
@@ -169,6 +196,75 @@ export default function RiskGauge() {
           </div>
         )}
       </div>
+
+      {/* ── Country news panel ── */}
+      {newsCountry && (() => {
+        const c = RISK_COUNTRIES.find((rc) => rc.id === newsCountry);
+        return (
+          <div
+            className="card-glass"
+            style={{
+              background: "rgba(11,11,12,0.92)", border: "1px solid #1E1E20", borderRadius: 12,
+              padding: "14px 16px", marginBottom: 28,
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+              <div style={{ fontSize: 9, letterSpacing: 1.5, textTransform: "uppercase", color: "#4A4A50" }}>
+                <T es={`Noticias · ${c?.name_es ?? ""} · últimas 48h`} en={`News · ${c?.name_en ?? ""} · last 48h`} />
+              </div>
+              <button
+                onClick={() => setNewsCountry(null)}
+                style={{ background: "none", border: "none", cursor: "pointer", color: "#4A4A50", fontSize: 12, padding: 0 }}
+                aria-label="close"
+              >
+                ✕
+              </button>
+            </div>
+
+            {newsLoading && (
+              <p style={{ fontSize: 12, color: "#8A8A8E" }}>
+                <T es="Cargando…" en="Loading…" />
+              </p>
+            )}
+
+            {!newsLoading && news.length === 0 && (
+              <p style={{ fontSize: 12, color: "#8A8A8E" }}>
+                <T es="Sin noticias relevantes en las últimas 48 horas." en="No relevant news in the last 48 hours." />
+              </p>
+            )}
+
+            {!newsLoading && news.length > 0 && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {news.map((n, i) => (
+                  <a
+                    key={i}
+                    href={n.link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      display: "flex", alignItems: "baseline", gap: 8,
+                      fontSize: 13, lineHeight: 1.5, color: "#D5D5D2",
+                      textDecoration: "none", borderBottom: i < news.length - 1 ? "1px solid #1A1A1C" : "none",
+                      paddingBottom: 8,
+                    }}
+                  >
+                    <span style={{
+                      fontFamily: "var(--font-mono)", fontSize: 10, color: "#5A5A62",
+                      flexShrink: 0, minWidth: 28,
+                    }}>
+                      {hoursAgo(n.pubDate) ?? ""}
+                    </span>
+                    <span style={{ flex: 1 }}>
+                      {n.title}
+                      {n.source && <span style={{ color: "#5A5A62" }}> — {n.source}</span>}
+                    </span>
+                  </a>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* ── Quant figure switcher ── */}
       <div style={{ marginBottom: 28 }}>

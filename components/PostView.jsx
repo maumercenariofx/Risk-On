@@ -9,8 +9,8 @@ export default function PostView({ post, prev, next }) {
   const label = riskLabel(post.score || 50);
   return (
     <article className="space-y-5 pt-4">
-      <Link href="/archive" className="text-sm text-muted hover:text-bone inline-block transition-colors">
-        ← <T es="Archivo" en="Archive" />
+      <Link href="/" className="text-sm text-muted hover:text-bone inline-block transition-colors">
+        ← <T es="Inicio" en="Home" />
       </Link>
       <div className="reveal flex items-center gap-4">
         <div className="flex flex-col items-center rounded-xl border border-edge px-4 py-2">

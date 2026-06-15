@@ -1,6 +1,5 @@
 "use client";
 // components/DailyRead.jsx
-import Link from "next/link";
 import { useLang, T } from "./Lang";
 import SubscribeForm from "./SubscribeForm";
 
@@ -23,12 +22,6 @@ export default function DailyRead({ post }) {
            en="The morning markets briefing, before Wall Street opens." />
       </p>
       <p className="text-[15px] leading-relaxed text-bone/80">{summary}</p>
-      <Link
-        href={`/archive/${post.slug}`}
-        className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-bone transition-transform hover:translate-x-1"
-      >
-        <T es="Leer completa" en="Read full note" /> →
-      </Link>
 
       <SubscribeForm />
     </section>
