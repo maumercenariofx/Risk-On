@@ -4,7 +4,7 @@ import { T } from "./Lang";
 import {
   eio, genSphere, genGlobe, genThomas, genChainEdges,
   makeDotTexture, FORMS,
-  makeGeoTexture, makeTensionTexture, applyRiskTension,
+  makeGeoTexture, makeCountryDataUniform,
   GLOBE_VERTEX_SHADER, GLOBE_FRAGMENT_SHADER,
 } from "../lib/quantForms";
 
@@ -30,7 +30,6 @@ function loadThree() {
 
 const N = 144000; // same particle count for every form, enables morphing
 const MORPH_S = 1.2;
-const TENSION_SPEED = 2.4; // blink rate for the top-5 risk countries
 
 export default function QuantLab() {
   const mountRef = useRef(null);
@@ -79,17 +78,14 @@ export default function QuantLab() {
 
       const dotTex     = makeDotTexture(THREE);
       const geoTex     = makeGeoTexture(THREE);
-      const tensionTex = makeTensionTexture(THREE);
-      applyRiskTension(tensionTex);
 
       const material = new THREE.ShaderMaterial({
         uniforms: {
           uMap:           { value: geoTex },
-          uTensionMap:    { value: tensionTex },
           uDot:           { value: dotTex },
           uColorT:        { value: 0 },
           uOpacity:       { value: 0.7 },
-          uTensionPulse:  { value: 1 },
+          uCountryData:   { value: makeCountryDataUniform(THREE) },
           uPixelsPerUnit: { value: 1 },
           uPixelRatio:    { value: Math.min(window.devicePixelRatio, 2) },
           uSize:          { value: 0.0175 },
@@ -160,8 +156,6 @@ export default function QuantLab() {
         globeColorT += (globeTarget - globeColorT) * 0.07;
         material.uniforms.uColorT.value = globeColorT;
 
-        // Blink for the top-5 risk countries lit up via the tension texture.
-        material.uniforms.uTensionPulse.value = 0.35 + 0.65 * (0.5 + 0.5 * Math.sin(elapsed * TENSION_SPEED));
         material.uniforms.uTime.value = elapsed;
 
         // Wireframe: traces the attractor's path, only shown for the Thomas form
@@ -188,7 +182,7 @@ export default function QuantLab() {
         cancelAnimationFrame(animId);
         window.removeEventListener("resize", onResize);
         geometry.dispose(); wireGeom.dispose();
-        dotTex.dispose(); geoTex.dispose(); tensionTex.dispose();
+        dotTex.dispose(); geoTex.dispose();
         material.dispose(); wireMat.dispose();
         renderer.dispose();
         if (renderer.domElement.parentNode === container) container.removeChild(renderer.domElement);

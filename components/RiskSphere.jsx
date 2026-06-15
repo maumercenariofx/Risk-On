@@ -2,7 +2,7 @@
 import { useEffect, useRef, forwardRef, useImperativeHandle } from "react";
 import {
   eio, genSphere, genGlobe, genThomas, genChainEdges, makeDotTexture,
-  makeGeoTexture, makeTensionTexture, applyRiskTension, latLonToDir,
+  makeGeoTexture, makeCountryDataUniform, latLonToDir,
   GLOBE_VERTEX_SHADER, GLOBE_FRAGMENT_SHADER,
 } from "../lib/quantForms";
 
@@ -30,7 +30,6 @@ const N = 144000; // same particle count for every form, enables morphing
 const R = 1.8;
 const MORPH_S       = 1.2;
 const PULSE_SPEED   = (2 * Math.PI) / 3;
-const TENSION_SPEED = 2.4; // blink rate for the top-5 risk countries
 const DRAG_SENS     = 0.005;
 const FOCUS_LERP    = 0.06;
 
@@ -64,8 +63,6 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
 
       const tex = makeDotTexture(THREE);
       const geoTex = makeGeoTexture(THREE);
-      const tensionTex = makeTensionTexture(THREE);
-      applyRiskTension(tensionTex);
 
       const HOMES = [
         genSphere(N, R),
@@ -90,11 +87,10 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
       const material = new THREE.ShaderMaterial({
         uniforms: {
           uMap:           { value: geoTex },
-          uTensionMap:    { value: tensionTex },
           uDot:           { value: tex },
           uColorT:        { value: 0 },
           uOpacity:       { value: 0.75 },
-          uTensionPulse:  { value: 1 },
+          uCountryData:   { value: makeCountryDataUniform(THREE) },
           uPixelsPerUnit: { value: 1 },
           uPixelRatio:    { value: Math.min(window.devicePixelRatio, 2) },
           uSize:          { value: 0.019 },
@@ -207,9 +203,6 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
         globeColorT += (globeTarget - globeColorT) * 0.07;
         material.uniforms.uColorT.value = globeColorT;
 
-        // Blink for the top-5 risk countries lit up via the tension texture.
-        material.uniforms.uTensionPulse.value = 0.35 + 0.65 * (0.5 + 0.5 * Math.sin(elapsed * TENSION_SPEED));
-
         // Morph effHome toward currHome
         if (morphT < 1) morphT = Math.min(1, morphT + dt / MORPH_S);
         const mt = eio(morphT);
@@ -293,7 +286,7 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
         window.removeEventListener("pointercancel", onPointerUp);
         window.removeEventListener("resize",        onResize);
         geometry.dispose(); wireGeom.dispose();
-        tex.dispose(); geoTex.dispose(); tensionTex.dispose();
+        tex.dispose(); geoTex.dispose();
         material.dispose(); wireMat.dispose();
         renderer.dispose();
         if (renderer.domElement.parentNode === container) container.removeChild(renderer.domElement);
