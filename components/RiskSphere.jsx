@@ -30,7 +30,8 @@ const N = 144000;
 const R = 1.8;
 const FOCUS_LERP = 0.06;
 const MORPH_S = 1.4;
-const INTRO_MORPH_S = 2.6;
+const INTRO_MORPH_S = 1.0;
+const BASE_SCALE = 1.3;
 const GLOBE_IDX = HERO_FORMS.findIndex(f => f.id === "GLOBE");
 const ATOM_IDX  = HERO_FORMS.findIndex(f => f.id === "ATOM");
 
@@ -112,9 +113,14 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
         while (v === 0) v = Math.random();
         return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
       };
-      const fovRad   = THREE.MathUtils.degToRad(camera.fov);
-      const visibleH = (2 * Math.tan(fovRad / 2) * camera.position.z) / 1.3;
-      const visibleW = visibleH * (container.clientWidth / container.clientHeight);
+      const fovRad    = THREE.MathUtils.degToRad(camera.fov);
+      const visibleHW = 2 * Math.tan(fovRad / 2) * camera.position.z;
+      // Shrink the globe on narrow/portrait viewports so it never gets
+      // clipped by the container's left/right edges.
+      const aspect    = container.clientWidth / container.clientHeight;
+      const groupScale = Math.min(BASE_SCALE, (visibleHW * aspect * 0.85) / (2 * R));
+      const visibleH = visibleHW / groupScale;
+      const visibleW = visibleH * aspect;
       const sigmaX = visibleW * 0.5;
       const sigmaY = visibleH * 0.5;
       const sigmaZ = 1.5;
@@ -176,7 +182,7 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
 
       const group = new THREE.Group();
       group.add(new THREE.Points(geometry, material));
-      group.scale.set(1.3, 1.3, 1.3);
+      group.scale.set(groupScale, groupScale, groupScale);
       scene.add(group);
 
       // Country-focus animation target (radians, group.rotation.y).
@@ -354,6 +360,8 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
         camera.aspect = container.clientWidth / container.clientHeight;
         camera.updateProjectionMatrix();
         renderer.setSize(container.clientWidth, container.clientHeight);
+        const newScale = Math.min(BASE_SCALE, (visibleHW * camera.aspect * 0.85) / (2 * R));
+        group.scale.set(newScale, newScale, newScale);
         updatePixelsPerUnit();
       };
       window.addEventListener("resize", onResize);
