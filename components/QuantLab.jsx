@@ -63,8 +63,6 @@ export default function QuantLab() {
         genThomas(N),
       ];
 
-      const positions = HOMES[0].slice();
-      const colors    = new Float32Array(N * 3).fill(1);
       const jPhase    = new Float32Array(N);
       for (let i = 0; i < N; i++) jPhase[i] = Math.random() * Math.PI * 2;
 
@@ -75,8 +73,9 @@ export default function QuantLab() {
       let morphT     = 1;
 
       const geometry = new THREE.BufferGeometry();
-      geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
-      geometry.setAttribute("color",    new THREE.BufferAttribute(colors, 3));
+      const posAttr  = new THREE.BufferAttribute(effHome, 3);
+      geometry.setAttribute("position", posAttr);
+      geometry.setAttribute("jPhase",   new THREE.BufferAttribute(jPhase, 1));
 
       const dotTex     = makeDotTexture(THREE);
       const geoTex     = makeGeoTexture(THREE);
@@ -94,6 +93,12 @@ export default function QuantLab() {
           uPixelsPerUnit: { value: 1 },
           uPixelRatio:    { value: Math.min(window.devicePixelRatio, 2) },
           uSize:          { value: 0.0175 },
+          uTime:          { value: 0 },
+          uLightDir:      { value: new THREE.Vector3(0, 0.4, 0.6) },
+          uUseViewFacing: { value: 0 },
+          uBrightBase:    { value: 0.25 },
+          uBrightScale:   { value: 0.7 },
+          uShimmerSpeed:  { value: 1.6 },
         },
         vertexShader: GLOBE_VERTEX_SHADER,
         fragmentShader: GLOBE_FRAGMENT_SHADER,
@@ -113,7 +118,6 @@ export default function QuantLab() {
 
       // Wireframe — draws the attractor's trajectory as a continuous curve
       // through phase space. Only shown (and meaningful) for the attractors.
-      const posAttr  = geometry.attributes.position;
       const wireGeom = new THREE.BufferGeometry();
       wireGeom.setAttribute("position", posAttr);
       wireGeom.setIndex(new THREE.BufferAttribute(genChainEdges(N), 1));
@@ -158,21 +162,7 @@ export default function QuantLab() {
 
         // Blink for the top-5 risk countries lit up via the tension texture.
         material.uniforms.uTensionPulse.value = 0.35 + 0.65 * (0.5 + 0.5 * Math.sin(elapsed * TENSION_SPEED));
-
-        for (let i = 0; i < N; i++) {
-          const i3 = i * 3;
-          const hx = effHome[i3], hy = effHome[i3+1], hz = effHome[i3+2];
-          positions[i3]   = hx;
-          positions[i3+1] = hy;
-          positions[i3+2] = hz;
-
-          const len = Math.sqrt(hx*hx + hy*hy + hz*hz) || 1;
-          const facing  = (hx/len)*0 + (hy/len)*0.4 + (hz/len)*0.6;
-          const shimmer = 0.12 * Math.sin(elapsed * 1.6 + jPhase[i]) * (1 - globeColorT);
-          const b = Math.max(0, 0.25 + (facing * 0.5 + 0.5) * 0.7 + shimmer);
-
-          colors[i3] = colors[i3+1] = colors[i3+2] = b;
-        }
+        material.uniforms.uTime.value = elapsed;
 
         // Wireframe: traces the attractor's path, only shown for the Thomas form
         const wireTarget = currentIdx === 2 ? 0.4 : 0;
@@ -182,7 +172,6 @@ export default function QuantLab() {
         // flicker in and out of brightness.
         material.uniforms.uOpacity.value = 0.55 + Math.sin(elapsed * (2 * Math.PI / 4)) * 0.1 * (1 - globeColorT);
         posAttr.needsUpdate = true;
-        geometry.attributes.color.needsUpdate = true;
         renderer.render(scene, camera);
       }
       animate();

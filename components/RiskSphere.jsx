@@ -79,14 +79,13 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
       let currentIdx = 0;
       let morphT     = 1;
 
-      const colors  = new Float32Array(N * 3).fill(1);
       const jPhase  = new Float32Array(N);
       for (let i = 0; i < N; i++) jPhase[i] = Math.random() * Math.PI * 2;
 
       const geometry = new THREE.BufferGeometry();
       const posAttr  = new THREE.BufferAttribute(effHome, 3);
       geometry.setAttribute("position", posAttr);
-      geometry.setAttribute("color",    new THREE.BufferAttribute(colors, 3));
+      geometry.setAttribute("jPhase",   new THREE.BufferAttribute(jPhase, 1));
 
       const material = new THREE.ShaderMaterial({
         uniforms: {
@@ -99,6 +98,12 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
           uPixelsPerUnit: { value: 1 },
           uPixelRatio:    { value: Math.min(window.devicePixelRatio, 2) },
           uSize:          { value: 0.019 },
+          uTime:          { value: 0 },
+          uLightDir:      { value: new THREE.Vector3(0, 0, 0) },
+          uUseViewFacing: { value: 1 },
+          uBrightBase:    { value: 0.22 },
+          uBrightScale:   { value: 0.72 },
+          uShimmerSpeed:  { value: 1.8 },
         },
         vertexShader: GLOBE_VERTEX_SHADER,
         fragmentShader: GLOBE_FRAGMENT_SHADER,
@@ -129,10 +134,12 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
 
       // Drag-to-rotate state and country-focus animation target (radians,
       // group.rotation.y). When dragging, auto-rotation pauses; on release
-      // the globe keeps spinning from wherever it was left. tiltOffset is
-      // the user-set vertical tilt (group.rotation.x base) — the idle wobble
-      // oscillates around it instead of snapping back to 0.
-      const drag = { active: false, lastX: 0, lastY: 0 };
+      // the globe keeps spinning with the momentum of the gesture (vx/vy,
+      // in rad/s) until friction damps it out, then idle auto-rotation
+      // resumes. tiltOffset is the user-set vertical tilt (group.rotation.x
+      // base) — the idle wobble oscillates around it instead of snapping
+      // back to 0.
+      const drag = { active: false, lastX: 0, lastY: 0, lastT: 0, vx: 0, vy: 0 };
       let focusTarget = null;
       let tiltOffset  = 0;
 
@@ -150,11 +157,6 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
           focusTarget = -Math.atan2(d.x, d.z);
         },
       };
-
-      // Pre-allocated vectors
-      const invMat   = new THREE.Matrix4();
-      const localCam = new THREE.Vector3();
-      const viewDir  = new THREE.Vector3();
 
       let elapsed = 0, animId, lastFrame = 0;
 
@@ -177,19 +179,25 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
             tiltOffset = 0;
             focusTarget = null;
           }
+        } else if (drag.active) {
+          // Rotation is driven directly by onPointerMove while dragging.
+        } else if (Math.abs(drag.vx) > 0.0005 || Math.abs(drag.vy) > 0.0005) {
+          // Momentum: keep spinning with the gesture's velocity, decaying
+          // via friction until it falls below the threshold above.
+          group.rotation.y += drag.vx * dt;
+          tiltOffset = Math.max(-1.2, Math.min(1.2, tiltOffset + drag.vy * dt));
+          group.rotation.x = Math.max(-1.2, Math.min(1.2, group.rotation.x + drag.vy * dt));
+          const damp = Math.pow(0.95, dt * 60);
+          drag.vx *= damp;
+          drag.vy *= damp;
         } else {
-          if (!drag.active) group.rotation.y += 0.003;
+          group.rotation.y += 0.003;
           // Idle wobble oscillates around the user's last drag tilt instead
           // of pulling back toward 0.
           group.rotation.x += ((tiltOffset + Math.sin(elapsed * 0.2) * 0.07) - group.rotation.x) * 0.03;
         }
 
-        group.updateMatrixWorld();
-        invMat.copy(group.matrixWorld).invert();
-        localCam.copy(camera.position).applyMatrix4(invMat);
-        viewDir.copy(localCam).normalize();
-
-        const vx = viewDir.x, vy = viewDir.y, vz = viewDir.z;
+        material.uniforms.uTime.value = elapsed;
 
         // Land/ocean/border tinting, only shown for the GLOBE form. Computed
         // before the per-particle loop so the shimmer/pulse damping below
@@ -209,19 +217,6 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
           effHome[i] = prevHome[i] + (currHome[i] - prevHome[i]) * mt;
         }
 
-        for (let i = 0; i < N; i++) {
-          const i3 = i * 3;
-          const hx = effHome[i3], hy = effHome[i3+1], hz = effHome[i3+2];
-
-          // Lighting using home position for stable normals
-          const len    = Math.sqrt(hx*hx + hy*hy + hz*hz) || 1;
-          const facing = (hx/len)*vx + (hy/len)*vy + (hz/len)*vz;
-          const shimmer = 0.12 * Math.sin(elapsed * 1.8 + jPhase[i]) * (1 - globeColorT);
-          const b = Math.max(0, 0.22 + (facing * 0.5 + 0.5) * 0.72 + shimmer);
-
-          colors[i3] = colors[i3+1] = colors[i3+2] = b;
-        }
-
         // Wireframe: traces the attractor's path, only shown for the Thomas form
         const wireTarget = currentIdx === 2 ? 0.35 : 0;
         wireMat.opacity += (wireTarget - wireMat.opacity) * 0.07;
@@ -229,8 +224,7 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
         // Pulse fades out while the GLOBE tint is active so the map doesn't
         // flicker in and out of brightness.
         material.uniforms.uOpacity.value = 0.715 + Math.sin(elapsed * PULSE_SPEED) * 0.165 * (1 - globeColorT);
-        posAttr.needsUpdate                   = true;
-        geometry.attributes.color.needsUpdate = true;
+        posAttr.needsUpdate = true;
         renderer.render(scene, camera);
       }
 
@@ -246,18 +240,32 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
         drag.active = true;
         drag.lastX  = e.clientX;
         drag.lastY  = e.clientY;
+        drag.lastT  = performance.now();
+        drag.vx = 0;
+        drag.vy = 0;
         focusTarget = null;
         container.style.cursor = "grabbing";
       };
       const onPointerMove = (e) => {
         if (!drag.active) return;
+        const now = performance.now();
+        const dt  = Math.max((now - drag.lastT) / 1000, 1 / 1000);
         const dx = e.clientX - drag.lastX;
         const dy = e.clientY - drag.lastY;
         drag.lastX = e.clientX;
         drag.lastY = e.clientY;
-        group.rotation.y += dx * DRAG_SENS;
-        tiltOffset = Math.max(-1.2, Math.min(1.2, tiltOffset - dy * DRAG_SENS));
-        group.rotation.x = Math.max(-1.2, Math.min(1.2, group.rotation.x - dy * DRAG_SENS));
+        drag.lastT = now;
+
+        const dRotY =  dx * DRAG_SENS;
+        const dRotX = -dy * DRAG_SENS;
+        group.rotation.y += dRotY;
+        tiltOffset = Math.max(-1.2, Math.min(1.2, tiltOffset + dRotX));
+        group.rotation.x = Math.max(-1.2, Math.min(1.2, group.rotation.x + dRotX));
+
+        // Track angular velocity (rad/s) so release can keep spinning with
+        // the gesture's momentum instead of stopping dead.
+        drag.vx = dRotY / dt;
+        drag.vy = dRotX / dt;
       };
       const onPointerUp = () => {
         drag.active = false;
