@@ -72,7 +72,7 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
       renderer.setSize(container.clientWidth, container.clientHeight);
       const canvas = renderer.domElement;
-      canvas.style.touchAction = "pan-y";
+      canvas.style.touchAction = "none";
       canvas.style.userSelect = "none";
       canvas.style.webkitUserSelect = "none";
       canvas.style.webkitTouchCallout = "none";
@@ -311,7 +311,7 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
       style={{
         width: "100%",
         height,
-        touchAction: "pan-y",
+        touchAction: "none",
         WebkitUserSelect: "none",
         userSelect: "none",
         WebkitTouchCallout: "none",
