@@ -30,6 +30,7 @@ const N = 144000;
 const R = 1.8;
 const FOCUS_LERP = 0.06;
 const MORPH_S = 1.4;
+const INTRO_MORPH_S = 2.6;
 const GLOBE_IDX = HERO_FORMS.findIndex(f => f.id === "GLOBE");
 const ATOM_IDX  = HERO_FORMS.findIndex(f => f.id === "ATOM");
 
@@ -100,12 +101,22 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
         }
       });
 
+      // Intro: particles start scattered across the screen and converge
+      // into the default Global Risk Map on load.
+      const scatter = new Float32Array(N * 3);
+      for (let i = 0; i < N; i++) {
+        scatter[i*3]   = (Math.random() - 0.5) * 6.4;
+        scatter[i*3+1] = (Math.random() - 0.5) * 6.4;
+        scatter[i*3+2] = (Math.random() - 0.5) * 6.4;
+      }
+
       let currentIdx = GLOBE_IDX;
-      let prevHome   = HOMES[GLOBE_IDX].slice();
+      let prevHome   = scatter;
       let currHome   = HOMES[GLOBE_IDX];
-      let morphT     = 1;
-      const baseNow  = HOMES[GLOBE_IDX].slice();
-      const effHome  = HOMES[GLOBE_IDX].slice();
+      let morphT     = 0;
+      let morphDur   = INTRO_MORPH_S;
+      const baseNow  = scatter.slice();
+      const effHome  = scatter.slice();
 
       // Per-particle hover-displacement state (local space, pre-group-scale).
       const dispX = new Float32Array(N), dispY = new Float32Array(N), dispZ = new Float32Array(N);
@@ -166,6 +177,7 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
           currHome   = HOMES[idx];
           currentIdx = idx;
           morphT     = 0;
+          morphDur   = MORPH_S;
         },
       };
 
@@ -253,7 +265,7 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
           tickAtom(HOMES[ATOM_IDX], atom.phases, atom.rIdx, elapsed, N, R);
         }
 
-        if (morphT < 1) morphT = Math.min(1, morphT + dt / MORPH_S);
+        if (morphT < 1) morphT = Math.min(1, morphT + dt / morphDur);
         const mt = morphT < 1 ? eio(morphT) : 1;
 
         for (let i = 0; i < N; i++) {
