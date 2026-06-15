@@ -128,10 +128,13 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
       let globeColorT = 0;
 
       // Drag-to-rotate state and country-focus animation target (radians,
-      // group.rotation.y). When dragging, auto-rotation/wobble pause; on
-      // release the globe simply keeps spinning from wherever it was left.
+      // group.rotation.y). When dragging, auto-rotation pauses; on release
+      // the globe keeps spinning from wherever it was left. tiltOffset is
+      // the user-set vertical tilt (group.rotation.x base) — the idle wobble
+      // oscillates around it instead of snapping back to 0.
       const drag = { active: false, lastX: 0, lastY: 0 };
       let focusTarget = null;
+      let tiltOffset  = 0;
 
       selectRef.current = {
         select: (idx) => {
@@ -171,11 +174,14 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
           if (Math.abs(dyaw) < 0.003 && Math.abs(group.rotation.x) < 0.003) {
             group.rotation.y = focusTarget;
             group.rotation.x = 0;
+            tiltOffset = 0;
             focusTarget = null;
           }
-        } else if (!drag.active) {
-          group.rotation.y += 0.003;
-          group.rotation.x += (Math.sin(elapsed * 0.2) * 0.07 - group.rotation.x) * 0.03;
+        } else {
+          if (!drag.active) group.rotation.y += 0.003;
+          // Idle wobble oscillates around the user's last drag tilt instead
+          // of pulling back toward 0.
+          group.rotation.x += ((tiltOffset + Math.sin(elapsed * 0.2) * 0.07) - group.rotation.x) * 0.03;
         }
 
         group.updateMatrixWorld();
@@ -250,6 +256,7 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
         drag.lastX = e.clientX;
         drag.lastY = e.clientY;
         group.rotation.y += dx * DRAG_SENS;
+        tiltOffset = Math.max(-1.2, Math.min(1.2, tiltOffset - dy * DRAG_SENS));
         group.rotation.x = Math.max(-1.2, Math.min(1.2, group.rotation.x - dy * DRAG_SENS));
       };
       const onPointerUp = () => {
