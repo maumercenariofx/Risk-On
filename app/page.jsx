@@ -1,7 +1,6 @@
 // app/page.jsx
 import Ticker from "../components/Ticker";
 import RiskGauge from "../components/RiskGauge";
-import DailyRead from "../components/DailyRead";
 import DailyWatch from "../components/DailyWatch";
 import ProjectCards from "../components/ProjectCards";
 import CountdownTimers from "../components/CountdownTimers";
@@ -20,9 +19,8 @@ export default function Home() {
         <Ticker />
       </div>
 
-      <RiskGauge />
+      <RiskGauge post={latest} />
 
-      {latest && <DailyRead  post={latest} />}
       {latest && <DailyWatch post={latest} />}
 
       <ProjectCards />

@@ -6,6 +6,7 @@ import { RISK_COUNTRIES, HERO_FORMS } from "../lib/quantForms";
 import RiskSphere from "./RiskSphere";
 import MarketsClient from "./MarketsClient";
 import VoronoiBackground from "./VoronoiBackground";
+import DailyRead from "./DailyRead";
 
 function minutesAgo(isoStr) {
   if (!isoStr) return null;
@@ -30,7 +31,7 @@ function accent(score) {
   return "#8A8A8E";
 }
 
-export default function RiskGauge() {
+export default function RiskGauge({ post }) {
   const { lang } = useLang();
   const [data, setData]         = useState(null);
   const [display, setDisplay]   = useState(0);
@@ -420,6 +421,13 @@ export default function RiskGauge() {
             </div>
           )}
         </>
+      )}
+
+      {/* ── Pre-market ── */}
+      {post && (
+        <div style={{ marginTop: 28 }}>
+          <DailyRead post={post} />
+        </div>
       )}
 
       {/* ── Markets with Voronoi background — no border, no box ── */}
