@@ -111,16 +111,26 @@ export async function GET() {
 
   const mxnLevels = rollingLevels(c.usdmxnChart?.highs, c.usdmxnChart?.lows);
 
+  // Último cierre diario (mismo campo que usa /api/history) redondeado igual,
+  // para que las tarjetas y el ticker muestren el mismo número que la gráfica
+  // de Mercados en vez del spot intradía (meta.regularMarketPrice), que puede
+  // diferir ligeramente del último candle.
+  const lastClose = (chart) => {
+    const closes = chart?.closes;
+    if (!closes?.length) return null;
+    return Math.round(closes[closes.length - 1] * 10000) / 10000;
+  };
+
   const data = {
     asOf: new Date().toISOString(),
     delayed: false,
-    // FX — precio y cambio diario (Yahoo primero: misma fuente que las gráficas
-    // de /api/history, así no hay discrepancia entre las tarjetas y el chart)
-    usdmxn:    c.usdmxnChart?.price ?? usdmxn ?? 18.42,
+    // FX — último cierre diario (misma fuente que /api/history, así no hay
+    // discrepancia entre las tarjetas/ticker y el chart de Mercados)
+    usdmxn:    lastClose(c.usdmxnChart) ?? c.usdmxnChart?.price ?? usdmxn ?? 18.42,
     usdmxnChg: c.usdmxnChart?.chgPct ?? null,
-    eurusd:    c.eurusdChart?.price ?? eurusd ?? 1.084,
+    eurusd:    lastClose(c.eurusdChart) ?? c.eurusdChart?.price ?? eurusd ?? 1.084,
     eurusdChg: c.eurusdChart?.chgPct ?? null,
-    eurmxn:    c.eurmxnChart?.price ?? null,
+    eurmxn:    lastClose(c.eurmxnChart) ?? c.eurmxnChart?.price ?? null,
     eurmxnChg: c.eurmxnChart?.chgPct ?? null,
     // Soportes y resistencias USD/MXN (rolling 10-day high/low, se actualiza con el mercado)
     mxnS1: mxnLevels?.support    ?? null,

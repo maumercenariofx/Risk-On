@@ -20,8 +20,11 @@ export default function Nav() {
   return (
     <header className="sticky top-0 z-50 border-b border-edge bg-black">
       <nav className="mx-auto flex max-w-5xl items-center justify-between px-5 py-3">
-        <Link href="/" className="font-serif text-2xl font-medium tracking-tight text-bone" onClick={() => setOpen(false)}>
-          Risk On
+        <Link href="/" className="flex flex-col leading-tight" onClick={() => setOpen(false)}>
+          <span className="font-serif text-2xl font-medium tracking-tight text-bone">Risk On</span>
+          <span className="text-[10px] tracking-wide text-muted">
+            <T es="vistas diarias por Mauricio Mercenario" en="daily views by Mauricio Mercenario" />
+          </span>
         </Link>
 
         <div className="hidden items-center gap-6 md:flex">
