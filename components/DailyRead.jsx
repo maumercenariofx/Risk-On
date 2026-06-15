@@ -13,7 +13,7 @@ export default function DailyRead({ post }) {
     <section className="reveal" style={{ animationDelay: "0.2s" }}>
       <div className="mb-3 flex items-baseline gap-3">
         <span className="font-serif text-3xl font-semibold tracking-tight text-bone">
-          El Pre-market
+          Pre-market
         </span>
         <span className="text-xs text-muted">{post.date}</span>
       </div>
