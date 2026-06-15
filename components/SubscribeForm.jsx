@@ -31,7 +31,7 @@ export default function SubscribeForm() {
       style={{ background: "rgba(11,11,12,0.92)" }}
     >
       <p className="mb-2 text-sm font-medium text-bone">
-        <T es="Recibe El Pre cada mañana" en="Get El Pre every morning" />
+        <T es="Recibe El Pre-market cada mañana" en="Get El Pre-market every morning" />
       </p>
       <p className="mb-3 text-xs text-muted">
         <T es="Un correo corto antes de la apertura, sin spam."

@@ -11,9 +11,9 @@ export default function DailyRead({ post }) {
 
   return (
     <section className="reveal" style={{ animationDelay: "0.2s" }}>
-      <div className="mb-2.5 flex items-center gap-2">
-        <span className="rounded-md border border-edge bg-white/5 px-2.5 py-1 text-[11px] font-medium uppercase tracking-wide text-muted">
-          El Pre
+      <div className="mb-3 flex items-baseline gap-3">
+        <span className="font-serif text-3xl font-semibold tracking-tight text-bone">
+          El Pre-market
         </span>
         <span className="text-xs text-muted">{post.date}</span>
       </div>

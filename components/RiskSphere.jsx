@@ -30,7 +30,6 @@ const N = 144000; // same particle count for every form, enables morphing
 const R = 1.8;
 const MORPH_S       = 1.2;
 const PULSE_SPEED   = (2 * Math.PI) / 3;
-const DRAG_SENS     = 0.005;
 const FOCUS_LERP    = 0.06;
 
 const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
@@ -128,16 +127,8 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
 
       let globeColorT = 0;
 
-      // Drag-to-rotate state and country-focus animation target (radians,
-      // group.rotation.y). When dragging, auto-rotation pauses; on release
-      // the globe keeps spinning with the momentum of the gesture (vx/vy,
-      // in rad/s) until friction damps it out, then idle auto-rotation
-      // resumes. tiltOffset is the user-set vertical tilt (group.rotation.x
-      // base) — the idle wobble oscillates around it instead of snapping
-      // back to 0.
-      const drag = { active: false, lastX: 0, lastY: 0, lastT: 0, vx: 0, vy: 0 };
+      // Country-focus animation target (radians, group.rotation.y).
       let focusTarget = null;
-      let tiltOffset  = 0;
 
       selectRef.current = {
         select: (idx) => {
@@ -172,25 +163,12 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
           if (Math.abs(dyaw) < 0.003 && Math.abs(group.rotation.x) < 0.003) {
             group.rotation.y = focusTarget;
             group.rotation.x = 0;
-            tiltOffset = 0;
             focusTarget = null;
           }
-        } else if (drag.active) {
-          // Rotation is driven directly by onPointerMove while dragging.
-        } else if (Math.abs(drag.vx) > 0.0005 || Math.abs(drag.vy) > 0.0005) {
-          // Momentum: keep spinning with the gesture's velocity, decaying
-          // via friction until it falls below the threshold above.
-          group.rotation.y += drag.vx * dt;
-          tiltOffset = Math.max(-1.2, Math.min(1.2, tiltOffset + drag.vy * dt));
-          group.rotation.x = Math.max(-1.2, Math.min(1.2, group.rotation.x + drag.vy * dt));
-          const damp = Math.pow(0.95, dt * 60);
-          drag.vx *= damp;
-          drag.vy *= damp;
         } else {
-          group.rotation.y += 0.003;
-          // Idle wobble oscillates around the user's last drag tilt instead
-          // of pulling back toward 0.
-          group.rotation.x += ((tiltOffset + Math.sin(elapsed * 0.2) * 0.07) - group.rotation.x) * 0.03;
+          group.rotation.y += 0.0036;
+          // Idle wobble oscillates around 0.
+          group.rotation.x += (Math.sin(elapsed * 0.2) * 0.07 - group.rotation.x) * 0.03;
         }
 
         material.uniforms.uTime.value = elapsed;
@@ -223,53 +201,6 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
 
       animate();
 
-      // ── Drag-to-rotate ──
-      // Press and hold (mouse or touch) to spin the globe by hand; on
-      // release it keeps rotating from wherever it was left.
-      container.style.cursor     = "grab";
-      container.style.touchAction = "none";
-
-      const onPointerDown = (e) => {
-        drag.active = true;
-        drag.lastX  = e.clientX;
-        drag.lastY  = e.clientY;
-        drag.lastT  = performance.now();
-        drag.vx = 0;
-        drag.vy = 0;
-        focusTarget = null;
-        container.style.cursor = "grabbing";
-      };
-      const onPointerMove = (e) => {
-        if (!drag.active) return;
-        const now = performance.now();
-        const dt  = Math.max((now - drag.lastT) / 1000, 1 / 1000);
-        const dx = e.clientX - drag.lastX;
-        const dy = e.clientY - drag.lastY;
-        drag.lastX = e.clientX;
-        drag.lastY = e.clientY;
-        drag.lastT = now;
-
-        const dRotY =  dx * DRAG_SENS;
-        const dRotX = -dy * DRAG_SENS;
-        group.rotation.y += dRotY;
-        tiltOffset = Math.max(-1.2, Math.min(1.2, tiltOffset + dRotX));
-        group.rotation.x = Math.max(-1.2, Math.min(1.2, group.rotation.x + dRotX));
-
-        // Track angular velocity (rad/s) so release can keep spinning with
-        // the gesture's momentum instead of stopping dead.
-        drag.vx = dRotY / dt;
-        drag.vy = dRotX / dt;
-      };
-      const onPointerUp = () => {
-        drag.active = false;
-        container.style.cursor = "grab";
-      };
-
-      container.addEventListener("pointerdown", onPointerDown);
-      window.addEventListener("pointermove", onPointerMove);
-      window.addEventListener("pointerup",   onPointerUp);
-      window.addEventListener("pointercancel", onPointerUp);
-
       const onResize = () => {
         camera.aspect = container.clientWidth / container.clientHeight;
         camera.updateProjectionMatrix();
@@ -280,11 +211,7 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
 
       cleanup = () => {
         cancelAnimationFrame(animId);
-        container.removeEventListener("pointerdown", onPointerDown);
-        window.removeEventListener("pointermove",   onPointerMove);
-        window.removeEventListener("pointerup",     onPointerUp);
-        window.removeEventListener("pointercancel", onPointerUp);
-        window.removeEventListener("resize",        onResize);
+        window.removeEventListener("resize", onResize);
         geometry.dispose(); wireGeom.dispose();
         tex.dispose(); geoTex.dispose();
         material.dispose(); wireMat.dispose();
