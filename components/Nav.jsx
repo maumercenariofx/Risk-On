@@ -23,7 +23,7 @@ export default function Nav() {
         <Link href="/" className="flex flex-col leading-tight" onClick={() => setOpen(false)}>
           <span className="font-serif text-2xl font-medium tracking-tight text-bone">Risk On</span>
           <span className="text-[10px] tracking-wide text-muted">
-            <T es="vistas diarias por Mauricio Mercenario" en="daily views by Mauricio Mercenario" />
+            Daily views by Mauricio Mercenario
           </span>
         </Link>
 
