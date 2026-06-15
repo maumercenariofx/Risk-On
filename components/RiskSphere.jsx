@@ -105,9 +105,9 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
       // into the default Global Risk Map on load.
       const scatter = new Float32Array(N * 3);
       for (let i = 0; i < N; i++) {
-        scatter[i*3]   = (Math.random() - 0.5) * 6.4;
-        scatter[i*3+1] = (Math.random() - 0.5) * 6.4;
-        scatter[i*3+2] = (Math.random() - 0.5) * 6.4;
+        scatter[i*3]   = (Math.random() - 0.5) * 12;
+        scatter[i*3+1] = (Math.random() - 0.5) * 6;
+        scatter[i*3+2] = (Math.random() - 0.5) * 5;
       }
 
       let currentIdx = GLOBE_IDX;

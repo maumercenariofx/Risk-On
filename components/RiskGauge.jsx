@@ -95,15 +95,8 @@ export default function RiskGauge() {
       {/* ── Hero ── */}
       <div style={{ position: "relative", height: 520, marginBottom: 28 }}>
 
-        {/* Sphere — centered */}
-        <div style={{
-          position: "absolute",
-          left: "50%",
-          top: "50%",
-          transform: "translate(-50%, -50%)",
-          width:  "min(500px, 88vw)",
-          height: "min(500px, 88vw)",
-        }}>
+        {/* Sphere — full hero, so intro particles can scatter to the edges */}
+        <div style={{ position: "absolute", inset: 0 }}>
           <RiskSphere ref={sphereRef} height="100%" />
         </div>
 
