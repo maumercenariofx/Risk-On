@@ -10,9 +10,9 @@ const PROJECTS = [
     title_es: "El peso en el ojo del huracán",
     title_en: "The Peso in the Eye of the Storm",
     desc_es:
-      "Análisis del ciclo de tasas de Banxico frente a la Fed y su impacto en el tipo de cambio. ¿Qué tan sostenible es el carry del MXN en un entorno de tasas altas prolongadas?",
+      "Banxico sigue con tasas altas mientras la Fed ya empieza a bajarle. ¿Cuánto tiempo más le conviene esa diferencia al peso? Te explicamos el carry trade del MXN sin tecnicismos.",
     desc_en:
-      "Analysis of Banxico's rate cycle vs the Fed and its FX impact. How sustainable is the MXN carry trade in a higher-for-longer rate environment?",
+      "Banxico's holding rates high while the Fed starts cutting. How much longer can that gap keep favoring the peso? We break down the MXN carry trade in plain English.",
     href: "/archive",
   },
   {
@@ -20,9 +20,9 @@ const PROJECTS = [
     title_es: "Leer el miedo antes de que llegue",
     title_en: "Reading Fear Before It Arrives",
     desc_es:
-      "Cómo interpretar el VIX y el MOVE juntos para anticipar episodios de volatilidad y ajustar exposición antes de que el mercado corrija.",
+      "El VIX y el MOVE son el termómetro del miedo en los mercados. Aquí te decimos cómo leerlos juntos para no agarrarte en curva cuando viene una sacudida.",
     desc_en:
-      "How to read VIX and MOVE together to anticipate volatility spikes and reposition before the market corrects.",
+      "VIX and MOVE are basically the market's fear gauge. Here's how to read them together so a sell-off doesn't catch you off guard.",
     href: "/archive",
   },
   {
@@ -30,9 +30,9 @@ const PROJECTS = [
     title_es: "El juego de las tasas",
     title_en: "The Rate Game",
     desc_es:
-      "Desglose de cómo las decisiones de la Fed se transmiten al MXN, los bonos y el apetito por riesgo en mercados emergentes. Guía práctica para no perderte en el ruido.",
+      "Cada vez que la Fed mueve un cuarto de punto, se siente en el peso, en los bonos y en todo lo que diga 'mercado emergente'. Te explicamos esa cadena, paso a paso y sin rollo.",
     desc_en:
-      "How Fed decisions flow through to MXN, bonds, and EM risk appetite. A practical guide to cutting through the noise.",
+      "Every quarter-point move from the Fed ripples through MXN, bonds, and basically anything labeled 'emerging market.' Here's that chain reaction, explained simply.",
     href: "/archive",
   },
   {
@@ -40,9 +40,9 @@ const PROJECTS = [
     title_es: "Cobertura sin miedo",
     title_en: "Hedging Without Fear",
     desc_es:
-      "Conceptos de opciones explicados desde cero para quienes manejan exposición en divisas o materias primas. Delta, theta y cuándo tiene sentido cubrir.",
+      "Opciones explicadas desde cero, en español de a pie: qué es delta, qué es theta, y cuándo realmente conviene cubrirte si tienes exposición en divisas o materias primas.",
     desc_en:
-      "Options concepts from scratch for those managing FX or commodity exposure. Delta, theta, and when hedging actually makes sense.",
+      "Options 101 for normal people: what delta and theta actually mean, and when hedging your FX or commodity exposure is genuinely worth it.",
     href: "/archive",
   },
 ];
