@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLang, T } from "./Lang";
 import { computeRiskIndex, riskLabel, componentMeta } from "../lib/riskIndex";
-import { RISK_COUNTRIES } from "../lib/quantForms";
+import { RISK_COUNTRIES, HERO_FORMS } from "../lib/quantForms";
 import RiskSphere from "./RiskSphere";
 import MarketsClient from "./MarketsClient";
 import VoronoiBackground from "./VoronoiBackground";
@@ -39,6 +39,8 @@ export default function RiskGauge() {
   const [newsCountry, setNewsCountry] = useState(null);
   const [news, setNews]               = useState([]);
   const [newsLoading, setNewsLoading] = useState(false);
+  const [formIdx, setFormIdx]         = useState(0);
+  const [formOpen, setFormOpen]       = useState(false);
   const sphereRef = useRef(null);
 
   useEffect(() => {
@@ -121,6 +123,58 @@ export default function RiskGauge() {
           <div style={{ color: "#F5F5F2" }}>WHAT'S</div>
           <div style={{ color: "#F5F5F2" }}>TODAY'S</div>
           <div style={{ color: "#2E2E34" }}>RISK?</div>
+        </div>
+
+        {/* Top-right: figure switcher */}
+        <div style={{ position: "absolute", top: 28, right: 0, zIndex: 2, fontFamily: "var(--font-mono)" }}>
+          <button
+            onClick={() => setFormOpen((o) => !o)}
+            style={{
+              background: "rgba(11,11,12,0.92)", border: "1px solid #1E1E20", borderRadius: 6,
+              padding: "5px 10px", cursor: "pointer",
+              fontSize: 10, letterSpacing: 1.5, textTransform: "uppercase",
+              color: "#C7C7C2", fontFamily: "var(--font-mono)",
+              display: "flex", alignItems: "center", gap: 6, whiteSpace: "nowrap",
+            }}
+          >
+            [ ◇ {lang === "es" ? HERO_FORMS[formIdx].label_es : HERO_FORMS[formIdx].label_en} ]
+          </button>
+
+          {formOpen && (
+            <div style={{
+              position: "absolute", top: "calc(100% + 6px)", right: 0, minWidth: 220,
+              background: "rgba(11,11,12,0.92)", border: "1px solid #1E1E20", borderRadius: 8,
+              backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)",
+              overflow: "hidden",
+            }}>
+              {HERO_FORMS.map((f, i) => (
+                <button
+                  key={f.id}
+                  onClick={() => {
+                    setFormIdx(i);
+                    sphereRef.current?.select(i);
+                    setFormOpen(false);
+                  }}
+                  style={{
+                    display: "block", width: "100%", textAlign: "left", cursor: "pointer",
+                    background: i === formIdx ? "rgba(255,255,255,0.05)" : "transparent",
+                    border: "none", borderBottom: i < HERO_FORMS.length - 1 ? "1px solid #1A1A1C" : "none",
+                    padding: "8px 10px",
+                  }}
+                >
+                  <div style={{
+                    fontSize: 10, letterSpacing: 1.5, textTransform: "uppercase",
+                    color: i === formIdx ? "#F5F5F2" : "#C7C7C2",
+                  }}>
+                    {lang === "es" ? f.label_es : f.label_en}
+                  </div>
+                  <div style={{ fontSize: 10, color: "#5A5A62", marginTop: 2 }}>
+                    {f.formula}
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Bottom-right: alert countries + score + label — score-blink starts after counter settles */}

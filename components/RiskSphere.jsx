@@ -1,9 +1,9 @@
 "use client";
 import { useEffect, useRef, forwardRef, useImperativeHandle } from "react";
 import {
-  genGlobe, makeDotTexture,
-  makeGeoTexture, makeCountryDataUniform, latLonToDir,
-  GLOBE_VERTEX_SHADER, GLOBE_FRAGMENT_SHADER,
+  genGlobe, genSphere, genThomas, genVoronoi, genAtom, tickAtom, eio,
+  makeDotTexture, makeGeoTexture, makeCountryDataUniform, latLonToDir,
+  HERO_FORMS, GLOBE_VERTEX_SHADER, GLOBE_FRAGMENT_SHADER,
 } from "../lib/quantForms";
 
 const THREE_SRC = "https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js";
@@ -29,6 +29,9 @@ function loadThree() {
 const N = 144000;
 const R = 1.8;
 const FOCUS_LERP = 0.06;
+const MORPH_S = 1.4;
+const GLOBE_IDX = HERO_FORMS.findIndex(f => f.id === "GLOBE");
+const ATOM_IDX  = HERO_FORMS.findIndex(f => f.id === "ATOM");
 
 // Hover effect: while the cursor is MOVING, nearby particles are pushed
 // outward (repel/crater). If the cursor stays still for IDLE_THRESHOLD,
@@ -52,6 +55,7 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
 
   useImperativeHandle(ref, () => ({
     focusCountry: (lat, lon) => selectRef.current?.focusCountry(lat, lon),
+    select: (idx) => selectRef.current?.select(idx),
   }), []);
 
   useEffect(() => {
@@ -82,8 +86,26 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
       const tex = makeDotTexture(THREE);
       const geoTex = makeGeoTexture(THREE);
 
-      const home    = genGlobe(N, R);
-      const effHome = home.slice();
+      // Particle positions for every selectable form. ATOM's home is
+      // continuously re-ticked (orbital motion) while it's active.
+      const atom = genAtom(N, R);
+      const HOMES = HERO_FORMS.map(f => {
+        switch (f.id) {
+          case "GLOBE":   return genGlobe(N, R);
+          case "SPHERE":  return genSphere(N, R);
+          case "THOMAS":  return genThomas(N);
+          case "VORONOI": return genVoronoi(N, R);
+          case "ATOM":    return atom.pos;
+          default:        return genGlobe(N, R);
+        }
+      });
+
+      let currentIdx = GLOBE_IDX;
+      let prevHome   = HOMES[GLOBE_IDX].slice();
+      let currHome   = HOMES[GLOBE_IDX];
+      let morphT     = 1;
+      const baseNow  = HOMES[GLOBE_IDX].slice();
+      const effHome  = HOMES[GLOBE_IDX].slice();
 
       // Per-particle hover-displacement state (local space, pre-group-scale).
       const dispX = new Float32Array(N), dispY = new Float32Array(N), dispZ = new Float32Array(N);
@@ -137,6 +159,13 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
         focusCountry: (lat, lon) => {
           const d = latLonToDir(lat, lon);
           focusTarget = -Math.atan2(d.x, d.z);
+        },
+        select: (idx) => {
+          if (idx < 0 || idx >= HOMES.length || idx === currentIdx) return;
+          prevHome   = baseNow.slice();
+          currHome   = HOMES[idx];
+          currentIdx = idx;
+          morphT     = 0;
         },
       };
 
@@ -197,6 +226,10 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
 
         material.uniforms.uTime.value = elapsed;
 
+        // Fade the globe-only tint/country highlight in or out as forms change.
+        const colorTarget = currentIdx === GLOBE_IDX ? 1 : 0;
+        material.uniforms.uColorT.value += (colorTarget - material.uniforms.uColorT.value) * 0.05;
+
         // Re-project the cursor onto the globe's surface every frame, so the
         // attraction point tracks the cursor even while the group rotates.
         if (mouseActive) {
@@ -215,9 +248,20 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
           ? ATTRACT_ACCEL_BASE + Math.min(idleTime - IDLE_THRESHOLD, ATTRACT_RAMP) * ATTRACT_ACCEL_GROWTH
           : 0;
 
+        // Continuously orbit ATOM's ring particles while it's the active form.
+        if (currentIdx === ATOM_IDX) {
+          tickAtom(HOMES[ATOM_IDX], atom.phases, atom.rIdx, elapsed, N, R);
+        }
+
+        if (morphT < 1) morphT = Math.min(1, morphT + dt / MORPH_S);
+        const mt = morphT < 1 ? eio(morphT) : 1;
+
         for (let i = 0; i < N; i++) {
           const ix = i * 3, iy = ix + 1, iz = ix + 2;
-          const bx = home[ix], by = home[iy], bz = home[iz];
+          const bx = prevHome[ix] + (currHome[ix] - prevHome[ix]) * mt;
+          const by = prevHome[iy] + (currHome[iy] - prevHome[iy]) * mt;
+          const bz = prevHome[iz] + (currHome[iz] - prevHome[iz]) * mt;
+          baseNow[ix] = bx; baseNow[iy] = by; baseNow[iz] = bz;
           const px = bx + dispX[i], py = by + dispY[i], pz = bz + dispZ[i];
 
           let fx, fy, fz;
