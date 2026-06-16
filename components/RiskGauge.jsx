@@ -222,6 +222,12 @@ export default function RiskGauge({ post }) {
               <div style={{ color: "#2E2E34" }}>
                 <T es={label.es} en={label.en} />
               </div>
+              <div style={{
+                fontSize: 9, letterSpacing: 2.5, fontWeight: 400,
+                color: "#2A2A30", marginTop: 6, lineHeight: 1,
+              }}>
+                ▲ <T es="ÍNDICE EN VIVO" en="LIVE INDEX" />
+              </div>
             </div>
           </div>
         )}

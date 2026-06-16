@@ -11,11 +11,23 @@ export default function DailyRead({ post }) {
 
   return (
     <section className="reveal" style={{ animationDelay: "0.2s" }}>
-      <div className="mb-3 flex items-baseline gap-3">
+      <div className="mb-3 flex items-baseline gap-3 flex-wrap">
         <span className="font-serif text-3xl font-semibold tracking-tight text-bone">
           Pre-market
         </span>
         <span className="text-xs text-muted">{post.date}</span>
+        {post.score && (
+          <span style={{
+            display: "inline-flex", alignItems: "center", gap: 5,
+            fontFamily: "var(--font-mono)",
+            fontSize: 11, color: post.score >= 58 ? "#3FA77E" : post.score < 42 ? "#A32D2D" : "#8A8A8E",
+          }}>
+            {post.score}
+            <span style={{ fontSize: 8, letterSpacing: 2, color: "#4A4A50" }}>
+              <T es="OPINIÓN" en="EDITORIAL" />
+            </span>
+          </span>
+        )}
       </div>
       <h2 className="mb-1 font-serif text-2xl font-medium leading-tight text-bone">{title}</h2>
       <p className="mb-2 text-xs text-muted">
