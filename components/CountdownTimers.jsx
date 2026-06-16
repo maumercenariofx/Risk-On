@@ -2,16 +2,10 @@
 import { useEffect, useState } from "react";
 import { T } from "./Lang";
 
-// ─── ACTUALIZA ESTAS FECHAS CUANDO SE PUBLIQUEN LOS CALENDARIOS ──────────────
-// Fed:     reunión FOMC — hora ET (verano = -04:00, invierno = -05:00)
-// Banxico: reunión Junta de Gobierno — hora CDMX (-06:00 invierno, -05:00 verano)
-const NEXT_FED     = new Date("2026-06-17T14:00:00-04:00");
-const NEXT_BANXICO = new Date("2026-06-26T13:00:00-06:00");
-// ─────────────────────────────────────────────────────────────────────────────
-
 function useCountdown(target) {
   const [r, setR] = useState(null);
   useEffect(() => {
+    if (!target) return;
     const calc = () => {
       const diff = target - Date.now();
       if (diff <= 0) return setR({ d: 0, h: 0, m: 0, s: 0, past: true });
@@ -57,7 +51,8 @@ function Colon() {
   );
 }
 
-function Countdown({ target, label_es, label_en }) {
+function Countdown({ isoDate, label_es, label_en }) {
+  const target = isoDate ? new Date(isoDate).getTime() : null;
   const r = useCountdown(target);
   return (
     <div
@@ -70,7 +65,11 @@ function Countdown({ target, label_es, label_en }) {
       <div style={{ fontSize: 9, letterSpacing: 2.5, textTransform: "uppercase", color: "#4A4A50", marginBottom: 14 }}>
         <T es={label_es} en={label_en} />
       </div>
-      {r?.past ? (
+      {!isoDate ? (
+        <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "#3A3A3E", letterSpacing: 1 }}>
+          —
+        </div>
+      ) : r?.past ? (
         <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "#3A3A3E", letterSpacing: 1 }}>
           <T es="Reunión en curso o finalizada" en="Meeting ongoing or concluded" />
         </div>
@@ -90,14 +89,23 @@ function Countdown({ target, label_es, label_en }) {
 }
 
 export default function CountdownTimers() {
+  const [dates, setDates] = useState({ fed: null, banxico: null });
+
+  useEffect(() => {
+    fetch("/api/meetings")
+      .then((r) => r.json())
+      .then(setDates)
+      .catch(() => {});
+  }, []);
+
   return (
     <section className="reveal" style={{ animationDelay: "0.2s" }}>
       <div style={{ fontSize: 10, letterSpacing: 3, textTransform: "uppercase", color: "#4A4A50", marginBottom: 12 }}>
         &mdash; <T es="Próximas decisiones de política monetaria" en="Next monetary policy decisions" />
       </div>
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-        <Countdown target={NEXT_FED}     label_es="Próxima Fed (FOMC)"  label_en="Next Fed (FOMC)"  />
-        <Countdown target={NEXT_BANXICO} label_es="Próxima Banxico"     label_en="Next Banxico"     />
+        <Countdown isoDate={dates.fed}     label_es="Próxima Fed (FOMC)"  label_en="Next Fed (FOMC)"  />
+        <Countdown isoDate={dates.banxico} label_es="Próxima Banxico"     label_en="Next Banxico"     />
       </div>
     </section>
   );
