@@ -50,37 +50,24 @@ export default function YieldCurveChart() {
         type: "line",
         plugins: [
           crosshairPlugin,
-          makeGlowPlugin(color, 1, 12),
-          makeTerminalDotPlugin(color, 1),
+          makeGlowPlugin(color, 0, 12),
+          makeTerminalDotPlugin(color, 0),
         ],
         data: {
           labels: data.points.map((p) => p.term),
-          datasets: [
-            // Fill gradient only
-            {
-              data:            data.points.map((p) => p.yield),
-              borderColor:     "transparent",
-              borderWidth:     0,
-              backgroundColor: gradFn,
-              fill:            true,
-              tension:         0.35,
-              pointRadius:     0,
-            },
-            // Glowing line
-            {
-              data:                      data.points.map((p) => p.yield),
-              borderColor:               color,
-              borderWidth:               2,
-              backgroundColor:           "transparent",
-              fill:                      false,
-              tension:                   0.35,
-              pointRadius:               0,
-              pointHoverRadius:          4,
-              pointHoverBackgroundColor: color,
-              pointHoverBorderColor:     "#000",
-              pointHoverBorderWidth:     2,
-            },
-          ],
+          datasets: [{
+            data:                      data.points.map((p) => p.yield),
+            borderColor:               color,
+            borderWidth:               2,
+            backgroundColor:           gradFn,
+            fill:                      true,
+            tension:                   0.35,
+            pointRadius:               0,
+            pointHoverRadius:          4,
+            pointHoverBackgroundColor: color,
+            pointHoverBorderColor:     "#000",
+            pointHoverBorderWidth:     2,
+          }],
         },
         options: {
           responsive:          true,
@@ -90,7 +77,6 @@ export default function YieldCurveChart() {
             legend:  { display: false },
             tooltip: {
               ...tooltipDefaults,
-              filter:   (item) => item.datasetIndex === 1,
               callbacks: {
                 title: (items) => items[0].label,
                 label: (c)     => ` ${c.parsed.y.toFixed(2)}%`,
@@ -99,10 +85,7 @@ export default function YieldCurveChart() {
           },
           scales: {
             x: xScaleDefaults(data.points.length),
-            y: {
-              ...yScaleDefaults((v) => v.toFixed(1) + "%"),
-              position: "right",
-            },
+            y: { ...yScaleDefaults((v) => v.toFixed(1) + "%"), position: "right" },
           },
         },
       });
@@ -129,10 +112,8 @@ export default function YieldCurveChart() {
           {status && (
             <span style={{
               fontSize: 8, letterSpacing: 2, fontFamily: "var(--font-mono)",
-              color: status.color,
-              border: `1px solid ${status.color}44`,
-              borderRadius: 20, padding: "3px 9px",
-              boxShadow: `0 0 10px ${status.color}30`,
+              color: status.color, border: `1px solid ${status.color}44`,
+              borderRadius: 20, padding: "3px 9px", boxShadow: `0 0 10px ${status.color}30`,
             }}>
               {lang === "en" ? status.en : status.es}
             </span>
