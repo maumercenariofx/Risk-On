@@ -17,10 +17,50 @@ const PAIRS = [
 ];
 
 const RANGES = [
-  { value: 30,  label: "1M" },
-  { value: 90,  label: "3M" },
-  { value: 365, label: "1Y" },
+  { value: "1d",  label: "1D" },
+  { value: 30,    label: "1M" },
+  { value: 90,    label: "3M" },
+  { value: 365,   label: "1Y" },
 ];
+
+// ── FX session segmentation (UTC hours) ──────────────────────────────────────
+// Overlap priority for MXN traders: NY > London > Tokyo (by peso volume)
+
+const FX_SESSIONS = [
+  { key: "newyork", es: "NY",      en: "NY",     color: "#00C805", from: 12, to: 21 },
+  { key: "london",  es: "Londres", en: "London", color: "#F59E0B", from: 7,  to: 16 },
+  { key: "tokyo",   es: "Asia",    en: "Asia",   color: "#818CF8", from: 0,  to: 9  },
+];
+const QUIET_COLOR = "#374151";
+
+function sessionColor(hourUTC) {
+  if (hourUTC >= 12 && hourUTC < 21) return "#00C805";  // NY
+  if (hourUTC >= 7  && hourUTC < 16) return "#F59E0B";  // London
+  if (hourUTC >= 0  && hourUTC < 9)  return "#818CF8";  // Asia/Tokyo
+  return QUIET_COLOR;
+}
+
+function currentSession(hourUTC) {
+  if (hourUTC >= 12 && hourUTC < 21) return FX_SESSIONS[0];
+  if (hourUTC >= 7  && hourUTC < 16) return FX_SESSIONS[1];
+  if (hourUTC >= 0  && hourUTC < 9)  return FX_SESSIONS[2];
+  return null;
+}
+
+function computeSessionChanges(prices, timestamps) {
+  const out = {};
+  for (const s of FX_SESSIONS) {
+    const pts = [];
+    for (let i = 0; i < timestamps.length; i++) {
+      const h = new Date(timestamps[i]).getUTCHours();
+      if (h >= s.from && h < s.to) pts.push(prices[i]);
+    }
+    if (pts.length >= 2) {
+      out[s.key] = ((pts[pts.length - 1] - pts[0]) / pts[0]) * 100;
+    }
+  }
+  return out;
+}
 
 // ── fallback data ────────────────────────────────────────────────────────────
 
@@ -46,7 +86,6 @@ function genLabels(n, daysBack) {
 
 // ── Chart.js plugins ─────────────────────────────────────────────────────────
 
-// Dashed vertical crosshair on hover
 const crosshairPlugin = {
   id: "crosshair",
   afterDraw(chart) {
@@ -65,7 +104,6 @@ const crosshairPlugin = {
   },
 };
 
-// Glow bloom on dataset index 0 (single-dataset setup)
 function makeGlowPlugin(color) {
   return {
     id: "lineGlow",
@@ -82,7 +120,6 @@ function makeGlowPlugin(color) {
   };
 }
 
-// Glowing terminal dot at last data point
 function makeTerminalDotPlugin(color) {
   return {
     id: "terminalDot",
@@ -93,28 +130,22 @@ function makeTerminalDotPlugin(color) {
       const tip = pts[pts.length - 1];
       const { ctx } = chart;
       ctx.save();
-
-      // Outer glow
       ctx.shadowColor = color;
       ctx.shadowBlur  = 18;
       ctx.beginPath();
       ctx.arc(tip.x, tip.y, 5, 0, Math.PI * 2);
       ctx.fillStyle = color;
       ctx.fill();
-
-      // Inner white core
       ctx.shadowBlur = 0;
       ctx.beginPath();
       ctx.arc(tip.x, tip.y, 2.5, 0, Math.PI * 2);
       ctx.fillStyle = "#FFFFFF";
       ctx.fill();
-
       ctx.restore();
     },
   };
 }
 
-// Gradient fill factory
 function makeGradient(ctx, chartArea, color) {
   const g = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
   g.addColorStop(0,   color + "38");
@@ -131,30 +162,45 @@ export default function MarketsClient({ embed = false }) {
   const chartRef   = useRef(null);
   const dataCache  = useRef({});
 
-  const [range,     setRange]     = useState(30);
-  const [pair,      setPair]      = useState("USDMXN");
-  const [priceInfo, setPriceInfo] = useState(null); // { last, change, changePct, isUp }
-  const [lineColor, setLineColor] = useState(GREEN);
-  const [loading,   setLoading]   = useState(true);
+  const [range,        setRange]        = useState("1d");
+  const [pair,         setPair]         = useState("USDMXN");
+  const [priceInfo,    setPriceInfo]    = useState(null);
+  const [lineColor,    setLineColor]    = useState(GREEN);
+  const [loading,      setLoading]      = useState(true);
+  const [sessChanges,  setSessChanges]  = useState(null);
+  const [activeSess,   setActiveSess]   = useState(null);
 
   const currentPair = PAIRS.find((p) => p.key === pair) || PAIRS[0];
+  const isIntraday  = range === "1d";
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
+    setSessChanges(null);
+    setActiveSess(null);
 
-    const buildChart = async (prices, labels) => {
+    const buildChart = async (prices, labels, tsArr = []) => {
       if (cancelled || !canvasRef.current) return;
 
-      const first   = prices[0] ?? 0;
-      const last    = prices[prices.length - 1] ?? 0;
-      const isUp    = last >= first;
-      const color   = isUp ? GREEN : RED;
-      const change  = last - first;
+      const first     = prices[0] ?? 0;
+      const last      = prices[prices.length - 1] ?? 0;
+      const isUp      = last >= first;
+      const color     = isUp ? GREEN : RED;
+      const change    = last - first;
       const changePct = first ? (change / first) * 100 : 0;
 
       setPriceInfo({ last, change, changePct, isUp });
       setLineColor(color);
+
+      // Session analysis for 1D
+      let dotColor = color;
+      if (tsArr.length) {
+        const sc = computeSessionChanges(prices, tsArr);
+        setSessChanges(sc);
+        const lastH = new Date(tsArr[tsArr.length - 1]).getUTCHours();
+        dotColor = sessionColor(lastH);
+        setActiveSess(currentSession(lastH));
+      }
 
       const mod   = await import("chart.js/auto");
       if (cancelled) return;
@@ -163,31 +209,44 @@ export default function MarketsClient({ embed = false }) {
       if (chartRef.current) chartRef.current.destroy();
       canvasRef.current.style.background = "transparent";
 
+      // Gradient fill: neutral for 1D, semantic for daily
+      const fillColor = isIntraday ? "#6B7280" : color;
+
+      const dataset = {
+        data:            prices,
+        borderColor:     color,
+        borderWidth:     2,
+        backgroundColor: (ctx) => {
+          const area = ctx.chart.chartArea;
+          if (!area) return "transparent";
+          return makeGradient(ctx.chart.ctx, area, fillColor);
+        },
+        fill:                      true,
+        tension:                   0.3,
+        pointRadius:               0,
+        pointHoverRadius:          4,
+        pointHoverBackgroundColor: dotColor,
+        pointHoverBorderColor:     "#000",
+        pointHoverBorderWidth:     2,
+      };
+
+      // Session-colored line for 1D
+      if (isIntraday && tsArr.length) {
+        dataset.segment = {
+          borderColor: (ctx) => {
+            const ts = tsArr[ctx.p0DataIndex];
+            return ts ? sessionColor(new Date(ts).getUTCHours()) : color;
+          },
+        };
+      }
+
+      const plugins = [crosshairPlugin, makeTerminalDotPlugin(dotColor)];
+      if (!isIntraday) plugins.push(makeGlowPlugin(color));
+
       chartRef.current = new Chart(canvasRef.current, {
         type:    "line",
-        plugins: [crosshairPlugin, makeGlowPlugin(color), makeTerminalDotPlugin(color)],
-        data: {
-          labels,
-          datasets: [
-            {
-              data:            prices,
-              borderColor:     color,
-              borderWidth:     2,
-              backgroundColor: (ctx) => {
-                const area = ctx.chart.chartArea;
-                if (!area) return "transparent";
-                return makeGradient(ctx.chart.ctx, area, color);
-              },
-              fill:                      true,
-              tension:                   0.3,
-              pointRadius:               0,
-              pointHoverRadius:          4,
-              pointHoverBackgroundColor: color,
-              pointHoverBorderColor:     "#000",
-              pointHoverBorderWidth:     2,
-            },
-          ],
-        },
+        plugins,
+        data:    { labels, datasets: [dataset] },
         options: {
           responsive:          true,
           maintainAspectRatio: false,
@@ -217,7 +276,7 @@ export default function MarketsClient({ embed = false }) {
               ticks: {
                 color:         "#4B5563",
                 font:          { size: 10 },
-                maxTicksLimit: range === 365 ? 10 : range === 90 ? 7 : 5,
+                maxTicksLimit: isIntraday ? 8 : (range === 365 ? 10 : range === 90 ? 7 : 5),
                 maxRotation:   0,
               },
               grid:   { display: false },
@@ -243,30 +302,36 @@ export default function MarketsClient({ embed = false }) {
 
     const cacheKey = `${pair}-${range}`;
     if (dataCache.current[cacheKey]) {
-      const { prices, labels } = dataCache.current[cacheKey];
-      buildChart(prices, labels);
+      const { prices, labels, timestamps } = dataCache.current[cacheKey];
+      buildChart(prices, labels, timestamps ?? []);
       return () => { cancelled = true; };
     }
 
     fetch(`/api/history?range=${range}&symbol=${pair}`)
       .then((r) => r.json())
-      .then(({ prices, labels }) => {
+      .then(({ prices, labels, timestamps: ts }) => {
         if (cancelled) return;
         if (prices?.length > 0) {
-          dataCache.current[cacheKey] = { prices, labels };
-          buildChart(prices, labels);
-        } else {
+          dataCache.current[cacheKey] = { prices, labels, timestamps: ts };
+          buildChart(prices, labels, ts ?? []);
+        } else if (!isIntraday) {
           const fp = genSeries(range, 18.1, 18.42);
           const fl = genLabels(range, range);
           dataCache.current[cacheKey] = { prices: fp, labels: fl };
-          buildChart(fp, fl);
+          buildChart(fp, fl, []);
+        } else {
+          setLoading(false);
         }
       })
       .catch(() => {
         if (cancelled) return;
-        const fp = genSeries(range, 18.1, 18.42);
-        const fl = genLabels(range, range);
-        buildChart(fp, fl);
+        if (!isIntraday) {
+          const fp = genSeries(range, 18.1, 18.42);
+          const fl = genLabels(range, range);
+          buildChart(fp, fl, []);
+        } else {
+          setLoading(false);
+        }
       });
 
     return () => { cancelled = true; };
@@ -346,6 +411,20 @@ export default function MarketsClient({ embed = false }) {
               color: "#4B5563", marginBottom: 6, fontFamily: "var(--font-mono)",
             }}>
               {currentPair.label}
+              {isIntraday && activeSess && (
+                <span style={{
+                  marginLeft: 8,
+                  color:      activeSess.color,
+                  border:     `1px solid ${activeSess.color}44`,
+                  borderRadius: 10,
+                  padding:    "2px 7px",
+                  fontSize:   8,
+                  letterSpacing: 1.5,
+                  boxShadow:  `0 0 8px ${activeSess.color}30`,
+                }}>
+                  {lang === "en" ? activeSess.en : activeSess.es}
+                </span>
+              )}
             </div>
             <div style={{
               fontFamily: "var(--font-sans)", fontWeight: 700,
@@ -366,6 +445,11 @@ export default function MarketsClient({ embed = false }) {
                 <span style={{ opacity: 0.55, fontSize: 12 }}>
                   ({isUp ? "+" : ""}{priceInfo.change.toFixed(dec)})
                 </span>
+                {isIntraday && (
+                  <span style={{ opacity: 0.4, fontSize: 10, fontFamily: "var(--font-mono)", letterSpacing: 1 }}>
+                    · 24H
+                  </span>
+                )}
               </div>
             )}
           </div>
@@ -420,13 +504,80 @@ export default function MarketsClient({ embed = false }) {
           />
         </div>
 
+        {/* Session breakdown — 1D only */}
+        {isIntraday && sessChanges && (
+          <div style={{ marginTop: 14, display: "flex", flexDirection: "column", gap: 10 }}>
+            {/* Session Δ chips */}
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              {FX_SESSIONS.map((s) => {
+                const delta = sessChanges[s.key];
+                if (delta == null) return null;
+                const up = delta >= 0;
+                return (
+                  <div key={s.key} style={{
+                    display:       "flex",
+                    alignItems:    "center",
+                    gap:           5,
+                    padding:       "5px 10px",
+                    borderRadius:  20,
+                    border:        `1px solid ${s.color}33`,
+                    background:    `${s.color}0A`,
+                    fontFamily:    "var(--font-mono)",
+                  }}>
+                    <span style={{
+                      width: 6, height: 6, borderRadius: "50%",
+                      background: s.color,
+                      boxShadow:  `0 0 6px ${s.color}`,
+                      flexShrink: 0,
+                    }} />
+                    <span style={{ fontSize: 9, color: "#6B7280", letterSpacing: 1 }}>
+                      {lang === "en" ? s.en : s.es}
+                    </span>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: up ? "#00C805" : "#FF5000", fontVariantNumeric: "tabular-nums" }}>
+                      {up ? "+" : ""}{delta.toFixed(2)}%
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Session color legend */}
+            <div style={{ display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap" }}>
+              {FX_SESSIONS.map((s) => (
+                <div key={s.key} style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                  <svg width="18" height="6">
+                    <line x1="0" y1="3" x2="18" y2="3" stroke={s.color} strokeWidth="2"
+                      style={{ filter: `drop-shadow(0 0 2px ${s.color})` }} />
+                  </svg>
+                  <span style={{ fontSize: 9, color: "#4B5563", fontFamily: "var(--font-mono)", letterSpacing: 1 }}>
+                    {lang === "en" ? s.en.toUpperCase() : s.es.toUpperCase()}
+                  </span>
+                </div>
+              ))}
+              <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                <svg width="18" height="6">
+                  <line x1="0" y1="3" x2="18" y2="3" stroke={QUIET_COLOR} strokeWidth="2" strokeDasharray="4 2" />
+                </svg>
+                <span style={{ fontSize: 9, color: "#374151", fontFamily: "var(--font-mono)", letterSpacing: 1 }}>
+                  <T es="SILENCIO" en="QUIET" />
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Footer */}
         <p style={{
-          marginTop: 12, fontSize: 10, color: "#374151",
+          marginTop: isIntraday ? 10 : 12,
+          fontSize: 10, color: "#374151",
           fontFamily: "var(--font-mono)", letterSpacing: 0.5,
         }}>
-          <T es="Cierres diarios · Yahoo Finance · datos con posible retraso"
-             en="Daily closes · Yahoo Finance · data may be delayed" />
+          {isIntraday
+            ? <T es="Datos intradía 5m · Yahoo Finance · UTC · solo pares FX (mercado 24h)"
+                 en="5m intraday data · Yahoo Finance · UTC · FX pairs only (24h market)" />
+            : <T es="Cierres diarios · Yahoo Finance · datos con posible retraso"
+                 en="Daily closes · Yahoo Finance · data may be delayed" />
+          }
         </p>
       </div>
     </div>
