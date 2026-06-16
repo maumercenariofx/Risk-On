@@ -12,6 +12,7 @@ export default function Nav() {
 
   const links = [
     { href: "/", es: "Inicio", en: "Home" },
+    { href: "/archive", es: "Archivo", en: "Archive" },
     { href: "/markets", es: "Mercados", en: "Markets" },
     { href: "/learn", es: "Aprende", en: "Learn" },
     { href: "/about", es: "Contacto", en: "Contact" },

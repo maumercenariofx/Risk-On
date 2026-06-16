@@ -1,8 +1,64 @@
 "use client";
 // components/PostView.jsx
+import { useState } from "react";
 import Link from "next/link";
 import { useLang, T } from "./Lang";
 import { riskLabel } from "../lib/riskIndex";
+
+function ShareBar({ post, lang }) {
+  const [copied, setCopied] = useState(false);
+  const title  = lang === "en" ? post.title_en : post.title_es;
+  const url    = `https://riskon.lat/archive/${post.slug}`;
+  const tweet  = `Risk On ${post.score}/100 — ${title} ${url}`;
+  const tweetUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(tweet)}`;
+
+  const copy = () => {
+    navigator.clipboard.writeText(url).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 10, paddingTop: 4 }}>
+      <span style={{ fontSize: 9, letterSpacing: 2, textTransform: "uppercase", color: "#4A4A50" }}>
+        <T es="Compartir" en="Share" />
+      </span>
+      <a
+        href={tweetUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        style={{
+          display: "inline-flex", alignItems: "center", gap: 6,
+          fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: 1,
+          color: "#8A8A8E", border: "1px solid #2A2A2E", borderRadius: 6,
+          padding: "5px 10px", textDecoration: "none",
+          transition: "color .2s, border-color .2s",
+        }}
+        onMouseEnter={e => { e.currentTarget.style.color = "#F5F5F2"; e.currentTarget.style.borderColor = "#4A4A50"; }}
+        onMouseLeave={e => { e.currentTarget.style.color = "#8A8A8E"; e.currentTarget.style.borderColor = "#2A2A2E"; }}
+      >
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.73-8.835L1.254 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+        </svg>
+        X
+      </a>
+      <button
+        onClick={copy}
+        style={{
+          display: "inline-flex", alignItems: "center", gap: 6,
+          fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: 1,
+          color: copied ? "#3FA77E" : "#8A8A8E",
+          border: `1px solid ${copied ? "#3FA77E33" : "#2A2A2E"}`,
+          borderRadius: 6, padding: "5px 10px", background: "none", cursor: "pointer",
+          transition: "color .2s, border-color .2s",
+        }}
+      >
+        {copied ? <T es="¡Copiado!" en="Copied!" /> : <T es="Copiar link" en="Copy link" />}
+      </button>
+    </div>
+  );
+}
 
 export default function PostView({ post, prev, next }) {
   const { lang } = useLang();
@@ -29,6 +85,10 @@ export default function PostView({ post, prev, next }) {
         style={{ animationDelay: "0.1s" }}
         dangerouslySetInnerHTML={{ __html: post.html }}
       />
+      <div className="border-t border-edge pt-4">
+        <ShareBar post={post} lang={lang} />
+      </div>
+
       <p className="text-xs text-muted/60">
         <T
           es={`Índice al momento de esta nota (${post.date}) — el valor en vivo en la portada puede haber cambiado.`}

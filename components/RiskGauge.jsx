@@ -117,6 +117,17 @@ export default function RiskGauge({ post }) {
           <div style={{ color: "#F5F5F2" }}>WHAT'S</div>
           <div style={{ color: "#F5F5F2" }}>TODAY'S</div>
           <div style={{ color: "#2E2E34" }}>RISK?</div>
+          <div style={{
+            fontFamily: "var(--font-mono)",
+            fontSize: "clamp(8px, 0.85vw, 11px)",
+            fontWeight: 400,
+            letterSpacing: 2,
+            color: "#3A3A40",
+            marginTop: 14,
+            lineHeight: 1,
+          }}>
+            <T es="Inteligencia macro diaria · MXN" en="Daily macro intelligence · MXN" />
+          </div>
         </div>
 
         {/* Top-right: figure switcher */}
