@@ -5,7 +5,7 @@ import { T } from "./Lang";
 // ─── ACTUALIZA ESTAS FECHAS CUANDO SE PUBLIQUEN LOS CALENDARIOS ──────────────
 // Fed:     reunión FOMC — hora ET (verano = -04:00, invierno = -05:00)
 // Banxico: reunión Junta de Gobierno — hora CDMX (-06:00 invierno, -05:00 verano)
-const NEXT_FED     = new Date("2026-07-29T14:00:00-04:00");
+const NEXT_FED     = new Date("2026-06-17T14:00:00-04:00");
 const NEXT_BANXICO = new Date("2026-06-26T13:00:00-06:00");
 // ─────────────────────────────────────────────────────────────────────────────
 
