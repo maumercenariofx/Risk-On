@@ -5,7 +5,6 @@ import { computeRiskIndex, riskLabel, componentMeta } from "../lib/riskIndex";
 import { RISK_COUNTRIES, HERO_FORMS } from "../lib/quantForms";
 import RiskSphere from "./RiskSphere";
 import MarketsClient from "./MarketsClient";
-import VoronoiBackground from "./VoronoiBackground";
 import DailyRead from "./DailyRead";
 
 function minutesAgo(isoStr) {
@@ -491,14 +490,9 @@ export default function RiskGauge({ post }) {
         </div>
       )}
 
-      {/* ── Markets with Voronoi background — no border, no box ── */}
-      <div style={{ position: "relative", marginTop: 28 }}>
-        <div style={{ position: "absolute", inset: 0, zIndex: 0 }}>
-          <VoronoiBackground />
-        </div>
-        <div style={{ position: "relative", zIndex: 1, padding: "8px 0" }}>
-          <MarketsClient embed />
-        </div>
+      {/* ── Markets embed ── */}
+      <div style={{ marginTop: 28, padding: "8px 0" }}>
+        <MarketsClient embed />
       </div>
 
     </section>
