@@ -42,7 +42,17 @@ export default function RiskGauge({ post }) {
   const [newsLoading, setNewsLoading] = useState(false);
   const [formIdx, setFormIdx]         = useState(0);
   const [formOpen, setFormOpen]       = useState(false);
+  const [heroGone, setHeroGone]       = useState(false);
   const sphereRef = useRef(null);
+  const heroRef   = useRef(null);
+
+  useEffect(() => {
+    const el = heroRef.current;
+    if (!el) return;
+    const io = new IntersectionObserver(([e]) => setHeroGone(!e.isIntersecting), { threshold: 0 });
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
 
   useEffect(() => {
     if (!newsCountry) return;
@@ -94,7 +104,7 @@ export default function RiskGauge({ post }) {
     <section className="reveal" style={{ animationDelay: "0.05s" }}>
 
       {/* ── Hero ── */}
-      <div style={{ position: "relative", height: 520, marginBottom: 28 }}>
+      <div ref={heroRef} style={{ position: "relative", height: 520, marginBottom: 28 }}>
 
         {/* Sphere — full hero, so intro particles can scatter to the edges */}
         <div style={{ position: "absolute", inset: 0 }}>
@@ -259,6 +269,40 @@ export default function RiskGauge({ post }) {
           </div>
         )}
       </div>
+
+      {/* ── Sticky score badge (appears when hero scrolls out of view) ── */}
+      {heroGone && result && (
+        <div style={{
+          position: "fixed",
+          bottom: 24,
+          right: 24,
+          zIndex: 200,
+          background: "rgba(9,9,11,0.96)",
+          backdropFilter: "blur(16px)",
+          WebkitBackdropFilter: "blur(16px)",
+          border: `1px solid ${accentColor}44`,
+          borderRadius: 14,
+          padding: "11px 16px",
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          boxShadow: `0 4px 32px rgba(0,0,0,0.7), 0 0 0 1px ${accentColor}18`,
+          pointerEvents: "none",
+          animation: "fadeInUp .25s ease both",
+        }}>
+          <div style={{ fontFamily: "var(--font-sans)", fontWeight: 800, fontSize: 30, lineHeight: 1, color: accentColor, letterSpacing: "-0.02em" }}>
+            {display}
+          </div>
+          <div style={{ lineHeight: 1.5 }}>
+            <div style={{ fontSize: 7.5, letterSpacing: 2.5, color: "#3A3A40", textTransform: "uppercase", fontFamily: "var(--font-mono)" }}>
+              RISK ON
+            </div>
+            <div style={{ fontSize: 8.5, letterSpacing: 2, color: accentColor, textTransform: "uppercase", fontFamily: "var(--font-mono)" }}>
+              {lang === "en" ? label.en : label.es}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Country news panel ── */}
       {newsCountry && (() => {
