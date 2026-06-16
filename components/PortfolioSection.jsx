@@ -1,6 +1,11 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLang, T } from "./Lang";
+import {
+  GREEN, RED, crosshairPlugin, multiGlowPlugin, lastDatasetDotPlugin,
+  makeGradientFn, tooltipDefaults, xScaleDefaults, yScaleDefaults,
+  cardStyle, sectionLabel,
+} from "../lib/chartHelpers";
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -13,10 +18,7 @@ function normalize(points) {
 function alignToCalendar(normalized, calDates) {
   const map  = new Map(normalized.map((p) => [p.date, p.value]));
   let   last = normalized[0]?.value ?? 100;
-  return calDates.map((d) => {
-    if (map.has(d)) last = map.get(d);
-    return last;
-  });
+  return calDates.map((d) => { if (map.has(d)) last = map.get(d); return last; });
 }
 
 function tbillSeries(n) {
@@ -32,69 +34,34 @@ const PALETTE = [
   "#F97316", "#EAB308", "#06B6D4", "#84CC16",
 ];
 
-const TBILL_KEY = "TBILL";
+const TBILL_KEY  = "TBILL";
+const LS_KEY     = "riskon_portfolio_v3";
+const DEFAULTS   = { symbols: ["^GSPC", TBILL_KEY], weights: { "^GSPC": 70, [TBILL_KEY]: 30 } };
+const QUICK_ADDS = ["NVDA", "BTC-USD", "GC=F", "TLT", "QQQ", "GLD", "AMXL.MX", "JPM", "TSLA", "AAPL"];
 
-const LS_KEY = "riskon_portfolio_v3";
-
-const DEFAULTS = {
-  symbols: ["^GSPC", TBILL_KEY],
-  weights: { "^GSPC": 70, [TBILL_KEY]: 30 },
-};
-
-// ── localStorage ─────────────────────────────────────────────────────────────
-
-function loadLS() {
-  try {
-    const raw = localStorage.getItem(LS_KEY);
-    return raw ? JSON.parse(raw) : null;
-  } catch { return null; }
-}
-
-function saveLS(symbols, weights) {
-  try { localStorage.setItem(LS_KEY, JSON.stringify({ symbols, weights })); } catch {}
-}
-
-// ── crosshair plugin ─────────────────────────────────────────────────────────
-
-const crosshairPlugin = {
-  id: "crosshair",
-  afterDraw(chart) {
-    if (!chart.tooltip._active?.length) return;
-    const ctx = chart.ctx;
-    const x   = chart.tooltip._active[0].element.x;
-    const { top, bottom } = chart.scales.y;
-    ctx.save();
-    ctx.beginPath();
-    ctx.moveTo(x, top); ctx.lineTo(x, bottom);
-    ctx.lineWidth   = 1;
-    ctx.strokeStyle = "rgba(245,245,242,0.12)";
-    ctx.setLineDash([4, 4]);
-    ctx.stroke();
-    ctx.restore();
-  },
-};
+function loadLS() { try { const r = localStorage.getItem(LS_KEY); return r ? JSON.parse(r) : null; } catch { return null; } }
+function saveLS(s, w) { try { localStorage.setItem(LS_KEY, JSON.stringify({ symbols: s, weights: w })); } catch {} }
 
 // ── component ────────────────────────────────────────────────────────────────
 
 export default function PortfolioSection() {
   const { lang } = useLang();
-  const canvasRef = useRef(null);
-  const chartRef  = useRef(null);
+  const canvasRef    = useRef(null);
+  const chartRef     = useRef(null);
 
-  const [symbols,        setSymbols]        = useState(DEFAULTS.symbols);
-  const [weights,        setWeights]        = useState(DEFAULTS.weights);
-  const [assetData,      setAssetData]      = useState({});   // { sym: { name, currency, points[] } }
-  const [loadingSet,     setLoadingSet]     = useState(new Set());
-  const [lastError,      setLastError]      = useState(null); // { sym, msg }
-  const [query,          setQuery]          = useState("");
-  const [portValue,      setPortValue]      = useState(null);
-  const [showLines,      setShowLines]      = useState(false);
-  const [initialized,    setInitialized]    = useState(false);
-
-  // ── fetch one symbol ──────────────────────────────────────────────────────
+  const [symbols,     setSymbols]     = useState(DEFAULTS.symbols);
+  const [weights,     setWeights]     = useState(DEFAULTS.weights);
+  const [assetData,   setAssetData]   = useState({});
+  const [loadingSet,  setLoadingSet]  = useState(new Set());
+  const [lastError,   setLastError]   = useState(null);
+  const [query,       setQuery]       = useState("");
+  const [portValue,   setPortValue]   = useState(null);
+  const [lineColor,   setLineColor]   = useState(GREEN);
+  const [showLines,   setShowLines]   = useState(false);
+  const [initialized, setInitialized] = useState(false);
 
   const fetchAsset = useCallback(async (sym) => {
-    if (sym === TBILL_KEY) return;                   // synthetic, no fetch needed
+    if (sym === TBILL_KEY) return;
     setLoadingSet((s) => new Set([...s, sym]));
     setLastError(null);
     try {
@@ -104,15 +71,12 @@ export default function PortfolioSection() {
       setAssetData((prev) => ({ ...prev, [sym]: d }));
     } catch (e) {
       setLastError({ sym, msg: e.message });
-      // Roll back the optimistic add
       setSymbols((prev) => prev.filter((s) => s !== sym));
       setWeights((prev) => { const w = { ...prev }; delete w[sym]; return w; });
     } finally {
       setLoadingSet((s) => { const n = new Set(s); n.delete(sym); return n; });
     }
   }, []);
-
-  // ── initialize from localStorage ─────────────────────────────────────────
 
   useEffect(() => {
     const saved = loadLS();
@@ -124,19 +88,15 @@ export default function PortfolioSection() {
       .finally(() => setInitialized(true));
   }, []); // eslint-disable-line
 
-  // ── save to localStorage on change ───────────────────────────────────────
+  useEffect(() => { if (initialized) saveLS(symbols, weights); }, [symbols, weights, initialized]);
 
-  useEffect(() => {
-    if (initialized) saveLS(symbols, weights);
-  }, [symbols, weights, initialized]);
-
-  // ── build + render chart ─────────────────────────────────────────────────
+  // ── chart rebuild ─────────────────────────────────────────────────────────
 
   useEffect(() => {
     const loaded = symbols.filter((s) => s === TBILL_KEY || assetData[s]?.points?.length);
     if (!loaded.length || !canvasRef.current) return;
 
-    // Master calendar: longest non-TBILL series
+    // Master calendar
     let calDates = [];
     for (const s of loaded) {
       if (s === TBILL_KEY) continue;
@@ -145,12 +105,11 @@ export default function PortfolioSection() {
     }
     if (!calDates.length) return;
 
-    const n      = calDates.length;
+    const n = calDates.length;
     const labels = calDates.map((d) =>
       new Date(d + "T12:00:00").toLocaleDateString("es-MX", { day: "numeric", month: "short" })
     );
 
-    // Align all series to calendar
     const seriesMap = {};
     for (const s of loaded) {
       seriesMap[s] = s === TBILL_KEY
@@ -158,20 +117,25 @@ export default function PortfolioSection() {
         : alignToCalendar(normalize(assetData[s].points), calDates);
     }
 
-    // Weighted portfolio (unallocated → cash at 100)
     const total     = Object.values(weights).reduce((a, b) => a + b, 0);
     const unalloc   = Math.max(0, 100 - total);
     const portfolio = calDates.map((_, i) => {
-      let sum = unalloc; // unallocated treated as flat cash
+      let sum = unalloc;
       for (const s of loaded) {
-        const w = (weights[s] ?? 0) / 100;
         const v = seriesMap[s]?.[i];
-        if (v != null) sum += w * v;
+        if (v != null) sum += ((weights[s] ?? 0) / 100) * v;
       }
       return +(sum).toFixed(4);
     });
 
-    setPortValue(portfolio[portfolio.length - 1] ?? null);
+    const lastVal = portfolio[portfolio.length - 1] ?? 100;
+    const isUp    = lastVal >= 100;
+    const color   = isUp ? GREEN : RED;
+
+    setPortValue(lastVal);
+    setLineColor(color);
+
+    const gradFn = makeGradientFn(color);
 
     let cancelled = false;
     (async () => {
@@ -179,16 +143,27 @@ export default function PortfolioSection() {
       if (cancelled) return;
       if (chartRef.current) chartRef.current.destroy();
 
-      const datasets = [];
+      const datasets = [
+        // Dataset 0: portfolio gradient fill
+        {
+          label:           "fill",
+          data:            portfolio,
+          borderColor:     "transparent",
+          borderWidth:     0,
+          backgroundColor: gradFn,
+          fill:            true,
+          tension:         0.25,
+          pointRadius:     0,
+        },
+      ];
 
-      // Individual asset lines (toggled)
+      // Individual asset lines (when toggled)
       if (showLines) {
         loaded.forEach((sym, idx) => {
-          const color = PALETTE[idx % PALETTE.length];
           datasets.push({
             label:       assetData[sym]?.name ?? sym,
             data:        seriesMap[sym],
-            borderColor: color + "70",
+            borderColor: PALETTE[idx % PALETTE.length],
             borderWidth: 1,
             pointRadius: 0,
             tension:     0.25,
@@ -197,25 +172,25 @@ export default function PortfolioSection() {
         });
       }
 
-      // Portfolio combined (always last = topmost)
+      // Portfolio combined line (always last)
       datasets.push({
         label:                     lang === "en" ? "Portfolio" : "Portafolio",
         data:                      portfolio,
-        borderColor:               "#F5F5F2",
-        backgroundColor:           "rgba(245,245,242,0.04)",
-        fill:                      true,
+        borderColor:               color,
+        borderWidth:               2,
+        backgroundColor:           "transparent",
+        fill:                      false,
         tension:                   0.25,
         pointRadius:               0,
         pointHoverRadius:          4,
-        pointHoverBackgroundColor: "#F5F5F2",
-        pointHoverBorderColor:     "#0A0A0B",
+        pointHoverBackgroundColor: color,
+        pointHoverBorderColor:     "#000",
         pointHoverBorderWidth:     2,
-        borderWidth:               2,
       });
 
       chartRef.current = new Chart(canvasRef.current, {
         type:    "line",
-        plugins: [crosshairPlugin],
+        plugins: [crosshairPlugin, multiGlowPlugin, lastDatasetDotPlugin],
         data:    { labels, datasets },
         options: {
           responsive:          true,
@@ -223,33 +198,22 @@ export default function PortfolioSection() {
           interaction:         { intersect: false, mode: "index" },
           animation:           { duration: 220 },
           plugins: {
-            legend: { display: false },
+            legend:  { display: false },
             tooltip: {
-              backgroundColor: "#111113",
-              borderColor:     "#1E1E22",
-              borderWidth:     1,
-              titleColor:      "#8A8A8E",
-              bodyColor:       "#F5F5F2",
-              titleFont:       { size: 11 },
-              bodyFont:        { family: "var(--font-mono)", size: 12 },
-              padding:         10,
-              itemSort:        (a, b) => b.raw - a.raw,
+              ...tooltipDefaults,
+              itemSort:  (a, b) => b.raw - a.raw,
+              filter:    (item) => item.dataset.label !== "fill",
               callbacks: {
                 title: (items) => items[0]?.label ?? "",
-                label: (c) => ` ${c.dataset.label}: ${(+c.parsed.y).toFixed(2)}`,
+                label: (c)     => ` ${c.dataset.label}: ${(+c.parsed.y).toFixed(2)}`,
               },
             },
           },
           scales: {
-            x: {
-              ticks:  { color: "#8A8A8E", font: { size: 10 }, maxTicksLimit: 10, maxRotation: 0 },
-              grid:   { display: false },
-              border: { color: "#1E1E22" },
-            },
+            x: xScaleDefaults(10),
             y: {
-              ticks:  { color: "#8A8A8E", font: { size: 10, family: "var(--font-mono)" }, callback: (v) => v.toFixed(0), maxTicksLimit: 6 },
-              grid:   { color: "rgba(255,255,255,0.03)" },
-              border: { color: "#1E1E22" },
+              ...yScaleDefaults((v) => v.toFixed(0)),
+              position: "right",
             },
           },
         },
@@ -280,26 +244,23 @@ export default function PortfolioSection() {
   const handleSlider = (key, raw) => {
     const value = Number(raw);
     setWeights((prev) => {
-      const otherTotal = Object.entries(prev)
-        .filter(([k]) => k !== key)
-        .reduce((a, [, v]) => a + v, 0);
+      const otherTotal = Object.entries(prev).filter(([k]) => k !== key).reduce((a, [, v]) => a + v, 0);
       return { ...prev, [key]: Math.min(value, Math.max(0, 100 - otherTotal)) };
     });
   };
 
   const handleReset = () => {
-    setSymbols(DEFAULTS.symbols);
-    setWeights(DEFAULTS.weights);
-    setAssetData({});
-    setLastError(null);
+    setSymbols(DEFAULTS.symbols); setWeights(DEFAULTS.weights);
+    setAssetData({}); setLastError(null);
     DEFAULTS.symbols.filter((s) => s !== TBILL_KEY).forEach(fetchAsset);
   };
 
   // ── derived ───────────────────────────────────────────────────────────────
 
-  const total   = Object.values(weights).reduce((a, b) => a + b, 0);
-  const perf    = portValue != null ? portValue - 100 : null;
-  const loading = loadingSet.size > 0;
+  const total    = Object.values(weights).reduce((a, b) => a + b, 0);
+  const perf     = portValue != null ? portValue - 100 : null;
+  const isUp     = perf != null ? perf >= 0 : true;
+  const loading  = loadingSet.size > 0;
 
   // ── render ────────────────────────────────────────────────────────────────
 
@@ -309,66 +270,54 @@ export default function PortfolioSection() {
       {/* Header */}
       <div className="mb-4 flex items-start justify-between gap-4">
         <div>
-          <div className="font-mono text-[10px] uppercase tracking-[2px] text-muted">
+          <div style={{ ...sectionLabel, marginBottom: 6 }}>
             <T es="Portafolio simulado · 1 año" en="Simulated portfolio · 1Y" />
           </div>
-          <div className="mt-1 flex items-baseline gap-2">
-            <div className="font-mono text-2xl font-medium text-bone">
+          <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+            <div style={{ fontFamily: "var(--font-sans)", fontWeight: 700, fontSize: 32, lineHeight: 1, color: "#F5F5F2", fontVariantNumeric: "tabular-nums", letterSpacing: "-0.02em" }}>
               {portValue != null ? portValue.toFixed(2) : "—"}
             </div>
             {perf != null && (
-              <span className="font-mono text-sm" style={{ color: perf >= 0 ? "#0F8A5F" : "#A32D2D" }}>
-                {perf >= 0 ? "+" : ""}{perf.toFixed(2)}%
+              <span style={{ fontSize: 14, fontWeight: 500, color: lineColor, fontVariantNumeric: "tabular-nums" }}>
+                {isUp ? "▲ +" : "▼ "}{perf.toFixed(2)}%
               </span>
             )}
           </div>
         </div>
 
-        <div style={{ display: "flex", gap: 6, alignItems: "center", marginTop: 4 }}>
-          {/* Toggle individual lines */}
+        <div style={{ display: "flex", gap: 6, marginTop: 4 }}>
           <button
             onClick={() => setShowLines((v) => !v)}
             style={{
-              fontSize: 10, letterSpacing: 1.5, textTransform: "uppercase",
-              fontFamily: "var(--font-mono)",
-              color:      showLines ? "#F5F5F2" : "#4A4A50",
-              border:     `1px solid ${showLines ? "#3A3A3E" : "#1E1E20"}`,
-              background: showLines ? "rgba(255,255,255,0.06)" : "transparent",
-              borderRadius: 6, padding: "4px 9px", cursor: "pointer", transition: "all .2s",
+              fontSize: 10, letterSpacing: 1.5, textTransform: "uppercase", fontFamily: "var(--font-mono)",
+              color:      showLines ? "#000" : "#6B7280",
+              border:     "none",
+              background: showLines ? GREEN : "rgba(255,255,255,0.06)",
+              boxShadow:  showLines ? `0 0 12px rgba(0,200,5,0.35)` : "none",
+              borderRadius: 20, padding: "5px 12px", cursor: "pointer", transition: "all .2s",
             }}
           >
             <T es="Ver activos" en="Show assets" />
           </button>
-
-          {/* Reset */}
           <button
             onClick={handleReset}
             style={{
-              fontSize: 10, letterSpacing: 1.5, textTransform: "uppercase",
-              fontFamily: "var(--font-mono)",
-              color: "#4A4A50", border: "1px solid #1E1E20",
-              background: "transparent",
-              borderRadius: 6, padding: "4px 9px", cursor: "pointer",
+              fontSize: 12, color: "#4B5563", background: "rgba(255,255,255,0.04)",
+              border: "1px solid rgba(255,255,255,0.07)", borderRadius: 20,
+              padding: "5px 11px", cursor: "pointer",
             }}
             title="Reset portfolio"
-          >
-            ↺
-          </button>
+          >↺</button>
         </div>
       </div>
 
-      <div
-        className="card-glass rounded-2xl p-5"
-        style={{ background: "rgba(5,5,6,0.50)", backdropFilter: "blur(14px)", WebkitBackdropFilter: "blur(14px)" }}
-      >
+      {/* Card */}
+      <div style={{ ...cardStyle(initialized ? isUp : null), padding: "20px 20px 18px", transition: "border-color .4s" }}>
+
         {/* Chart */}
         <div style={{ position: "relative", height: 260 }}>
           {!initialized && (
-            <div style={{
-              position: "absolute", inset: 0, display: "flex",
-              alignItems: "center", justifyContent: "center",
-              color: "#8A8A8E", fontSize: 11, letterSpacing: 2, textTransform: "uppercase",
-            }}>
+            <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", color: "#374151", fontSize: 11, letterSpacing: 2.5, textTransform: "uppercase", fontFamily: "var(--font-mono)" }}>
               — <T es="cargando" en="loading" /> —
             </div>
           )}
@@ -378,14 +327,12 @@ export default function PortfolioSection() {
         {/* Sliders */}
         <div className="mt-5 space-y-3">
           {symbols.map((sym, idx) => {
-            const dotColor = PALETTE[idx % PALETTE.length];
+            const dotColor  = PALETTE[idx % PALETTE.length];
             const isLoading = loadingSet.has(sym);
             const name =
-              sym === TBILL_KEY
-                ? (lang === "en" ? "T-Bills · 5% est." : "T-Bills · 5% est.")
-                : isLoading
-                ? "…"
-                : (assetData[sym]?.name ?? sym);
+              sym === TBILL_KEY ? "T-Bills · 5% est."
+              : isLoading       ? "…"
+              : (assetData[sym]?.name ?? sym);
 
             return (
               <div key={sym}>
@@ -393,34 +340,26 @@ export default function PortfolioSection() {
                   <div className="flex items-center gap-2 min-w-0">
                     <div style={{
                       width: 7, height: 7, borderRadius: "50%", flexShrink: 0,
-                      background: isLoading ? "#2A2A2E" : dotColor,
-                      boxShadow:  isLoading ? "none" : `0 0 5px ${dotColor}55`,
+                      background: isLoading ? "#1F2937" : dotColor,
+                      boxShadow:  isLoading ? "none" : `0 0 7px ${dotColor}80`,
                     }} />
-                    <span className="text-xs text-muted truncate" style={{ maxWidth: 200 }}>{name}</span>
-                    <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, color: "#3A3A3E", letterSpacing: 1, flexShrink: 0 }}>
-                      {sym === TBILL_KEY ? "" : sym}
+                    <span style={{ fontSize: 12, color: "#9CA3AF", fontFamily: "var(--font-sans)" }} className="truncate" title={name}>
+                      {name}
                     </span>
-                    {isLoading && (
-                      <span style={{ fontSize: 9, color: "#3A3A3E", letterSpacing: 1 }}>…</span>
+                    {sym !== TBILL_KEY && (
+                      <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, color: "#374151", letterSpacing: 0.5 }}>{sym}</span>
                     )}
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
-                    <span style={{ fontFamily: "var(--font-mono)", fontSize: 12, color: "#F5F5F2" }}>
+                    <span style={{ fontFamily: "var(--font-mono)", fontSize: 13, color: "#F5F5F2", fontVariantNumeric: "tabular-nums" }}>
                       {weights[sym] ?? 0}%
                     </span>
                     <button
                       onClick={() => handleRemove(sym)}
-                      style={{
-                        color: "#3A3A3E", fontSize: 16, lineHeight: 1,
-                        background: "none", border: "none", cursor: "pointer",
-                        padding: "0 3px", transition: "color .15s",
-                      }}
-                      onMouseEnter={(e) => e.currentTarget.style.color = "#A32D2D"}
-                      onMouseLeave={(e) => e.currentTarget.style.color = "#3A3A3E"}
-                      title="Remove"
-                    >
-                      ×
-                    </button>
+                      style={{ color: "#374151", fontSize: 16, lineHeight: 1, background: "none", border: "none", cursor: "pointer", padding: "0 3px", transition: "color .15s" }}
+                      onMouseEnter={(e) => e.currentTarget.style.color = RED}
+                      onMouseLeave={(e) => e.currentTarget.style.color = "#374151"}
+                    >×</button>
                   </div>
                 </div>
                 <input
@@ -436,7 +375,7 @@ export default function PortfolioSection() {
           })}
         </div>
 
-        {/* Search bar */}
+        {/* Search */}
         <div className="mt-5">
           <div style={{ display: "flex", gap: 7 }}>
             <input
@@ -446,89 +385,70 @@ export default function PortfolioSection() {
               onKeyDown={(e) => e.key === "Enter" && handleAdd()}
               placeholder={lang === "en" ? "Add ticker… NVDA, BTC-USD, AMXL.MX, GC=F" : "Agregar ticker… NVDA, BTC-USD, AMXL.MX, GC=F"}
               style={{
-                flex:        1,
-                background:  "rgba(255,255,255,0.04)",
-                border:      `1px solid ${lastError ? "#A32D2D55" : "#1E1E20"}`,
-                borderRadius: 8,
-                padding:     "9px 12px",
-                fontSize:    13,
-                fontFamily:  "var(--font-mono)",
-                color:       "#F5F5F2",
-                outline:     "none",
-                letterSpacing: 0.5,
-                transition:  "border-color .2s",
+                flex: 1, background: "rgba(255,255,255,0.04)",
+                border: `1px solid ${lastError ? "rgba(255,80,0,0.35)" : "rgba(255,255,255,0.08)"}`,
+                borderRadius: 12, padding: "9px 13px", fontSize: 13,
+                fontFamily: "var(--font-mono)", color: "#F5F5F2", outline: "none", letterSpacing: 0.5,
+                transition: "border-color .2s",
               }}
             />
             <button
               onClick={handleAdd}
               disabled={!query.trim() || loading}
               style={{
-                background:   query.trim() ? "rgba(63,167,126,0.14)" : "transparent",
-                border:       `1px solid ${query.trim() ? "#3FA77E55" : "#1E1E20"}`,
-                borderRadius: 8,
-                padding:      "9px 18px",
-                fontSize:     16,
-                fontFamily:   "var(--font-mono)",
-                color:        query.trim() ? "#3FA77E" : "#4A4A50",
-                cursor:       query.trim() ? "pointer" : "default",
-                transition:   "all .2s",
-                lineHeight:   1,
+                background: query.trim() ? `rgba(0,200,5,0.16)` : "transparent",
+                border:     `1px solid ${query.trim() ? "rgba(0,200,5,0.35)" : "rgba(255,255,255,0.07)"}`,
+                boxShadow:  query.trim() ? "0 0 12px rgba(0,200,5,0.20)" : "none",
+                borderRadius: 12, padding: "9px 18px", fontSize: 18, lineHeight: 1,
+                color:   query.trim() ? GREEN : "#374151",
+                cursor:  query.trim() ? "pointer" : "default",
+                transition: "all .2s",
               }}
-            >
-              +
-            </button>
+            >+</button>
           </div>
 
           {lastError && (
-            <div style={{ fontSize: 11, color: "#A32D2D", marginTop: 6, fontFamily: "var(--font-mono)", letterSpacing: 0.5 }}>
-              <T
-                es={`"${lastError.sym}" no encontrado — verifica el símbolo`}
-                en={`"${lastError.sym}" not found — check the symbol`}
-              />
+            <div style={{ fontSize: 11, color: RED, marginTop: 6, fontFamily: "var(--font-mono)" }}>
+              <T es={`"${lastError.sym}" no encontrado`} en={`"${lastError.sym}" not found`} />
             </div>
           )}
 
           {/* Quick-add chips */}
           <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginTop: 9 }}>
-            {["NVDA", "BTC-USD", "GC=F", "TLT", "QQQ", "GLD", "AMXL.MX", "JPM", "TSLA", "AAPL"].map((s) =>
+            {QUICK_ADDS.map((s) =>
               !symbols.includes(s) ? (
-                <button
-                  key={s}
-                  onClick={() => { setQuery(""); setSymbols((p) => [...p, s]); setWeights((p) => ({ ...p, [s]: 0 })); fetchAsset(s); }}
+                <button key={s}
+                  onClick={() => { setSymbols((p) => [...p, s]); setWeights((p) => ({ ...p, [s]: 0 })); fetchAsset(s); }}
                   style={{
-                    fontSize: 9.5, letterSpacing: 1, fontFamily: "var(--font-mono)",
-                    color: "#5A5A68", border: "1px solid #1E1E20",
-                    background: "transparent", borderRadius: 5,
-                    padding: "3px 8px", cursor: "pointer", transition: "all .15s",
+                    fontSize: 9.5, letterSpacing: 0.5, fontFamily: "var(--font-mono)",
+                    color: "#4B5563", border: "1px solid rgba(255,255,255,0.07)",
+                    background: "transparent", borderRadius: 20, padding: "3px 9px", cursor: "pointer", transition: "all .15s",
                   }}
-                  onMouseEnter={(e) => { e.currentTarget.style.color = "#F5F5F2"; e.currentTarget.style.borderColor = "#3A3A3E"; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.color = "#5A5A68"; e.currentTarget.style.borderColor = "#1E1E20"; }}
-                >
-                  {s}
-                </button>
+                  onMouseEnter={(e) => { e.currentTarget.style.color = "#F5F5F2"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.2)"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.color = "#4B5563"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.07)"; }}
+                >{s}</button>
               ) : null
             )}
           </div>
         </div>
 
-        {/* Footer bar */}
-        <div className="mt-4 flex items-center justify-between border-t border-edge pt-3 text-[11px]">
-          <span className="text-muted">
-            <T es="Asignado" en="Allocated" />:{" "}
-            <span style={{ fontFamily: "var(--font-mono)", color: "#F5F5F2" }}>{total}%</span>
+        {/* Footer */}
+        <div style={{ marginTop: 16, paddingTop: 14, borderTop: "1px solid rgba(255,255,255,0.05)", display: "flex", justifyContent: "space-between" }}>
+          <span style={{ fontSize: 11, color: "#4B5563", fontFamily: "var(--font-mono)" }}>
+            <T es="Asignado" en="Allocated" />: <span style={{ color: "#F5F5F2" }}>{total}%</span>
           </span>
-          <span className="text-muted">
-            <T es="Efectivo libre" en="Unallocated cash" />:{" "}
-            <span style={{ fontFamily: "var(--font-mono)", color: 100 - total > 0 ? "#BA7517" : "#4A4A50" }}>
+          <span style={{ fontSize: 11, color: "#4B5563", fontFamily: "var(--font-mono)" }}>
+            <T es="Efectivo libre" en="Cash" />:{" "}
+            <span style={{ color: 100 - total > 0 ? "#FACC15" : "#374151", fontVariantNumeric: "tabular-nums" }}>
               {Math.max(0, 100 - total)}%
             </span>
           </span>
         </div>
 
-        <p className="mt-2 text-[10px] leading-relaxed text-muted/70">
+        <p style={{ marginTop: 8, fontSize: 10, color: "#374151", fontFamily: "var(--font-mono)", lineHeight: 1.5 }}>
           <T
-            es="Base 100 · sin ajuste por dividendos ni splits · simulación educativa, no asesoría de inversión"
-            en="Base 100 · unadjusted for dividends/splits · educational simulation, not investment advice"
+            es="Base 100 · sin ajuste por dividendos · simulación educativa, no asesoría"
+            en="Base 100 · unadjusted for dividends · educational simulation, not advice"
           />
         </p>
       </div>

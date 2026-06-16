@@ -1,8 +1,10 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useLang, T } from "./Lang";
+import { GREEN, RED, cardStyle } from "../lib/chartHelpers";
 
-// Detect topic chip for a bullet
+// ── bullet topic chips ────────────────────────────────────────────────────────
+
 const CHIPS = [
   { test: /\bFOMC\b|\bFed\b|Federal Reserve/i,              label: "FED",   color: "#0F6E56", bg: "rgba(15,110,86,0.12)" },
   { test: /Banxico|Banco de M[eé]xico|\bTIIE\b/i,           label: "MX",    color: "#3FA77E", bg: "rgba(63,167,126,0.12)" },
@@ -30,96 +32,95 @@ function highlightNumbers(text) {
   );
 }
 
+// ── FX pairs config ───────────────────────────────────────────────────────────
+
 const FX_PAIRS = [
   { key: "usdmxn", chgKey: "usdmxnChg", label: "USD/MXN", decimals: 4 },
   { key: "eurmxn", chgKey: "eurmxnChg", label: "EUR/MXN", decimals: 4 },
   { key: "eurusd", chgKey: "eurusdChg", label: "EUR/USD", decimals: 4 },
 ];
 
-function ChgBadge({ pct }) {
-  if (pct == null) return <span style={{ color: "#4A4A50", fontSize: 11 }}>—</span>;
-  const up    = pct >= 0;
-  const color = up ? "#0F8A5F" : "#A32D2D";
-  const arrow = up ? "▲" : "▼";
+// ── sub-components ────────────────────────────────────────────────────────────
+
+function FXCard({ label, price, chg, decimals }) {
+  const isUp     = chg == null ? null : chg >= 0;
+  const sigColor = isUp === null ? "#F5F5F2" : isUp ? GREEN : RED;
+
   return (
-    <span style={{ color, fontSize: 11, fontFamily: "var(--font-mono)" }}>
-      {arrow} {Math.abs(pct).toFixed(2)}%
-    </span>
+    <div style={{
+      ...cardStyle(isUp),
+      padding: "14px 16px",
+      transition: "border-color .4s",
+    }}>
+      <div style={{ fontSize: 9, letterSpacing: 2, textTransform: "uppercase", color: "#4B5563", marginBottom: 6, fontFamily: "var(--font-mono)" }}>
+        {label}
+      </div>
+      <div style={{ fontFamily: "var(--font-sans)", fontWeight: 700, fontSize: 22, lineHeight: 1, color: "#F5F5F2", fontVariantNumeric: "tabular-nums", letterSpacing: "-0.02em", marginBottom: 5 }}>
+        {price != null ? price.toFixed(decimals) : "—"}
+      </div>
+      {chg != null && (
+        <div style={{ fontSize: 12, fontWeight: 500, color: sigColor, fontVariantNumeric: "tabular-nums", display: "flex", alignItems: "center", gap: 3 }}>
+          <span>{isUp ? "▲" : "▼"}</span>
+          <span>{isUp ? "+" : ""}{chg.toFixed(2)}%</span>
+        </div>
+      )}
+      {chg == null && (
+        <div style={{ fontSize: 12, color: "#374151" }}>—</div>
+      )}
+    </div>
   );
 }
+
+// ── main component ────────────────────────────────────────────────────────────
 
 export default function DailyWatch({ post }) {
   const { lang } = useLang();
   const [market, setMarket] = useState(null);
 
   useEffect(() => {
-    fetch("/api/market")
-      .then((r) => r.json())
-      .then(setMarket)
-      .catch(() => {});
+    fetch("/api/market").then((r) => r.json()).then(setMarket).catch(() => {});
   }, []);
 
   if (!post) return null;
 
-  const bullets   = lang === "en" ? post.watch_en : post.watch_es;
+  const bullets    = lang === "en" ? post.watch_en : post.watch_es;
   const hasBullets = Array.isArray(bullets) && bullets.length > 0;
 
-  // Soportes/resistencias: live si ya cargó la API, fallback al markdown
-  // Track source so we can label correctly (10d range vs editorial)
   const usingApiRange = !!market?.mxnR1;
-  const support    = market?.mxnS1 ?? post.support ?? null;
-  const resistance = market?.mxnR1 ?? post.resistance ?? null;
-  const hasLevels  = support || resistance;
+  const support       = market?.mxnS1  ?? post.support    ?? null;
+  const resistance    = market?.mxnR1  ?? post.resistance ?? null;
+  const hasLevels     = support || resistance;
 
   if (!hasBullets && !hasLevels && !market) return null;
 
   return (
     <section className="reveal" style={{ animationDelay: "0.3s" }}>
 
-      {/* ── FX hoy: USD/MXN · EUR/MXN · EUR/USD ── */}
+      {/* FX cards */}
       <div style={{ marginBottom: 20 }}>
         <div style={{ fontSize: 10, letterSpacing: 3, textTransform: "uppercase", color: "#4A4A50", marginBottom: 10 }}>
           &mdash; <T es="Tipo de cambio" en="Exchange rates" />
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))", gap: 10 }}>
-          {FX_PAIRS.map(({ key, chgKey, label, decimals }) => {
-            const price = market?.[key];
-            const chg   = market?.[chgKey];
-            return (
-              <div
-                key={key}
-                style={{
-                  background: "rgba(11,11,12,0.92)",
-                  backdropFilter: "blur(8px)",
-                  WebkitBackdropFilter: "blur(8px)",
-                  border: "1px solid #1E1E20",
-                  borderRadius: 10,
-                  padding: "12px 13px",
-                }}
-              >
-                <div style={{ fontSize: 9, letterSpacing: 1.5, textTransform: "uppercase", color: "#4A4A50", marginBottom: 5 }}>
-                  {label}
-                </div>
-                <div style={{ fontFamily: "var(--font-mono)", fontSize: 22, fontWeight: 500, lineHeight: 1, color: "#F5F5F2", marginBottom: 6 }}>
-                  {price != null ? price.toFixed(decimals) : "—"}
-                </div>
-                <ChgBadge pct={chg} />
-              </div>
-            );
-          })}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(115px, 1fr))", gap: 10 }}>
+          {FX_PAIRS.map(({ key, chgKey, label, decimals }) => (
+            <FXCard
+              key={key}
+              label={label}
+              price={market?.[key] ?? null}
+              chg={market?.[chgKey] ?? null}
+              decimals={decimals}
+            />
+          ))}
         </div>
       </div>
 
-      {/* ── Qué vigilar hoy (bullets editoriales) ── */}
+      {/* Bullets */}
       {hasBullets && (
         <div style={{ marginBottom: hasLevels ? 16 : 0 }}>
           <div style={{ fontSize: 10, letterSpacing: 3, textTransform: "uppercase", color: "#4A4A50", marginBottom: 10 }}>
             &mdash; <T es="Qué vigilar hoy" en="What to watch today" />
           </div>
-          <div
-            className="card-glass"
-            style={{ background: "rgba(11,11,12,0.92)", border: "1px solid #1E1E20", borderRadius: 12, padding: "14px 18px" }}
-          >
+          <div style={{ ...cardStyle(), padding: "14px 18px" }}>
             {bullets.map((b, i) => {
               const chip = chipFor(b);
               return (
@@ -129,7 +130,7 @@ export default function DailyWatch({ post }) {
                       fontSize: 7.5, letterSpacing: 1.5, fontFamily: "var(--font-mono)",
                       color: chip.color, background: chip.bg,
                       border: `1px solid ${chip.color}40`,
-                      borderRadius: 3, padding: "2px 5px",
+                      borderRadius: 4, padding: "2px 5px",
                       flexShrink: 0, marginTop: 3, lineHeight: 1,
                     }}>
                       {chip.label}
@@ -148,16 +149,13 @@ export default function DailyWatch({ post }) {
         </div>
       )}
 
-      {/* ── Rango técnico USD/MXN: barra visual de posición ── */}
+      {/* Range widget */}
       {hasLevels && market?.usdmxn && (
         <div>
           <div style={{ fontSize: 10, letterSpacing: 3, textTransform: "uppercase", color: "#4A4A50", marginBottom: 10 }}>
             &mdash; <T es="Rango técnico USD/MXN · 10d" en="USD/MXN range · 10d" />
           </div>
-          <div
-            className="card-glass"
-            style={{ background: "rgba(11,11,12,0.92)", border: "1px solid #1E1E20", borderRadius: 12, padding: "16px 18px" }}
-          >
+          <div style={{ ...cardStyle(), padding: "16px 18px" }}>
             {(() => {
               const lo  = typeof support    === "number" ? support    : parseFloat(support);
               const hi  = typeof resistance === "number" ? resistance : parseFloat(resistance);
@@ -165,46 +163,46 @@ export default function DailyWatch({ post }) {
               const pct = Math.min(100, Math.max(0, ((cur - lo) / (hi - lo)) * 100));
               const isNearHigh = pct > 70;
               const isNearLow  = pct < 30;
-              const dotColor   = isNearHigh ? "#A32D2D" : isNearLow ? "#0F8A5F" : "#E8E6E0";
+              const dotColor   = isNearHigh ? RED : isNearLow ? GREEN : "#E8E6E0";
               return (
                 <>
-                  {/* Range bar */}
-                  <div style={{ position: "relative", height: 3, background: "#1E1E20", borderRadius: 2, margin: "8px 0 16px" }}>
+                  <div style={{ position: "relative", height: 3, background: "rgba(255,255,255,0.06)", borderRadius: 2, margin: "8px 0 16px" }}>
+                    {/* Gradient track */}
+                    <div style={{
+                      position: "absolute", inset: 0, borderRadius: 2,
+                      background: `linear-gradient(to right, ${GREEN}40, rgba(255,255,255,0.04) 50%, ${RED}40)`,
+                    }} />
                     <div style={{
                       position: "absolute", left: `${pct}%`, top: "50%",
                       transform: "translate(-50%, -50%)",
-                      width: 9, height: 9, borderRadius: "50%",
-                      background: dotColor, boxShadow: `0 0 8px ${dotColor}55`,
+                      width: 10, height: 10, borderRadius: "50%",
+                      background: dotColor,
+                      boxShadow: `0 0 10px ${dotColor}88`,
                       transition: "left .6s ease-out",
                     }} />
                   </div>
-                  {/* Labels */}
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
                     <div>
-                      <div style={{ fontSize: 8, color: "#4A4A50", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 3 }}>
-                        {usingApiRange
-                          ? <T es="Mín 10d" en="10d Low" />
-                          : <T es="Soporte" en="Support" />}
+                      <div style={{ fontSize: 8, color: "#4B5563", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 4, fontFamily: "var(--font-mono)" }}>
+                        {usingApiRange ? <T es="Mín 10d" en="10d Low" /> : <T es="Soporte" en="Support" />}
                       </div>
-                      <div style={{ fontFamily: "var(--font-mono)", fontSize: 15, color: "#0F8A5F" }}>
+                      <div style={{ fontFamily: "var(--font-mono)", fontSize: 15, color: GREEN, fontVariantNumeric: "tabular-nums" }}>
                         {lo.toFixed(4)}
                       </div>
                     </div>
                     <div style={{ textAlign: "center" }}>
-                      <div style={{ fontSize: 8, color: "#4A4A50", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 3 }}>
+                      <div style={{ fontSize: 8, color: "#4B5563", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 4, fontFamily: "var(--font-mono)" }}>
                         <T es="Actual" en="Current" />
                       </div>
-                      <div style={{ fontFamily: "var(--font-mono)", fontSize: 19, fontWeight: 500, color: dotColor }}>
+                      <div style={{ fontFamily: "var(--font-sans)", fontWeight: 700, fontSize: 20, color: dotColor, fontVariantNumeric: "tabular-nums", letterSpacing: "-0.02em" }}>
                         {cur.toFixed(4)}
                       </div>
                     </div>
                     <div style={{ textAlign: "right" }}>
-                      <div style={{ fontSize: 8, color: "#4A4A50", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 3 }}>
-                        {usingApiRange
-                          ? <T es="Máx 10d" en="10d High" />
-                          : <T es="Resistencia" en="Resistance" />}
+                      <div style={{ fontSize: 8, color: "#4B5563", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 4, fontFamily: "var(--font-mono)" }}>
+                        {usingApiRange ? <T es="Máx 10d" en="10d High" /> : <T es="Resistencia" en="Resistance" />}
                       </div>
-                      <div style={{ fontFamily: "var(--font-mono)", fontSize: 15, color: "#A32D2D" }}>
+                      <div style={{ fontFamily: "var(--font-mono)", fontSize: 15, color: RED, fontVariantNumeric: "tabular-nums" }}>
                         {hi.toFixed(4)}
                       </div>
                     </div>
