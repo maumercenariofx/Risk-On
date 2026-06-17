@@ -1,4 +1,4 @@
-import { getAllPostsMeta } from "@/lib/posts";
+import { getAllPostsMeta } from "../../../lib/posts";
 
 export const dynamic = "force-dynamic";
 
