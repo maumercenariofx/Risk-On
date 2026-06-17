@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.104.2",
     "chart.js": "^4.4.1",
     "flag-icons": "^7.5.0",
     "gray-matter": "^4.0.3",
