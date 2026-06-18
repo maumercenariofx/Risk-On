@@ -5,9 +5,23 @@ import { fetchLiveData, generateDailyView, buildMarkdown, publishToGitHub } from
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-const SUBSCRIBERS = ["mauriciomn2002@gmail.com"];
+// Lista temporal (mientras se conecta la lectura del Google Sheet vía doGet).
+const SUBSCRIBERS = [
+  "mauriciomn2002@gmail.com",
+  "suscriptor-purgado@riskon.lat",
+  "suscriptor-purgado@riskon.lat",
+  "suscriptor-purgado@riskon.lat",
+  "suscriptor-purgado@riskon.lat",
+  "suscriptor-purgado@riskon.lat",
+  "suscriptor-purgado@riskon.lat",
+  "suscriptor-purgado@riskon.lat",
+  "suscriptor-purgado@riskon.lat",
+  "suscriptor-purgado@riskon.lat",
+  "suscriptor-purgado@riskon.lat",
+];
 const SITE = "https://riskon.lat";
 const CALENDLY = "https://calendly.com/mauriciomercenariofx/30min";
+const UNSUB = "__UNSUB_URL__"; // placeholder reemplazado por destinatario
 
 // 9 activos clave para la tabla del premarket.
 const TICKERS = [
@@ -40,6 +54,24 @@ const YAHOO_UA =
 
 function riskStateFromScore(score) {
   return RISK_STATES.find((s) => score >= s.min && score <= s.max) ?? RISK_STATES[2];
+}
+
+// Lee la lista de suscriptores del Google Sheet (doGet con token) si está
+// configurada (SHEETS_LIST_URL); si no, usa la lista fija de respaldo.
+async function getSubscribers() {
+  const url = process.env.SHEETS_LIST_URL;
+  if (url) {
+    try {
+      const res = await fetch(url, { cache: "no-store" });
+      if (res.ok) {
+        const list = await res.json();
+        if (Array.isArray(list) && list.length) {
+          return list.map((e) => String(e).trim().toLowerCase()).filter(Boolean);
+        }
+      }
+    } catch {}
+  }
+  return SUBSCRIBERS;
 }
 
 async function yahooChart(symbol) {
@@ -166,13 +198,20 @@ async function handler(request) {
           </table>
           <div style="border-bottom:2px solid ${C.text};margin:12px 0 26px 0"></div>
 
-          <!-- Risk state + score -->
-          <table role="presentation" cellpadding="0" cellspacing="0" style="margin-bottom:22px">
-            <tr>
-              <td style="background:${color};border-radius:3px;padding:7px 14px;font-family:${sans};font-size:13px;font-weight:700;letter-spacing:1px;color:#ffffff">◇ ${riskState}</td>
-              <td style="padding-left:14px;font-family:${sans};font-size:13px;color:${C.muted};letter-spacing:1px">SCORE <span style="color:${C.text};font-weight:700;font-size:15px">${score}</span>/100</td>
-            </tr>
-          </table>
+          <!-- Score gauge -->
+          <div style="font-family:${sans};font-size:11px;letter-spacing:2px;color:${C.faint};font-weight:700;margin-bottom:10px">RISK ON SCORE</div>
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:7px"><tr>
+            <td style="background:#ECE8DF;border-radius:7px;padding:0;font-size:0;line-height:0">
+              <table role="presentation" width="${score}%" cellpadding="0" cellspacing="0"><tr>
+                <td style="background:${color};border-radius:7px;height:14px;font-size:0;line-height:0">&nbsp;</td>
+              </tr></table>
+            </td>
+          </tr></table>
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px"><tr>
+            <td style="font-family:${sans};font-size:10px;color:${C.faint};letter-spacing:0.5px">0 · risk-off</td>
+            <td style="text-align:center;white-space:nowrap"><span style="font-family:${sans};font-size:22px;font-weight:700;color:${color}">${score}</span> <span style="font-family:${sans};font-size:12px;font-weight:700;color:${color};letter-spacing:1px">◇ ${riskState}</span></td>
+            <td style="text-align:right;font-family:${sans};font-size:10px;color:${C.faint};letter-spacing:0.5px">risk-on · 100</td>
+          </tr></table>
 
           <!-- Headline + summary -->
           <div style="font-family:${serif};font-size:26px;line-height:1.25;color:${C.text};font-weight:700;margin-bottom:18px">${title_es}</div>
@@ -227,6 +266,8 @@ async function handler(request) {
         <tr><td style="padding:20px 44px;text-align:center;font-family:${sans};font-size:11px;letter-spacing:1px;color:${C.faint};line-height:1.7">
           RISKON.LAT · PREMARKET DIARIO<br>
           <a href="${SITE}" style="color:${C.muted};text-decoration:none">riskon.lat</a>
+          &nbsp;·&nbsp;
+          <a href="${UNSUB}" style="color:${C.faint};text-decoration:underline">Darse de baja</a>
         </td></tr>
       </table>
 
@@ -235,20 +276,54 @@ async function handler(request) {
 </body>
 </html>`;
 
+  // Versión texto plano (deliverability + accesibilidad)
+  const text = [
+    `EL PRE-MARKET · ${dateLong}`,
+    `Risk On score ${score}/100 · ${riskState}`,
+    "",
+    title_es,
+    "",
+    summary_es,
+    "",
+    `Leer el view completo: ${articleUrl}`,
+    "",
+    "DATOS DE MERCADO",
+    ...market.map((d) => `  ${d.name}: ${fmtPrice(d.price, d.kind)} (${fmtPct(d.chgPct)})`),
+    "",
+    ...(watch_es.length ? ["A VIGILAR", ...watch_es.map((w) => `  - ${w}`), ""] : []),
+    `USD/MXN — Soporte ${support ?? "—"} / Resistencia ${resistance ?? "—"}`,
+    "",
+    `Mercados: ${SITE}/markets`,
+    `Aprende: ${SITE}/learn`,
+    `Agenda una asesoría: ${CALENDLY}`,
+    "",
+    `Darse de baja: ${UNSUB}`,
+    "riskon.lat",
+  ].join("\n");
+
   // ── 4. Enviar ───────────────────────────────────────────────────────────────
+  const only = new URL(request.url).searchParams.get("only"); // modo prueba: ?only=correo
+  const recipients = only ? [only] : await getSubscribers();
+
   const resend = new Resend(process.env.RESEND_API_KEY);
   const results = [];
-  for (const email of SUBSCRIBERS) {
+  for (const email of recipients) {
+    const unsubUrl = `${SITE}/api/unsubscribe?email=${encodeURIComponent(email)}`;
     const { error } = await resend.emails.send({
-      from: "RISKON.LAT <view@riskon.lat>",
+      from: '"Análisis FX · Mauricio Mercenario | Riskon" <view@riskon.lat>',
       to: email,
-      subject: `El Pre-Market de hoy · ${dateShort}`,
-      html,
+      subject: `El Pre-Market · ${riskState} ${score} · ${dateShort}`,
+      html: html.split(UNSUB).join(unsubUrl),
+      text: text.split(UNSUB).join(unsubUrl),
+      headers: {
+        "List-Unsubscribe": `<${unsubUrl}>, <mailto:view@riskon.lat?subject=unsubscribe>`,
+        "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+      },
     });
     results.push({ email, ok: !error, error: error?.message });
   }
 
-  return Response.json({ ok: true, riskState, score, steps, sent: results });
+  return Response.json({ ok: true, riskState, score, steps, recipients: recipients.length, sent: results });
 }
 
 export { handler as GET, handler as POST };

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useLang, T } from "./Lang";
-import { riskLabel } from "../lib/riskIndex";
+import ScoreGauge from "./ScoreGauge";
 
 function ShareBar({ post, lang }) {
   const [copied, setCopied] = useState(false);
@@ -62,24 +62,23 @@ function ShareBar({ post, lang }) {
 
 export default function PostView({ post, prev, next }) {
   const { lang } = useLang();
-  const label = riskLabel(post.score || 50);
   return (
     <article className="space-y-5 pt-4">
       <Link href="/" className="text-sm text-muted hover:text-bone inline-block transition-colors">
         ← <T es="Inicio" en="Home" />
       </Link>
-      <div className="reveal flex items-center gap-4">
-        <div className="flex flex-col items-center rounded-xl border border-edge px-4 py-2">
-          <span className="font-mono text-2xl font-medium" style={{ color: label.color }}>{post.score}</span>
-          <span className="text-[10px] uppercase tracking-wide text-muted">Risk On</span>
-        </div>
-        <div>
-          <div className="text-xs text-muted">{post.date}</div>
-          <h1 className="font-serif text-2xl font-medium leading-tight text-bone">
-            {lang === "en" ? post.title_en : post.title_es}
-          </h1>
-        </div>
+      <div className="reveal">
+        <div className="text-xs text-muted">{post.date}</div>
+        <h1 className="mt-1 font-serif text-2xl font-medium leading-tight text-bone">
+          {lang === "en" ? post.title_en : post.title_es}
+        </h1>
       </div>
+
+      {typeof post.score === "number" && (
+        <div className="reveal" style={{ animationDelay: "0.06s" }}>
+          <ScoreGauge score={post.score} signals={post.signals || []} />
+        </div>
+      )}
       <div
         className="reveal prose-invert max-w-none text-[15px] leading-relaxed text-bone/85 [&>p]:mb-4 [&_strong]:text-bone [&>p:first-of-type]:text-[17px] [&>p:first-of-type]:text-bone [&>p:first-of-type]:font-medium [&_h3]:mb-2 [&_h3]:mt-7 [&_h3]:font-mono [&_h3]:text-[10px] [&_h3]:uppercase [&_h3]:tracking-[3px] [&_h3]:text-muted"
         style={{ animationDelay: "0.1s" }}

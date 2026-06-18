@@ -8,11 +8,14 @@ export async function generateStaticParams() {
 
 export async function generateMetadata({ params }) {
   const post = await getPost(params.slug);
-  const title = `${post.title_en} · Risk On`;
+  const title = `${post.title_es} · Risk On`;
+  const description = post.summary_es;
+  const url = `https://riskon.lat/archive/${params.slug}`;
   return {
     title,
-    description: post.summary_en,
-    openGraph: { title, description: post.summary_en, type: "article" },
+    description,
+    openGraph: { title, description, url, type: "article", images: ["/riskon-logo.png"] },
+    twitter: { card: "summary", title, description, images: ["/riskon-logo.png"] },
   };
 }
 
