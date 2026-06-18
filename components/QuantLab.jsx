@@ -2,8 +2,8 @@
 import { useEffect, useRef, useState } from "react";
 import { T } from "./Lang";
 import {
-  eio, genSphere, genGlobe, genThomas, genChainEdges,
-  makeDotTexture, FORMS,
+  eio, genSphere, genThomas, genVoronoi, genAtom, tickAtom, genChainEdges,
+  makeDotTexture, LAB_FORMS,
   makeGeoTexture, makeCountryDataUniform,
   GLOBE_VERTEX_SHADER, GLOBE_FRAGMENT_SHADER,
 } from "../lib/quantForms";
@@ -56,11 +56,17 @@ export default function QuantLab() {
       renderer.setSize(container.clientWidth, container.clientHeight);
       container.appendChild(renderer.domElement);
 
-      const HOMES = [
-        genSphere(N, 1.8),
-        genGlobe(N, 1.8),
-        genThomas(N),
-      ];
+      const R = 1.8;
+      const atom = genAtom(N, R); // {pos, phases, rIdx} — pos se re-tickea en cada frame
+      const HOMES = LAB_FORMS.map((f) => {
+        switch (f.id) {
+          case "SPHERE":  return genSphere(N, R);
+          case "THOMAS":  return genThomas(N);
+          case "VORONOI": return genVoronoi(N, R);
+          case "ATOM":    return atom.pos;
+          default:        return genSphere(N, R);
+        }
+      });
 
       const jPhase    = new Float32Array(N);
       for (let i = 0; i < N; i++) jPhase[i] = Math.random() * Math.PI * 2;
@@ -142,6 +148,11 @@ export default function QuantLab() {
         group.rotation.y += 0.0016;
         group.rotation.x  = Math.sin(elapsed * 0.18) * 0.12;
 
+        // Órbita continua del ÁTOMO mientras es la forma activa.
+        if (LAB_FORMS[currentIdx].id === "ATOM") {
+          tickAtom(HOMES[currentIdx], atom.phases, atom.rIdx, elapsed, N, R);
+        }
+
         if (morphT < 1) morphT = Math.min(1, morphT + dt / MORPH_S);
         const mt = eio(morphT);
         for (let i = 0; i < N * 3; i++) {
@@ -152,14 +163,14 @@ export default function QuantLab() {
         // before the per-particle loop so the shimmer/pulse damping below
         // (which fades to a calmer look while the globe tint is active) uses
         // the up-to-date value.
-        const globeTarget = currentIdx === 1 ? 1 : 0;
+        const globeTarget = 0; // sin globo en el lab
         globeColorT += (globeTarget - globeColorT) * 0.07;
         material.uniforms.uColorT.value = globeColorT;
 
         material.uniforms.uTime.value = elapsed;
 
-        // Wireframe: traces the attractor's path, only shown for the Thomas form
-        const wireTarget = currentIdx === 2 ? 0.4 : 0;
+        // Wireframe: traza la trayectoria del atractor, solo para Thomas
+        const wireTarget = LAB_FORMS[currentIdx].id === "THOMAS" ? 0.4 : 0;
         wireMat.opacity += (wireTarget - wireMat.opacity) * 0.07;
 
         // Pulse fades out while the GLOBE tint is active so the map doesn't
@@ -193,7 +204,7 @@ export default function QuantLab() {
     return () => { destroyed = true; cleanup(); };
   }, []);
 
-  const form = FORMS[formIdx];
+  const form = LAB_FORMS[formIdx];
 
   return (
     <div className="reveal">
@@ -205,7 +216,7 @@ export default function QuantLab() {
       </div>
 
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}>
-        {FORMS.map((f, i) => (
+        {LAB_FORMS.map((f, i) => (
           <button
             key={f.id}
             onClick={() => selectFnRef.current?.(i)}
