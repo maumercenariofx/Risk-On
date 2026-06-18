@@ -118,13 +118,14 @@ async function handler(request) {
   });
 
   const reqUrl = new URL(request.url);
-  const only  = reqUrl.searchParams.get("only");   // modo prueba: ?only=correo
-  const force = reqUrl.searchParams.get("force");   // ?force=1 ignora la guarda
+  const only   = reqUrl.searchParams.get("only");    // ?only=a@x.com,b@y.com (subconjunto)
+  const force  = reqUrl.searchParams.get("force");   // ?force=1 ignora la guarda
+  const resend = reqUrl.searchParams.get("resend");  // ?resend=1 re-envía el view YA publicado (sin regenerar)
 
-  // ── Idempotencia: si el view de hoy ya se publicó, no re-enviar. Permite tener
-  // el disparador externo (puntual, 7:00) + el cron de Vercel (respaldo tardío)
-  // sin que el correo salga dos veces. ?only y ?force la saltan.
-  if (!only && !force) {
+  // ── Idempotencia: si el view de hoy ya se publicó, no re-generar/enviar. Permite
+  // tener el disparador externo (puntual 7:00) + el cron de Vercel (respaldo tardío)
+  // sin que el correo salga dos veces. ?only, ?force y ?resend la saltan.
+  if (!only && !force && !resend) {
     const exists = await fetch(
       `https://raw.githubusercontent.com/maumercenariofx/Risk-On/main/content/${slug}.md`,
       { cache: "no-store" }
@@ -134,20 +135,25 @@ async function handler(request) {
     }
   }
 
-  // ── 1. Generar el view del día con IA + publicarlo en el sitio ──────────────
+  // ── 1. Obtener el view: re-enviar el publicado, o generar uno nuevo ──────────
   let post = null;
   const steps = { generated: false, published: false };
-  try {
-    const data = await fetchLiveData(SITE);
-    const view = await generateDailyView(data, dateLong);
-    const md = buildMarkdown(view, slug);
-    const pub = await publishToGitHub(slug, md);
-    steps.generated = true;
-    steps.published = pub.ok;
-    if (!pub.ok) steps.publishError = pub.error;
-    post = { slug, ...view };
-  } catch (e) {
-    steps.genError = String(e?.message ?? e);
+  if (resend) {
+    const posts = getAllPostsMeta();
+    post = posts.find((p) => String(p.date).slice(0, 10) === slug) ?? posts[0] ?? null;
+  } else {
+    try {
+      const data = await fetchLiveData(SITE);
+      const view = await generateDailyView(data, dateLong);
+      const md = buildMarkdown(view, slug);
+      const pub = await publishToGitHub(slug, md);
+      steps.generated = true;
+      steps.published = pub.ok;
+      if (!pub.ok) steps.publishError = pub.error;
+      post = { slug, ...view };
+    } catch (e) {
+      steps.genError = String(e?.message ?? e);
+    }
   }
 
   // Fallback: si la generación falló, usa el último view existente.
@@ -319,28 +325,37 @@ async function handler(request) {
     "riskon.lat",
   ].join("\n");
 
-  // ── 4. Enviar ───────────────────────────────────────────────────────────────
-  const recipients = only ? [only] : await getSubscribers();
+  // ── 4. Enviar (batch: 1 request para todos → sin rate-limit ni timeout) ──────
+  const recipients = only
+    ? only.split(",").map((s) => s.trim()).filter(Boolean)
+    : await getSubscribers();
 
-  const resend = new Resend(process.env.RESEND_API_KEY);
-  const results = [];
-  for (const email of recipients) {
+  const from = '"Análisis FX · Mauricio Mercenario | Riskon" <view@riskon.lat>';
+  const subject = `El Pre-Market · ${riskState} ${score} · ${dateShort}`;
+  const payloads = recipients.map((email) => {
     const unsubUrl = `${SITE}/api/unsubscribe?email=${encodeURIComponent(email)}`;
-    const { error } = await resend.emails.send({
-      from: '"Análisis FX · Mauricio Mercenario | Riskon" <view@riskon.lat>',
-      to: email,
-      subject: `El Pre-Market · ${riskState} ${score} · ${dateShort}`,
+    return {
+      from, to: email, subject,
       html: html.split(UNSUB).join(unsubUrl),
       text: text.split(UNSUB).join(unsubUrl),
       headers: {
         "List-Unsubscribe": `<${unsubUrl}>, <mailto:view@riskon.lat?subject=unsubscribe>`,
         "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
       },
-    });
-    results.push({ email, ok: !error, error: error?.message });
+    };
+  });
+
+  const resendClient = new Resend(process.env.RESEND_API_KEY);
+  let sent;
+  try {
+    // Resend batch: hasta 100 correos por llamada.
+    const { data, error } = await resendClient.batch.send(payloads);
+    sent = { ok: !error, count: data?.data?.length ?? (error ? 0 : recipients.length), error: error?.message };
+  } catch (e) {
+    sent = { ok: false, error: String(e?.message ?? e) };
   }
 
-  return Response.json({ ok: true, riskState, score, steps, recipients: recipients.length, sent: results });
+  return Response.json({ ok: true, riskState, score, steps, recipients: recipients.length, sent });
 }
 
 export { handler as GET, handler as POST };
