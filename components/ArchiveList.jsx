@@ -2,7 +2,7 @@
 // components/ArchiveList.jsx
 import Link from "next/link";
 import { useLang, T } from "./Lang";
-import { riskLabel } from "../lib/riskIndex";
+import { riskBand } from "../lib/riskScore";
 
 export default function ArchiveList({ posts }) {
   const { lang } = useLang();
@@ -18,7 +18,7 @@ export default function ArchiveList({ posts }) {
       </div>
       <div className="space-y-3">
         {posts.map((p, i) => {
-          const label = riskLabel(p.score || 50);
+          const label = riskBand(p.score || 50);
           return (
             <Link key={p.slug} href={`/archive/${p.slug}`}
               className="reveal block rounded-xl border border-edge bg-ink2/40 p-4 transition-colors hover:border-[#3A3A3E]"
