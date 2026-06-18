@@ -28,6 +28,13 @@ function accent(score) {
   return riskBand(score).color;
 }
 
+// Color por tensión de país (0 = calma/verde → 100 = estrés/rojo).
+function tensionColor(s) {
+  if (s >= 66) return "#D85A30";
+  if (s >= 45) return "#C99A2E";
+  return "#3FA77E";
+}
+
 export default function RiskGauge({ post }) {
   const { lang } = useLang();
   const [data, setData]         = useState(null); // /api/market
@@ -40,6 +47,7 @@ export default function RiskGauge({ post }) {
   const [news, setNews]               = useState([]);
   const [newsLoading, setNewsLoading] = useState(false);
   const [heroGone, setHeroGone]       = useState(false);
+  const [cScores, setCScores]         = useState(null); // riesgo por país en vivo
   const sphereRef = useRef(null);
   const heroRef   = useRef(null);
 
@@ -66,7 +74,27 @@ export default function RiskGauge({ post }) {
       .catch(() => setData({ vix: 13.4, move: 98, dxy: 104.3, mxnVol: 9.1, us10y: 4.3 }));
     fetch("/api/rates").then((r) => r.json()).then(setRates).catch(() => setRates(null));
     fetch("/api/curve").then((r) => r.json()).then(setCurve).catch(() => setCurve(null));
+    fetch("/api/country-risk").then((r) => r.json()).then((d) => setCScores(d.scores || null)).catch(() => {});
   }, []);
+
+  // Aplica el riesgo por país en vivo al globo (reintenta hasta que monte el 3D).
+  useEffect(() => {
+    if (!cScores) return;
+    let tries = 0, id;
+    const apply = () => {
+      if (sphereRef.current?.setCountryScores) sphereRef.current.setCountryScores(cScores);
+      else if (tries++ < 25) id = setTimeout(apply, 300);
+    };
+    apply();
+    return () => clearTimeout(id);
+  }, [cScores]);
+
+  // Lista de países ordenada por tensión en vivo (con fallback al valor curado).
+  const countriesByRisk = useMemo(() => {
+    return RISK_COUNTRIES
+      .map((c) => ({ ...c, live: cScores?.[c.id] ?? c.score }))
+      .sort((a, b) => b.live - a.live);
+  }, [cScores]);
 
   // Mismo modelo que el view diario (lib/riskScore.js) → portada y nota coinciden.
   const result = useMemo(
@@ -148,24 +176,29 @@ export default function RiskGauge({ post }) {
                 <T es="Países en alerta" en="Countries on alert" />
               </div>
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "flex-end" }}>
-                {RISK_COUNTRIES.map((c) => (
-                  <button
-                    key={c.id}
-                    onClick={() => {
-                      sphereRef.current?.focusCountry(c.lat, c.lon);
-                      setNewsCountry((cur) => (cur === c.id ? null : c.id));
-                    }}
-                    style={{
-                      fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: 1, textTransform: "uppercase",
-                      padding: "3px 8px", borderRadius: 5, cursor: "pointer",
-                      background: newsCountry === c.id ? "rgba(163,45,45,0.28)" : "rgba(163,45,45,0.12)",
-                      border: "1px solid rgba(163,45,45,0.4)",
-                      color: "#C77B7B", transition: "all .2s",
-                    }}
-                  >
-                    {lang === "es" ? c.name_es : c.name_en}
-                  </button>
-                ))}
+                {countriesByRisk.map((c) => {
+                  const col = tensionColor(c.live);
+                  return (
+                    <button
+                      key={c.id}
+                      onClick={() => {
+                        sphereRef.current?.focusCountry(c.lat, c.lon);
+                        setNewsCountry((cur) => (cur === c.id ? null : c.id));
+                      }}
+                      style={{
+                        display: "flex", alignItems: "center", gap: 5,
+                        fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: 1, textTransform: "uppercase",
+                        padding: "3px 8px", borderRadius: 5, cursor: "pointer",
+                        background: newsCountry === c.id ? `${col}38` : `${col}1A`,
+                        border: `1px solid ${col}66`,
+                        color: col, transition: "all .2s",
+                      }}
+                    >
+                      {lang === "es" ? c.name_es : c.name_en}
+                      <span style={{ opacity: 0.8 }}>{c.live}</span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 

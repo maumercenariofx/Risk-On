@@ -3,7 +3,7 @@ import { useEffect, useRef, forwardRef, useImperativeHandle } from "react";
 import {
   genGlobe, genSphere, genThomas, genVoronoi, genAtom, tickAtom, eio,
   makeDotTexture, makeGeoTexture, makeCountryDataUniform, latLonToDir,
-  HERO_FORMS, GLOBE_VERTEX_SHADER, GLOBE_FRAGMENT_SHADER,
+  HERO_FORMS, RISK_COUNTRIES, GLOBE_VERTEX_SHADER, GLOBE_FRAGMENT_SHADER,
 } from "../lib/quantForms";
 
 const THREE_SRC = "https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js";
@@ -58,6 +58,7 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
   useImperativeHandle(ref, () => ({
     focusCountry: (lat, lon) => selectRef.current?.focusCountry(lat, lon),
     select: (idx) => selectRef.current?.select(idx),
+    setCountryScores: (map) => selectRef.current?.setCountryScores(map),
   }), []);
 
   useEffect(() => {
@@ -200,6 +201,13 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
           currentIdx = idx;
           morphT     = 0;
           morphDur   = MORPH_S;
+        },
+        // Actualiza en vivo el color/pulso de cada país (score 0-100 por id).
+        setCountryScores: (map) => {
+          const arr = material.uniforms.uCountryData.value;
+          RISK_COUNTRIES.forEach((c, i) => {
+            if (map?.[c.id] != null && arr[i]) arr[i].x = Math.max(0, Math.min(100, map[c.id])) / 100;
+          });
         },
       };
 
