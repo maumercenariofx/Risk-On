@@ -116,6 +116,23 @@ async function handler(request) {
     day: "numeric", month: "long", year: "numeric", timeZone: "America/Mexico_City",
   });
 
+  const reqUrl = new URL(request.url);
+  const only  = reqUrl.searchParams.get("only");   // modo prueba: ?only=correo
+  const force = reqUrl.searchParams.get("force");   // ?force=1 ignora la guarda
+
+  // ── Idempotencia: si el view de hoy ya se publicó, no re-enviar. Permite tener
+  // el disparador externo (puntual, 7:00) + el cron de Vercel (respaldo tardío)
+  // sin que el correo salga dos veces. ?only y ?force la saltan.
+  if (!only && !force) {
+    const exists = await fetch(
+      `https://raw.githubusercontent.com/maumercenariofx/Risk-On/main/content/${slug}.md`,
+      { cache: "no-store" }
+    ).then((r) => r.ok).catch(() => false);
+    if (exists) {
+      return Response.json({ ok: true, skipped: "already published today", slug });
+    }
+  }
+
   // ── 1. Generar el view del día con IA + publicarlo en el sitio ──────────────
   let post = null;
   const steps = { generated: false, published: false };
@@ -302,7 +319,6 @@ async function handler(request) {
   ].join("\n");
 
   // ── 4. Enviar ───────────────────────────────────────────────────────────────
-  const only = new URL(request.url).searchParams.get("only"); // modo prueba: ?only=correo
   const recipients = only ? [only] : await getSubscribers();
 
   const resend = new Resend(process.env.RESEND_API_KEY);
