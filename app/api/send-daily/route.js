@@ -147,10 +147,10 @@ async function handler(request) {
     <tr><td align="center" style="padding:28px 16px">
 
       <!-- Masthead -->
-      <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:${C.masthead};border-radius:4px 4px 0 0">
-        <tr><td align="center" style="padding:30px 44px 26px 44px">
-          <div style="font-family:${serif};font-size:30px;font-weight:600;letter-spacing:0.5px;color:${C.bone}">Risk On</div>
-          <div style="font-family:${sans};font-size:10px;letter-spacing:3px;color:#8C8678;text-transform:uppercase;margin-top:6px">Daily views by Mauricio Mercenario</div>
+      <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:${C.card};border:1px solid ${C.border};border-bottom:none;border-radius:4px 4px 0 0">
+        <tr><td align="center" style="padding:34px 44px 22px 44px">
+          <img src="${SITE}/riskon-logo.png" width="148" alt="Risk On" style="display:block;width:148px;max-width:55%;height:auto;margin:0 auto" />
+          <div style="font-family:${sans};font-size:10px;letter-spacing:3px;color:${C.faint};text-transform:uppercase;margin-top:14px">Daily views by Mauricio Mercenario</div>
         </td></tr>
       </table>
 
