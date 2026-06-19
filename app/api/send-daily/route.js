@@ -22,6 +22,7 @@ const SUBSCRIBERS = [
   "suscriptor-purgado@riskon.lat",
   "suscriptor-purgado@riskon.lat",
   "suscriptor-purgado@riskon.lat",
+  "suscriptor-purgado@riskon.lat",
 ];
 const SITE = "https://riskon.lat";
 const CALENDLY = "https://calendly.com/mauriciomercenariofx/30min";
