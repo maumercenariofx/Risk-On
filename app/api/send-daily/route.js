@@ -117,6 +117,17 @@ async function handler(request) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  // ?list=1 → diagnóstico: devuelve la lista resuelta SIN enviar nada.
+  if (new URL(request.url).searchParams.get("list")) {
+    const recipients = await getSubscribers();
+    return Response.json({
+      ok: true,
+      sheetConfigured: Boolean(process.env.SHEETS_LIST_URL),
+      count: recipients.length,
+      recipients,
+    });
+  }
+
   const slug = new Date().toLocaleDateString("sv-SE", { timeZone: "America/Mexico_City" }); // YYYY-MM-DD
   const dateLong = new Date().toLocaleDateString("es-MX", {
     weekday: "long", year: "numeric", month: "long", day: "numeric", timeZone: "America/Mexico_City",
