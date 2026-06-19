@@ -57,22 +57,30 @@ function riskStateFromScore(score) {
   return RISK_STATES.find((s) => score >= s.min && score <= s.max) ?? RISK_STATES[2];
 }
 
-// Lee la lista de suscriptores del Google Sheet (doGet con token) si está
-// configurada (SHEETS_LIST_URL); si no, usa la lista fija de respaldo.
+const clean = (e) => String(e).trim().toLowerCase();
+
+// Lista final de destinatarios = (los 12 de respaldo ∪ activos del Sheet) − bajas del Sheet.
+// El Sheet (SHEETS_LIST_URL, doGet con token) es la fuente para altas/bajas nuevas;
+// la lista fija SUBSCRIBERS es un piso de seguridad para que nadie se pierda si el
+// Sheet falla o aún no tiene a los 12 sembrados. El doGet puede devolver:
+//   - un arreglo de correos activos (compat), o
+//   - { active: [...], unsub: [...] } para poder dar de baja también a los del piso.
 async function getSubscribers() {
+  const base = new Set(SUBSCRIBERS.map(clean));
   const url = process.env.SHEETS_LIST_URL;
   if (url) {
     try {
       const res = await fetch(url, { cache: "no-store" });
       if (res.ok) {
-        const list = await res.json();
-        if (Array.isArray(list) && list.length) {
-          return list.map((e) => String(e).trim().toLowerCase()).filter(Boolean);
-        }
+        const data = await res.json();
+        const active = Array.isArray(data) ? data : (data?.active ?? []);
+        const unsub  = Array.isArray(data) ? []   : (data?.unsub  ?? []);
+        active.map(clean).filter(Boolean).forEach((e) => base.add(e));
+        unsub.map(clean).filter(Boolean).forEach((e) => base.delete(e));
       }
     } catch {}
   }
-  return SUBSCRIBERS;
+  return [...base];
 }
 
 async function yahooChart(symbol) {

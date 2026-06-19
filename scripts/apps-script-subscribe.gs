@@ -46,7 +46,9 @@ function doPost(e) {
     .setMimeType(ContentService.MimeType.JSON);
 }
 
-// Devuelve el arreglo JSON de correos activos. Protegido por ?token=
+// Devuelve { active: [...], unsub: [...] } en JSON. Protegido por ?token=
+// (active = correos a los que se envía; unsub = bajas, para restar incluso a los
+//  que estén en la lista de respaldo del servidor).
 function doGet(e) {
   if (!e || !e.parameter || e.parameter.token !== TOKEN) {
     return ContentService.createTextOutput(JSON.stringify({ error: "unauthorized" }))
@@ -54,12 +56,14 @@ function doGet(e) {
   }
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
   var values = sheet.getDataRange().getValues();
-  var emails = [];
+  var active = [], unsub = [];
   for (var i = 1; i < values.length; i++) {
     var email = String(values[i][0]).trim();
+    if (!email) continue;
     var estado = String(values[i][2] || "active").trim().toLowerCase();
-    if (email && estado !== "unsub") emails.push(email);
+    if (estado === "unsub") unsub.push(email);
+    else active.push(email);
   }
-  return ContentService.createTextOutput(JSON.stringify(emails))
+  return ContentService.createTextOutput(JSON.stringify({ active: active, unsub: unsub }))
     .setMimeType(ContentService.MimeType.JSON);
 }
