@@ -166,7 +166,7 @@ async function handler(request) {
   } else {
     try {
       const data = await fetchLiveData(SITE);
-      const view = await generateDailyView(data, dateLong);
+      const view = await generateDailyView(data, dateLong, slug);
       const md = buildMarkdown(view, slug);
       const pub = await publishToGitHub(slug, md);
       steps.generated = true;
@@ -185,7 +185,7 @@ async function handler(request) {
     post = posts.find((p) => String(p.date).slice(0, 10) === slug) ?? posts[0];
   }
 
-  const { title_es, summary_es, watch_es = [], support, resistance, score = 70 } = post;
+  const { title_es, summary_es, watch_es = [], support, resistance, score = 70, greeting_es, signoff_es } = post;
   const { label: riskState, color } = riskStateFromScore(score);
   const articleUrl = `${SITE}/archive/${post.slug}`;
 
@@ -242,7 +242,9 @@ async function handler(request) {
               <td style="text-align:right;font-family:${sans};font-size:12px;color:${C.muted};text-transform:capitalize">${dateLong}</td>
             </tr>
           </table>
-          <div style="border-bottom:2px solid ${C.text};margin:12px 0 26px 0"></div>
+          <div style="border-bottom:2px solid ${C.text};margin:12px 0 ${greeting_es ? "18px" : "26px"} 0"></div>
+
+          ${greeting_es ? `<div style="font-family:${serif};font-size:16px;font-style:italic;color:${C.text};margin-bottom:24px">${greeting_es}</div>` : ""}
 
           <!-- Score gauge -->
           <div style="font-family:${sans};font-size:11px;letter-spacing:2px;color:${C.faint};font-weight:700;margin-bottom:10px">RISK ON SCORE</div>
@@ -289,6 +291,8 @@ async function handler(request) {
             </td></tr>
           </table>` : ""}
 
+          ${signoff_es ? `<div style="font-family:${serif};font-size:15px;font-style:italic;color:${C.muted};text-align:center;padding:4px 10px 28px 10px">— ${signoff_es}</div>` : ""}
+
           <!-- Nav -->
           <div style="border-top:1px solid ${C.border};padding-top:24px;text-align:center">
             <div style="font-family:${sans};font-size:11px;letter-spacing:2px;color:${C.faint};font-weight:700;margin-bottom:14px">EXPLORA</div>
@@ -327,6 +331,7 @@ async function handler(request) {
     `EL PRE-MARKET · ${dateLong}`,
     `Risk On score ${score}/100 · ${riskState}`,
     "",
+    ...(greeting_es ? [greeting_es, ""] : []),
     title_es,
     "",
     summary_es,
@@ -343,6 +348,7 @@ async function handler(request) {
     `Aprende: ${SITE}/learn`,
     `Agenda una asesoría: ${CALENDLY}`,
     "",
+    ...(signoff_es ? [`— ${signoff_es}`, ""] : []),
     `Darse de baja: ${UNSUB}`,
     "riskon.lat",
   ].join("\n");

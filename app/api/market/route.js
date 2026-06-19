@@ -90,7 +90,7 @@ function realizedVol(closes) {
 
 export async function GET() {
   const SYMBOLS = {
-    spx: "^GSPC", ndx: "^IXIC", vix: "^VIX", move: "^MOVE", dxy: "DX-Y.NYB",
+    spx: "^GSPC", esfut: "ES=F", ndx: "^IXIC", vix: "^VIX", move: "^MOVE", dxy: "DX-Y.NYB",
     aapl: "AAPL", tsla: "TSLA", nvda: "NVDA", btc: "BTC-USD", eth: "ETH-USD",
     ipc: "^MXX", wti: "CL=F", gold: "GC=F",
     usdjpy: "JPY=X", us10y: "^TNX",
@@ -128,6 +128,9 @@ export async function GET() {
     // discrepancia entre las tarjetas/ticker y el chart de Mercados)
     usdmxn:    lastClose(c.usdmxnChart) ?? c.usdmxnChart?.price ?? usdmxn ?? 18.42,
     usdmxnChg: c.usdmxnChart?.chgPct ?? null,
+    // Spot en vivo (regularMarketPrice) — más fiel a las 7am que el último cierre
+    // diario; lo usa el view premarket para citar el nivel exacto del USD/MXN.
+    usdmxnSpot: c.usdmxnChart?.price ?? lastClose(c.usdmxnChart) ?? usdmxn ?? null,
     eurusd:    lastClose(c.eurusdChart) ?? c.eurusdChart?.price ?? eurusd ?? 1.084,
     eurusdChg: c.eurusdChart?.chgPct ?? null,
     eurmxn:    lastClose(c.eurmxnChart) ?? c.eurmxnChart?.price ?? null,
@@ -138,6 +141,11 @@ export async function GET() {
     // Indices
     spx:     c.spx?.price  ?? 5412,
     spxChg:  c.spx?.chgPct ?? null,
+    // Futuros S&P (ES=F) — cotizan ~24h; a las 7am CST (cash cerrado) reflejan el
+    // movimiento premarket real, a diferencia de ^GSPC que aún trae el cierre de
+    // ayer. Es la señal de acciones del Risk On score (lib/riskScore.js).
+    spxFut:    c.esfut?.price  ?? null,
+    spxFutChg: c.esfut?.chgPct ?? null,
     ndx:     c.ndx?.price  ?? 17890,
     ndxChg:  c.ndx?.chgPct ?? null,
     // Volatilidad
