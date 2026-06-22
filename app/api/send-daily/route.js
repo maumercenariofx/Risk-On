@@ -69,6 +69,39 @@ const clean = (e) => String(e).trim().toLowerCase();
 // Sheet falla o aún no tiene a los 12 sembrados. El doGet puede devolver:
 //   - un arreglo de correos activos (compat), o
 //   - { active: [...], unsub: [...] } para poder dar de baja también a los del piso.
+// Diagnóstico: golpea SHEETS_LIST_URL y reporta exactamente qué responde,
+// para distinguir entre doGet ausente, token equivocado, o parseo OK.
+async function probeSheet() {
+  const url = process.env.SHEETS_LIST_URL;
+  if (!url) return { configured: false };
+  try {
+    const res = await fetch(url, { cache: "no-store", redirect: "follow" });
+    const text = await res.text();
+    let parsed = null, activeCount = null, unsubCount = null, parseError = null;
+    try {
+      parsed = JSON.parse(text);
+      const active = Array.isArray(parsed) ? parsed : (parsed?.active ?? []);
+      const unsub  = Array.isArray(parsed) ? []     : (parsed?.unsub  ?? []);
+      activeCount = Array.isArray(active) ? active.length : null;
+      unsubCount  = Array.isArray(unsub)  ? unsub.length  : null;
+    } catch (e) {
+      parseError = String(e?.message ?? e);
+    }
+    return {
+      configured: true,
+      httpStatus: res.status,
+      ok: res.ok,
+      contentType: res.headers.get("content-type"),
+      bodySnippet: text.slice(0, 400),
+      activeCount,
+      unsubCount,
+      parseError,
+    };
+  } catch (e) {
+    return { configured: true, fetchError: String(e?.message ?? e) };
+  }
+}
+
 async function getSubscribers() {
   const base = new Set(SUBSCRIBERS.map(clean));
   const url = process.env.SHEETS_LIST_URL;
@@ -122,11 +155,15 @@ async function handler(request) {
   }
 
   // ?list=1 → diagnóstico: devuelve la lista resuelta SIN enviar nada.
+  // Incluye sheetProbe: prueba SHEETS_LIST_URL en vivo y reporta el status real
+  // (HTTP, cuerpo crudo, conteos parseados) para depurar el doGet del Apps Script.
   if (new URL(request.url).searchParams.get("list")) {
     const recipients = await getSubscribers();
+    const sheetProbe = await probeSheet();
     return Response.json({
       ok: true,
       sheetConfigured: Boolean(process.env.SHEETS_LIST_URL),
+      sheetProbe,
       count: recipients.length,
       recipients,
     });
