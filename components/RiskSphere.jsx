@@ -37,17 +37,20 @@ const ATOM_IDX  = HERO_FORMS.findIndex(f => f.id === "ATOM");
 
 // Hover effect: while the cursor is MOVING, nearby particles are pushed
 // outward (repel/crater). If the cursor stays still for IDLE_THRESHOLD,
-// it flips to "black hole" mode — particles get sucked inward with
-// growing force + a swirl, forming a void. Moving again snaps back to
-// repel and everything springs home with inertia (overdamped, no bounce).
-const HOVER_RADIUS       = 0.2275;
+// it flips to "black hole" mode — particles get absorbed and held orbiting
+// at the event-horizon rim (ORBIT_RADIUS) instead of spiraling into the
+// center, growing faster the longer the cursor stays still. Moving again
+// snaps back to repel and everything springs home with inertia (overdamped,
+// no bounce).
+const HOVER_RADIUS       = 0.455;
 const HOVER_RADIUS2      = HOVER_RADIUS * HOVER_RADIUS;
+const ORBIT_RADIUS       = HOVER_RADIUS * 0.65;
+const RADIAL_K           = 12;
 const IDLE_THRESHOLD     = 0.6;
 const REPEL_ACCEL        = 14;
 const ATTRACT_ACCEL_BASE = 6;
 const ATTRACT_ACCEL_GROWTH = 18;
 const ATTRACT_RAMP       = 1.5;
-const SWIRL_FRAC         = 0.4;
 const SPRING_K           = 9;
 const DAMPING            = 0.88;
 
@@ -318,13 +321,18 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
               const invD = 1 / d;
               const rx = dx * invD, ry = dy * invD, rz = dz * invD;
               if (isAttract) {
-                // Black hole: pull toward the cursor with a spiral swirl,
-                // growing stronger the longer the cursor stays still.
+                // Black hole: absorb the particle and hold it orbiting at
+                // ORBIT_RADIUS (a spring centered on the rim, pulling in
+                // particles still further out and pushing back any that
+                // overshoot toward the center) while a tangential term
+                // spins it around the rim, faster the longer the cursor idles.
                 const tx = -ry, ty = rx, tz = 0;
-                const accel = falloff * attractAccel;
-                fx = (rx + tx * SWIRL_FRAC) * accel;
-                fy = (ry + ty * SWIRL_FRAC) * accel;
-                fz = (rz + tz * SWIRL_FRAC) * accel;
+                const radialErr   = d - ORBIT_RADIUS;
+                const radialAccel = radialErr * RADIAL_K;
+                const orbitAccel  = falloff * attractAccel;
+                fx = rx * radialAccel + tx * orbitAccel;
+                fy = ry * radialAccel + ty * orbitAccel;
+                fz = rz * radialAccel + tz * orbitAccel;
               } else {
                 // Repel: push away from the cursor (crater follows the mouse).
                 const accel = falloff * REPEL_ACCEL;

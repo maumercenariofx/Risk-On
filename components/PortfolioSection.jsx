@@ -55,6 +55,9 @@ export default function PortfolioSection() {
   const [loadingSet,  setLoadingSet]  = useState(new Set());
   const [lastError,   setLastError]   = useState(null);
   const [query,       setQuery]       = useState("");
+  const [suggestions, setSuggestions] = useState([]);
+  const [showSugg,    setShowSugg]    = useState(false);
+  const searchDebounce = useRef(null);
   const [portValue,   setPortValue]   = useState(null);
   const [lineColor,   setLineColor]   = useState(GREEN);
   const [showLines,   setShowLines]   = useState(false);
@@ -89,6 +92,21 @@ export default function PortfolioSection() {
   }, []); // eslint-disable-line
 
   useEffect(() => { if (initialized) saveLS(symbols, weights); }, [symbols, weights, initialized]);
+
+  // Ticker autocomplete — debounced, narrows as the user keeps typing
+  // (e.g. "a" -> Apple, AMD…; "am" -> AMD only).
+  useEffect(() => {
+    if (searchDebounce.current) clearTimeout(searchDebounce.current);
+    const q = query.trim();
+    if (!q) { setSuggestions([]); return; }
+    searchDebounce.current = setTimeout(() => {
+      fetch(`/api/ticker-search?q=${encodeURIComponent(q)}`)
+        .then((r) => r.json())
+        .then((d) => setSuggestions(d.results ?? []))
+        .catch(() => setSuggestions([]));
+    }, 200);
+    return () => clearTimeout(searchDebounce.current);
+  }, [query]);
 
   // ── chart rebuild ─────────────────────────────────────────────────────────
 
@@ -228,10 +246,19 @@ export default function PortfolioSection() {
   const handleAdd = () => {
     const sym = query.trim().toUpperCase();
     if (!sym || symbols.includes(sym)) { setQuery(""); return; }
-    setQuery("");
+    setQuery(""); setSuggestions([]); setShowSugg(false);
     setSymbols((prev) => [...prev, sym]);
     setWeights((prev) => ({ ...prev, [sym]: 0 }));
     fetchAsset(sym);
+  };
+
+  const handlePickSuggestion = (sym) => {
+    const symU = sym.trim().toUpperCase();
+    setQuery(""); setSuggestions([]); setShowSugg(false);
+    if (!symU || symbols.includes(symU)) return;
+    setSymbols((prev) => [...prev, symU]);
+    setWeights((prev) => ({ ...prev, [symU]: 0 }));
+    fetchAsset(symU);
   };
 
   const handleRemove = (sym) => {
@@ -377,34 +404,70 @@ export default function PortfolioSection() {
 
         {/* Search */}
         <div className="mt-5">
-          <div style={{ display: "flex", gap: 7 }}>
-            <input
-              type="text"
-              value={query}
-              onChange={(e) => { setQuery(e.target.value.toUpperCase()); setLastError(null); }}
-              onKeyDown={(e) => e.key === "Enter" && handleAdd()}
-              placeholder={lang === "en" ? "Add ticker… NVDA, BTC-USD, AMXL.MX, GC=F" : "Agregar ticker… NVDA, BTC-USD, AMXL.MX, GC=F"}
-              style={{
-                flex: 1, background: "rgba(255,255,255,0.04)",
-                border: `1px solid ${lastError ? "rgba(255,80,0,0.35)" : "rgba(255,255,255,0.08)"}`,
-                borderRadius: 12, padding: "9px 13px", fontSize: 13,
-                fontFamily: "var(--font-mono)", color: "#F5F5F2", outline: "none", letterSpacing: 0.5,
-                transition: "border-color .2s",
-              }}
-            />
-            <button
-              onClick={handleAdd}
-              disabled={!query.trim() || loading}
-              style={{
-                background: query.trim() ? `rgba(0,200,5,0.16)` : "transparent",
-                border:     `1px solid ${query.trim() ? "rgba(0,200,5,0.35)" : "rgba(255,255,255,0.07)"}`,
-                boxShadow:  query.trim() ? "0 0 12px rgba(0,200,5,0.20)" : "none",
-                borderRadius: 12, padding: "9px 18px", fontSize: 18, lineHeight: 1,
-                color:   query.trim() ? GREEN : "#374151",
-                cursor:  query.trim() ? "pointer" : "default",
-                transition: "all .2s",
-              }}
-            >+</button>
+          <div style={{ position: "relative" }}>
+            <div style={{ display: "flex", gap: 7 }}>
+              <input
+                type="text"
+                value={query}
+                onChange={(e) => { setQuery(e.target.value.toUpperCase()); setLastError(null); }}
+                onKeyDown={(e) => e.key === "Enter" && handleAdd()}
+                onFocus={() => setShowSugg(true)}
+                onBlur={() => setTimeout(() => setShowSugg(false), 120)}
+                placeholder={lang === "en" ? "Add ticker… NVDA, BTC-USD, AMXL.MX, GC=F" : "Agregar ticker… NVDA, BTC-USD, AMXL.MX, GC=F"}
+                style={{
+                  flex: 1, background: "rgba(255,255,255,0.04)",
+                  border: `1px solid ${lastError ? "rgba(255,80,0,0.35)" : "rgba(255,255,255,0.08)"}`,
+                  borderRadius: 12, padding: "9px 13px", fontSize: 13,
+                  fontFamily: "var(--font-mono)", color: "#F5F5F2", outline: "none", letterSpacing: 0.5,
+                  transition: "border-color .2s",
+                }}
+              />
+              <button
+                onClick={handleAdd}
+                disabled={!query.trim() || loading}
+                style={{
+                  background: query.trim() ? `rgba(0,200,5,0.16)` : "transparent",
+                  border:     `1px solid ${query.trim() ? "rgba(0,200,5,0.35)" : "rgba(255,255,255,0.07)"}`,
+                  boxShadow:  query.trim() ? "0 0 12px rgba(0,200,5,0.20)" : "none",
+                  borderRadius: 12, padding: "9px 18px", fontSize: 18, lineHeight: 1,
+                  color:   query.trim() ? GREEN : "#374151",
+                  cursor:  query.trim() ? "pointer" : "default",
+                  transition: "all .2s",
+                }}
+              >+</button>
+            </div>
+
+            {/* Autocomplete dropdown — narrows as you keep typing */}
+            {showSugg && query.trim() && suggestions.length > 0 && (
+              <div style={{
+                position: "absolute", top: "calc(100% + 5px)", left: 0, right: 48,
+                background: "rgba(14,14,16,0.97)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)",
+                border: "1px solid rgba(255,255,255,0.10)", borderRadius: 12,
+                overflow: "hidden", zIndex: 30, boxShadow: "0 12px 32px rgba(0,0,0,0.5)",
+              }}>
+                {suggestions.map((s) => (
+                  <button
+                    key={s.symbol}
+                    onMouseDown={(e) => { e.preventDefault(); handlePickSuggestion(s.symbol); }}
+                    style={{
+                      display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10,
+                      width: "100%", textAlign: "left", background: "transparent", border: "none",
+                      borderBottom: "1px solid rgba(255,255,255,0.05)", cursor: "pointer",
+                      padding: "8px 12px", color: "#F5F5F2",
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.background = "rgba(255,255,255,0.06)"}
+                    onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
+                  >
+                    <span style={{ fontSize: 12.5, color: "#D5D5D2", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {s.name}
+                    </span>
+                    <span style={{ fontFamily: "var(--font-mono)", fontSize: 10.5, color: "#6B7280", flexShrink: 0, letterSpacing: 0.5 }}>
+                      {s.symbol}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {lastError && (

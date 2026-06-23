@@ -404,8 +404,8 @@ export default function MarketsClient({ embed = false }) {
         }}
       >
         {/* Price header */}
-        <div className="mb-5 flex items-start justify-between gap-4">
-          <div>
+        <div className="mb-5 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
+          <div style={{ minWidth: 0 }}>
             <div style={{
               fontSize: 10, letterSpacing: 2.5, textTransform: "uppercase",
               color: "#4B5563", marginBottom: 6, fontFamily: "var(--font-mono)",
