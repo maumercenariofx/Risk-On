@@ -447,6 +447,18 @@ async function handler(request) {
     recipients = await getSubscribers();
   }
 
+  // ?preview=1 → diagnóstico: devuelve el saludo YA personalizado por
+  // destinatario SIN enviar. Úsalo con &resend=1&only=correo para no regenerar.
+  if (reqUrl.searchParams.get("preview")) {
+    return Response.json({
+      ok: true, preview: true, greeting_es,
+      recipients: recipients.map((s) => ({
+        email: s.email, nombre: s.nombre ?? "",
+        greeting: personalizeGreeting(greeting_es, s),
+      })),
+    });
+  }
+
   const from = '"Análisis FX · Mauricio Mercenario | Riskon" <view@riskon.lat>';
   const subject = `El Pre-Market · ${riskState} ${score} · ${dateShort}`;
   const payloads = recipients.map((sub) => {
