@@ -435,9 +435,17 @@ async function handler(request) {
   ].join("\n");
 
   // ── 4. Enviar (batch: 1 request para todos → sin rate-limit ni timeout) ──────
-  const recipients = only
-    ? only.split(",").map((s) => s.trim()).filter(Boolean).map((email) => ({ email }))
-    : await getSubscribers();
+  // Con ?only mandamos solo al subconjunto pedido, pero tomamos su nombre del
+  // Sheet (si existe) para que el saludo siga personalizado; los correos que no
+  // estén en la lista van con saludo genérico.
+  let recipients;
+  if (only) {
+    const wanted = only.split(",").map((s) => clean(s)).filter(Boolean);
+    const byEmail = new Map((await getSubscribers()).map((s) => [s.email, s]));
+    recipients = wanted.map((e) => byEmail.get(e) ?? { email: e });
+  } else {
+    recipients = await getSubscribers();
+  }
 
   const from = '"Análisis FX · Mauricio Mercenario | Riskon" <view@riskon.lat>';
   const subject = `El Pre-Market · ${riskState} ${score} · ${dateShort}`;
