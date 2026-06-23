@@ -1,6 +1,7 @@
 // app/page.jsx
 import Ticker from "../components/Ticker";
 import RiskGauge from "../components/RiskGauge";
+import RiskBands from "../components/RiskBands";
 import DailyWatch from "../components/DailyWatch";
 import ProjectCards from "../components/ProjectCards";
 import CountdownTimers from "../components/CountdownTimers";
@@ -20,6 +21,8 @@ export default function Home() {
       </div>
 
       <RiskGauge post={latest} />
+
+      <div className="reveal"><RiskBands /></div>
 
       {latest && <DailyWatch post={latest} />}
 

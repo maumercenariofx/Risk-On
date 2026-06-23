@@ -23,7 +23,7 @@ export default function SubscribeForm() {
       const res = await fetch("/api/subscribe", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, nombre, apellidos, trato }),
+        body: JSON.stringify({ email, nombre, apellidos, trato, lang }),
       });
       if (!res.ok) throw new Error();
       setStatus("done");

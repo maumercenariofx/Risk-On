@@ -342,6 +342,11 @@ async function handler(request) {
             <td style="text-align:right;font-family:${sans};font-size:10px;color:${C.faint};letter-spacing:0.5px">risk-on · 100</td>
           </tr></table>
 
+          <!-- Qué significa: link a la explicación de las bandas -->
+          <div style="font-family:${sans};font-size:11px;color:${C.muted};margin:-14px 0 24px 0">
+            <a href="${SITE}/#bandas" style="color:${C.muted};text-decoration:underline">¿Qué significa “${riskState}”? Conoce las 4 bandas del índice →</a>
+          </div>
+
           <!-- Headline + summary -->
           <div style="font-family:${serif};font-size:26px;line-height:1.25;color:${C.text};font-weight:700;margin-bottom:18px">${title_es}</div>
           <div style="font-family:${sans};font-size:15px;line-height:1.7;color:#3a3a3a;margin-bottom:26px">${summary_es}</div>
@@ -411,6 +416,7 @@ async function handler(request) {
   const text = [
     `EL PRE-MARKET · ${dateLong}`,
     `Risk On score ${score}/100 · ${riskState}`,
+    `¿Qué significa "${riskState}"? Las 4 bandas del índice: ${SITE}/#bandas`,
     "",
     ...(greeting_es ? [GREET_TOKEN, ""] : []),
     title_es,
