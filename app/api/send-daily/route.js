@@ -63,6 +63,35 @@ function riskStateFromScore(score) {
 
 const clean = (e) => String(e).trim().toLowerCase();
 
+// Limpia un campo de nombre/trato que viene del formulario (anti-XSS en el HTML
+// del correo + recorte de longitud). Devuelve "" si no hay nada útil.
+const cleanName = (s) =>
+  String(s ?? "").replace(/[<>&"'`]/g, "").trim().slice(0, 60);
+
+// Token reemplazable: el saludo se renderiza una vez en la plantilla y se
+// personaliza por destinatario en el loop de envío (igual que UNSUB).
+const GREET_TOKEN = "@@GREETING@@";
+
+// Cómo nombrar al suscriptor en el saludo. Con trato (Sr./Sra.) usa el apellido
+// (o el nombre si no dio apellidos) → "Sr. González"; si solo dio nombre, usa el
+// nombre de pila → "Mauricio". Sin datos, "" → saludo genérico.
+function saludoNombre(sub) {
+  const trato     = cleanName(sub?.trato);
+  const nombre    = cleanName(sub?.nombre);
+  const apellidos = cleanName(sub?.apellidos);
+  if (trato && apellidos) return `${trato} ${apellidos}`;
+  if (trato && nombre)    return `${trato} ${nombre}`;
+  return nombre;
+}
+
+// Inserta el nombre dentro del saludo base: "¡Buenos días!" → "¡Buenos días, Mauricio!".
+// .replace con string reemplaza solo la PRIMERA "!", así respeta sufijos (feriados, etc.).
+function personalizeGreeting(greeting, sub) {
+  const name = saludoNombre(sub);
+  if (!name || !greeting) return greeting;
+  return greeting.includes("!") ? greeting.replace("!", `, ${name}!`) : `${greeting} ${name}`;
+}
+
 // Lista final de destinatarios = (los 12 de respaldo ∪ activos del Sheet) − bajas del Sheet.
 // El Sheet (SHEETS_LIST_URL, doGet con token) es la fuente para altas/bajas nuevas;
 // la lista fija SUBSCRIBERS es un piso de seguridad para que nadie se pierda si el
@@ -102,8 +131,13 @@ async function probeSheet() {
   }
 }
 
+// Devuelve [{ email, nombre, apellidos, trato }]. El Sheet puede mandar `active`
+// como arreglo de correos (compat) o de objetos { email, nombre, apellidos, trato }
+// (cuando el suscriptor llenó los campos opcionales del formulario). Los nombres
+// solo viven en el Sheet; la lista fija de respaldo va sin nombre (saludo genérico).
 async function getSubscribers() {
-  const base = new Set(SUBSCRIBERS.map(clean));
+  const map = new Map(); // email → { email, nombre, apellidos, trato }
+  SUBSCRIBERS.map(clean).forEach((e) => map.set(e, { email: e }));
   const url = process.env.SHEETS_LIST_URL;
   if (url) {
     try {
@@ -112,12 +146,21 @@ async function getSubscribers() {
         const data = await res.json();
         const active = Array.isArray(data) ? data : (data?.active ?? []);
         const unsub  = Array.isArray(data) ? []   : (data?.unsub  ?? []);
-        active.map(clean).filter(Boolean).forEach((e) => base.add(e));
-        unsub.map(clean).filter(Boolean).forEach((e) => base.delete(e));
+        active.forEach((item) => {
+          const email = clean(typeof item === "string" ? item : item?.email);
+          if (!email) return;
+          map.set(email, {
+            email,
+            nombre:    typeof item === "object" ? cleanName(item?.nombre)    : "",
+            apellidos: typeof item === "object" ? cleanName(item?.apellidos) : "",
+            trato:     typeof item === "object" ? cleanName(item?.trato)     : "",
+          });
+        });
+        unsub.map((e) => clean(typeof e === "string" ? e : e?.email)).filter(Boolean).forEach((e) => map.delete(e));
       }
     } catch {}
   }
-  return [...base];
+  return [...map.values()];
 }
 
 async function yahooChart(symbol) {
@@ -282,7 +325,7 @@ async function handler(request) {
           </table>
           <div style="border-bottom:2px solid ${C.text};margin:12px 0 ${greeting_es ? "18px" : "26px"} 0"></div>
 
-          ${greeting_es ? `<div style="font-family:${serif};font-size:16px;font-style:italic;color:${C.text};margin-bottom:24px">${greeting_es}</div>` : ""}
+          ${greeting_es ? `<div style="font-family:${serif};font-size:16px;font-style:italic;color:${C.text};margin-bottom:24px">${GREET_TOKEN}</div>` : ""}
 
           <!-- Score gauge -->
           <div style="font-family:${sans};font-size:11px;letter-spacing:2px;color:${C.faint};font-weight:700;margin-bottom:10px">RISK ON SCORE</div>
@@ -369,7 +412,7 @@ async function handler(request) {
     `EL PRE-MARKET · ${dateLong}`,
     `Risk On score ${score}/100 · ${riskState}`,
     "",
-    ...(greeting_es ? [greeting_es, ""] : []),
+    ...(greeting_es ? [GREET_TOKEN, ""] : []),
     title_es,
     "",
     summary_es,
@@ -393,17 +436,20 @@ async function handler(request) {
 
   // ── 4. Enviar (batch: 1 request para todos → sin rate-limit ni timeout) ──────
   const recipients = only
-    ? only.split(",").map((s) => s.trim()).filter(Boolean)
+    ? only.split(",").map((s) => s.trim()).filter(Boolean).map((email) => ({ email }))
     : await getSubscribers();
 
   const from = '"Análisis FX · Mauricio Mercenario | Riskon" <view@riskon.lat>';
   const subject = `El Pre-Market · ${riskState} ${score} · ${dateShort}`;
-  const payloads = recipients.map((email) => {
+  const payloads = recipients.map((sub) => {
+    const email = sub.email;
     const unsubUrl = `${SITE}/api/unsubscribe?email=${encodeURIComponent(email)}`;
+    // Saludo personalizado por destinatario (genérico si no llenó su nombre).
+    const greet = personalizeGreeting(greeting_es, sub);
     return {
       from, to: email, subject,
-      html: html.split(UNSUB).join(unsubUrl),
-      text: text.split(UNSUB).join(unsubUrl),
+      html: html.split(UNSUB).join(unsubUrl).split(GREET_TOKEN).join(greet ?? ""),
+      text: text.split(UNSUB).join(unsubUrl).split(GREET_TOKEN).join(greet ?? ""),
       headers: {
         "List-Unsubscribe": `<${unsubUrl}>, <mailto:view@riskon.lat?subject=unsubscribe>`,
         "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",

@@ -1,27 +1,34 @@
 // Google Apps Script — "El Pre" subscriber webhook (alta, baja y lectura).
 //
-// Hoja: columnas  A: Email | B: Fecha | C: Estado   (Estado = "active" | "unsub")
+// Hoja: columnas
+//   A: Email | B: Fecha | C: Estado | D: Nombre | E: Apellidos | F: Trato
+//   (Estado = "active" | "unsub"; D/E/F son opcionales y solo se usan para
+//    saludar por nombre en el correo diario.)
 //
-// Setup / re-deploy:
+// Setup / re-deploy (IMPORTANTE: edita la implementación EXISTENTE para
+// conservar la misma URL /exec — crear una NUEVA cambia el id y rompe Vercel):
 // 1. En tu Google Sheet: Extensiones > Apps Script.
-// 2. Pega este contenido completo (reemplaza el anterior).
-// 3. Cambia TOKEN abajo por una cadena secreta tuya.
-// 4. Implementar > Nueva implementación > tipo "Aplicación web".
-//      - Ejecutar como: Yo
-//      - Quién tiene acceso: Cualquiera
-// 5. Copia la URL del Web App:
-//      - SHEETS_WEBHOOK_URL  = esa URL                          (alta/baja, POST)
-//      - SHEETS_LIST_URL     = esa URL + "?token=TU_TOKEN"      (lectura, GET)
-//    Ponlas en Vercel (Project Settings > Environment Variables) y redeploy.
+// 2. Pega este contenido completo (reemplaza el anterior). CONSERVA tu TOKEN.
+// 3. Implementar > Administrar implementaciones > (la existente) > Editar (lápiz)
+//      > Versión: "Nueva versión" > Implementar.   [misma URL /exec]
+//      - Ejecutar como: Yo   ·   Quién tiene acceso: Cualquiera
+// 4. No hace falta cambiar SHEETS_WEBHOOK_URL / SHEETS_LIST_URL si reusaste la URL.
+//
+// Compat: las filas viejas (solo A/B/C) siguen funcionando — sin nombre = saludo
+// genérico. doGet devuelve `active` como objetos { email, nombre, apellidos, trato };
+// el servidor también acepta el formato viejo (arreglo de correos).
 
 var TOKEN = "CAMBIA_ESTE_TOKEN";
 
 function doPost(e) {
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
   var data = JSON.parse(e.postData.contents);
-  var email = String(data.email || "").trim().toLowerCase();
-  var date  = String(data.date  || new Date().toISOString());
-  var action = String(data.action || "subscribe");
+  var email     = String(data.email || "").trim().toLowerCase();
+  var date      = String(data.date  || new Date().toISOString());
+  var action    = String(data.action || "subscribe");
+  var nombre    = String(data.nombre    || "").trim();
+  var apellidos = String(data.apellidos || "").trim();
+  var trato     = String(data.trato     || "").trim();
 
   if (!email) {
     return ContentService.createTextOutput(JSON.stringify({ error: "missing email" }))
@@ -36,19 +43,23 @@ function doPost(e) {
 
   if (action === "unsubscribe") {
     if (rowIdx > 0) sheet.getRange(rowIdx, 3).setValue("unsub");
-    else sheet.appendRow([email, date, "unsub"]);
+    else sheet.appendRow([email, date, "unsub", "", "", ""]);
+  } else if (rowIdx > 0) {
+    // Reactivar y completar nombre/trato sin sobrescribir con vacío lo ya guardado.
+    sheet.getRange(rowIdx, 3).setValue("active");
+    if (nombre)    sheet.getRange(rowIdx, 4).setValue(nombre);
+    if (apellidos) sheet.getRange(rowIdx, 5).setValue(apellidos);
+    if (trato)     sheet.getRange(rowIdx, 6).setValue(trato);
   } else {
-    if (rowIdx > 0) sheet.getRange(rowIdx, 3).setValue("active");
-    else sheet.appendRow([email, date, "active"]);
+    sheet.appendRow([email, date, "active", nombre, apellidos, trato]);
   }
 
   return ContentService.createTextOutput(JSON.stringify({ ok: true }))
     .setMimeType(ContentService.MimeType.JSON);
 }
 
-// Devuelve { active: [...], unsub: [...] } en JSON. Protegido por ?token=
-// (active = correos a los que se envía; unsub = bajas, para restar incluso a los
-//  que estén en la lista de respaldo del servidor).
+// Devuelve { active: [{email,nombre,apellidos,trato}], unsub: [email] } en JSON.
+// Protegido por ?token=. unsub son bajas (para restar incluso a los del respaldo).
 function doGet(e) {
   if (!e || !e.parameter || e.parameter.token !== TOKEN) {
     return ContentService.createTextOutput(JSON.stringify({ error: "unauthorized" }))
@@ -61,8 +72,16 @@ function doGet(e) {
     var email = String(values[i][0]).trim();
     if (!email) continue;
     var estado = String(values[i][2] || "active").trim().toLowerCase();
-    if (estado === "unsub") unsub.push(email);
-    else active.push(email);
+    if (estado === "unsub") {
+      unsub.push(email);
+    } else {
+      active.push({
+        email:     email,
+        nombre:    String(values[i][3] || "").trim(),
+        apellidos: String(values[i][4] || "").trim(),
+        trato:     String(values[i][5] || "").trim(),
+      });
+    }
   }
   return ContentService.createTextOutput(JSON.stringify({ active: active, unsub: unsub }))
     .setMimeType(ContentService.MimeType.JSON);
