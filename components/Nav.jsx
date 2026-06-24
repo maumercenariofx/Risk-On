@@ -10,6 +10,21 @@ export default function Nav() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
+  // Scroll al formulario de suscripción. En móvil el contenido async (cards,
+  // datos) carga DESPUÉS y empuja el form hacia abajo, así que el hash nativo
+  // aterriza arriba del form → reintentamos el scroll tras el reflow.
+  const handleSubscribe = (e) => {
+    setOpen(false);
+    if (pathname === "/") {
+      e.preventDefault();
+      const go = () => document.getElementById("subscribe")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      go();
+      setTimeout(go, 300);
+      setTimeout(go, 800);
+    }
+    // En otras páginas dejamos que el <Link> navegue a /#subscribe.
+  };
+
   const links = [
     { href: "/", es: "Inicio", en: "Home" },
     { href: "/archive", es: "Archivo", en: "Archive" },
@@ -40,6 +55,7 @@ export default function Nav() {
           ))}
           <Link
             href="/#subscribe"
+            onClick={handleSubscribe}
             className="rounded-md border border-bone/50 bg-white/10 px-3 py-1.5 text-sm font-medium text-bone transition-colors hover:bg-white/15"
           >
             <T es="Suscríbete" en="Subscribe" />
@@ -95,7 +111,7 @@ export default function Nav() {
           ))}
           <Link
             href="/#subscribe"
-            onClick={() => setOpen(false)}
+            onClick={handleSubscribe}
             className="mt-3 rounded-md border border-bone/50 bg-white/10 py-2.5 text-center text-sm font-medium text-bone"
           >
             <T es="Suscríbete" en="Subscribe" />

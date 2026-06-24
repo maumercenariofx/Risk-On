@@ -1,6 +1,6 @@
 "use client";
 // components/SubscribeForm.jsx
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLang, T } from "./Lang";
 
 const FIELD_CLS =
@@ -14,6 +14,15 @@ export default function SubscribeForm() {
   const [nombre,    setNombre]    = useState("");
   const [apellidos, setApellidos] = useState("");
   const [trato,     setTrato]     = useState(""); // "" | "Sr." | "Sra."
+
+  // Si se llega con #subscribe (p.ej. desde otra página), hace scroll al form
+  // con reintentos, porque el contenido async empuja el layout tras montar.
+  useEffect(() => {
+    if (typeof window === "undefined" || window.location.hash !== "#subscribe") return;
+    const go = () => document.getElementById("subscribe")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    const timers = [120, 500, 1000].map((ms) => setTimeout(go, ms));
+    return () => timers.forEach(clearTimeout);
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
