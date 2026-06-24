@@ -7,19 +7,25 @@ import RiskSphere from "./RiskSphere";
 import MarketsClient from "./MarketsClient";
 import DailyRead from "./DailyRead";
 
-function minutesAgo(isoStr) {
-  if (!isoStr) return null;
+// Frescura del dato, frase completa según idioma (antes mezclaba "Data ahora ago").
+function dataFreshness(isoStr, lang) {
+  if (!isoStr) return "";
   const mins = Math.round((Date.now() - new Date(isoStr)) / 60000);
-  if (mins < 1) return "ahora";
-  if (mins < 60) return `${mins} min`;
-  return `${Math.round(mins / 60)}h`;
+  if (lang === "en") {
+    if (mins < 1) return "Data just now";
+    if (mins < 60) return `Data ${mins} min ago`;
+    return `Data ${Math.round(mins / 60)}h ago`;
+  }
+  if (mins < 1) return "Datos ahora mismo";
+  if (mins < 60) return `Datos hace ${mins} min`;
+  return `Datos hace ${Math.round(mins / 60)}h`;
 }
 
-function hoursAgo(pubDate) {
+function newsAge(pubDate, lang) {
   const t = new Date(pubDate).getTime();
-  if (isNaN(t)) return null;
+  if (isNaN(t)) return "";
   const hrs = Math.round((Date.now() - t) / 3600000);
-  if (hrs < 1) return "now";
+  if (hrs < 1) return lang === "en" ? "now" : "ahora";
   if (hrs < 24) return `${hrs}h`;
   return `${Math.round(hrs / 24)}d`;
 }
@@ -238,10 +244,36 @@ export default function RiskGauge({ post }) {
             color: "#2E2E32",
             pointerEvents: "none",
           }}>
-            <T es={`Datos hace ${minutesAgo(data.asOf)}`} en={`Data ${minutesAgo(data.asOf)} ago`} />
+            {dataFreshness(data.asOf, lang)}
           </div>
         )}
       </div>
+
+      {/* ── Termómetro 0–100: lectura instantánea de la temperatura del mercado ── */}
+      {result && (
+        <div style={{ margin: "0 0 22px" }}>
+          <div style={{
+            position: "relative", height: 8, borderRadius: 5,
+            background: "linear-gradient(90deg,#5B7FB9 0%,#D9A227 34%,#2FB89A 60%,#19C39B 100%)",
+          }}>
+            <div style={{
+              position: "absolute", top: -3, left: `${score}%`, transform: "translateX(-50%)",
+              width: 3, height: 14, background: "#F5F5F2", borderRadius: 2,
+              boxShadow: "0 0 0 1px rgba(0,0,0,0.55)",
+            }} />
+          </div>
+          <div style={{
+            display: "flex", justifyContent: "space-between", marginTop: 6,
+            fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: 1, color: "#5A5A62",
+          }}>
+            <span><T es="0 · Pánico" en="0 · Panic" /></span>
+            <span style={{ color: accentColor, fontWeight: 600 }}>
+              {score} · <T es={label.es} en={label.en} />
+            </span>
+            <span><T es="Euforia · 100" en="Euphoria · 100" /></span>
+          </div>
+        </div>
+      )}
 
       {/* ── Sticky score badge (appears when hero scrolls out of view) ── */}
       {heroGone && result && (
@@ -332,7 +364,7 @@ export default function RiskGauge({ post }) {
                       fontFamily: "var(--font-mono)", fontSize: 10, color: "#5A5A62",
                       flexShrink: 0, minWidth: 28,
                     }}>
-                      {hoursAgo(n.pubDate) ?? ""}
+                      {newsAge(n.pubDate, lang)}
                     </span>
                     <span style={{ flex: 1 }}>
                       {n.title}

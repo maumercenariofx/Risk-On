@@ -40,7 +40,8 @@ export default function SubscribeForm() {
 
   return (
     <div
-      className="card-glass mt-4 rounded-xl border border-edge p-4"
+      id="subscribe"
+      className="card-glass mt-4 scroll-mt-24 rounded-xl border border-edge p-4"
       style={{ background: "rgba(11,11,12,0.92)" }}
     >
       <p className="mb-2 text-sm font-medium text-bone">

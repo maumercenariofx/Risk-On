@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useLang, T } from "./Lang";
 import ScoreGauge from "./ScoreGauge";
 import RiskBands from "./RiskBands";
+import SubscribeForm from "./SubscribeForm";
 
 function ShareBar({ post, lang }) {
   const [copied, setCopied] = useState(false);
@@ -99,6 +100,18 @@ export default function PostView({ post, prev, next }) {
           en={`Index at the time of this note (${post.date}) — the live value on the homepage may have changed.`}
         />
       </p>
+
+      {/* CTA de captura al cierre de la nota: si el análisis les gustó, suscriben aquí mismo. */}
+      <div className="reveal border-t border-edge pt-5">
+        <p className="font-serif text-xl font-medium text-bone">
+          <T es="¿Te gustó el análisis?" en="Liked the analysis?" />
+        </p>
+        <p className="mt-1 text-sm text-muted">
+          <T es="Recibe el Pre-Market cada mañana, antes de que abra Wall Street."
+             en="Get the Pre-Market every morning, before Wall Street opens." />
+        </p>
+        <SubscribeForm />
+      </div>
 
       {(prev || next) && (
         <div className="reveal flex items-center justify-between border-t border-edge pt-4 text-sm">

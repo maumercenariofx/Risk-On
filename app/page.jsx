@@ -8,6 +8,7 @@ import CountdownTimers from "../components/CountdownTimers";
 import RatesSection from "../components/RatesSection";
 import EconCalendar from "../components/EconCalendar";
 import AdvancedData from "../components/AdvancedData";
+import MobileCollapse from "../components/MobileCollapse";
 import { getAllPostsMeta } from "../lib/posts";
 
 export default function Home() {
@@ -28,9 +29,17 @@ export default function Home() {
 
       <ProjectCards />
       <CountdownTimers />
-      <RatesSection />
-      <EconCalendar />
-      <AdvancedData />
+
+      {/* Secciones densas: colapsables en móvil para evitar scroll infinito */}
+      <MobileCollapse es="Tasas de referencia" en="Reference rates">
+        <RatesSection />
+      </MobileCollapse>
+      <MobileCollapse es="Calendario económico" en="Economic calendar">
+        <EconCalendar />
+      </MobileCollapse>
+      <MobileCollapse es="Datos avanzados" en="Advanced data">
+        <AdvancedData />
+      </MobileCollapse>
     </div>
   );
 }

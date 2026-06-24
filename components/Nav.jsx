@@ -24,7 +24,7 @@ export default function Nav() {
         <Link href="/" className="flex flex-col leading-tight" onClick={() => setOpen(false)}>
           <span className="font-serif text-2xl font-medium tracking-tight text-bone">Risk On</span>
           <span className="text-[10px] tracking-wide text-muted">
-            Daily views by Mauricio Mercenario
+            <T es="Views diarios de Mauricio Mercenario" en="Daily views by Mauricio Mercenario" />
           </span>
         </Link>
 
@@ -38,6 +38,12 @@ export default function Nav() {
               <T es={l.es} en={l.en} />
             </Link>
           ))}
+          <Link
+            href="/#subscribe"
+            className="rounded-md border border-bone/50 bg-white/10 px-3 py-1.5 text-sm font-medium text-bone transition-colors hover:bg-white/15"
+          >
+            <T es="Suscríbete" en="Subscribe" />
+          </Link>
         </div>
 
         <div className="flex items-center gap-1.5">
@@ -87,6 +93,13 @@ export default function Nav() {
               <T es={l.es} en={l.en} />
             </Link>
           ))}
+          <Link
+            href="/#subscribe"
+            onClick={() => setOpen(false)}
+            className="mt-3 rounded-md border border-bone/50 bg-white/10 py-2.5 text-center text-sm font-medium text-bone"
+          >
+            <T es="Suscríbete" en="Subscribe" />
+          </Link>
         </div>
       </div>
     </header>
