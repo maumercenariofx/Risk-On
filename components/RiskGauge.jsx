@@ -421,10 +421,16 @@ export default function RiskGauge({ post }) {
               backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)",
               border: "1px solid #1E1E20", borderRadius: 10, padding: "18px 18px",
             }}>
+              <p style={{ fontSize: 12, color: "#8A8A8E", lineHeight: 1.75, marginBottom: 12 }}>
+                <T
+                  es="El índice Risk On resume en un número (0–100) el apetito global por riesgo con énfasis en México. Combina 9 señales de mercado ponderadas; es el MISMO número, determinístico, que ves en cada nota diaria y en el correo — sin cajas negras ni IA inventando el valor."
+                  en="The Risk On index summarizes global risk appetite — with a Mexico focus — in a single number (0–100). It combines 9 weighted market signals; it's the SAME deterministic number you see in every daily note and email — no black boxes, no AI making up the value."
+                />
+              </p>
               <p style={{ fontSize: 12, color: "#8A8A8E", lineHeight: 1.75, marginBottom: 16 }}>
                 <T
-                  es="El índice Risk On resume en un número (0–100) el apetito global por riesgo con énfasis en México. Combina 9 señales de mercado, cada una normalizada a 0–100 según rangos típicos, y las pondera. Es el MISMO número que ves en cada nota diaria — sin cajas negras."
-                  en="The Risk On index summarizes global risk appetite — with a Mexico focus — in a single number (0–100). It combines 9 market signals, each normalized to 0–100 over typical ranges, then weighted. It's the SAME number you see in every daily note — no black boxes."
+                  es="Cada señal se normaliza a 0–100 con un z-score robusto contra su desviación rodante (~60 días): el rango se ensancha en pánico y se encoge en calma, y un mapeo logístico evita que los extremos se 'topen' en 0 o 100 — así sigue siendo sensible en días de euforia o miedo. Las señales lentas (carry, curva) usan rangos de referencia fijos. La metodología se valida con backtests de 5 años y las bandas están calibradas sobre la distribución histórica."
+                  en="Each signal is normalized to 0–100 with a robust z-score against its rolling deviation (~60 days): the range widens in panic and narrows in calm, and a logistic mapping keeps extremes from pinning at 0 or 100 — so it stays sensitive on days of fear or euphoria. Slow signals (carry, curve) use fixed reference ranges. The methodology is validated with 5-year backtests and the bands are calibrated to the historical distribution."
                 />
               </p>
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>

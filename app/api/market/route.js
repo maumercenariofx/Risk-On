@@ -116,8 +116,10 @@ export async function GET(request) {
   };
   const keys = Object.keys(SYMBOLS);
 
+  // range=6mo: necesitamos ~126 cierres diarios para la ventana rodante de 60
+  // días que usa la normalización dinámica del índice (lib/riskScore.js).
   const [charts, usdmxn, eurusd, liveSpot] = await Promise.all([
-    Promise.all(keys.map((k) => yahooChart(SYMBOLS[k], { live }))),
+    Promise.all(keys.map((k) => yahooChart(SYMBOLS[k], { range: "6mo", live }))),
     fxRate("USD", "MXN", { live }),
     fxRate("EUR", "USD", { live }),
     live ? usdmxnIntradaySpot() : Promise.resolve(null),
@@ -137,6 +139,42 @@ export async function GET(request) {
     if (!closes?.length) return null;
     return Math.round(closes[closes.length - 1] * 10000) / 10000;
   };
+
+  // ── Series rodantes para la normalización dinámica del índice ───────────────
+  // El score (lib/riskScore.js) normaliza cada señal con un z-score robusto sobre
+  // una ventana de ~60 días; aquí mandamos la serie de insumos diarios que necesita
+  // (recortada a 70 puntos, redondeada). Si una serie viene corta/vacía, el índice
+  // cae solo a su rampa fija.
+  const round3 = (v) => (v == null || isNaN(v) ? null : Math.round(v * 1000) / 1000);
+  const tail = (arr, n = 70) => (Array.isArray(arr) ? arr.slice(-n).map(round3) : []);
+  const dailyPct = (closes) => {
+    if (!closes?.length) return [];
+    const out = [];
+    for (let i = 1; i < closes.length; i++) {
+      const p = closes[i - 1];
+      out.push(p ? ((closes[i] - p) / p) * 100 : null);
+    }
+    return out;
+  };
+  // Vol realizada anualizada (%) rodante a `win` días, un valor por día.
+  const rollingVol = (closes, win = 21) => {
+    if (!closes?.length) return [];
+    const lr = [];
+    for (let i = 1; i < closes.length; i++) {
+      lr.push(closes[i] && closes[i - 1] ? Math.log(closes[i] / closes[i - 1]) : null);
+    }
+    const out = [];
+    for (let i = 0; i < lr.length; i++) {
+      const w = lr.slice(Math.max(0, i - win + 1), i + 1).filter((x) => x != null);
+      if (w.length < 6) { out.push(null); continue; }
+      const m = w.reduce((a, b) => a + b, 0) / w.length;
+      const v = w.reduce((a, b) => a + (b - m) ** 2, 0) / (w.length - 1);
+      out.push(Math.sqrt(v) * Math.sqrt(252) * 100);
+    }
+    return out;
+  };
+  const mxnVolSeries = rollingVol(c.usdmxnChart?.closes);
+  const mxnVolNow = mxnVolSeries.length ? mxnVolSeries[mxnVolSeries.length - 1] : null;
 
   const data = {
     asOf: new Date().toISOString(),
@@ -193,8 +231,16 @@ export async function GET(request) {
     usdjpyChg: c.usdjpy?.chgPct ?? null,
     us10y:    c.us10y?.price  ?? null,
     us10yChg: c.us10y?.chgPct ?? null,
-    // Volatilidad realizada USD/MXN (proxy automático de la implícita)
-    mxnVol: realizedVol(c.usdmxnChart?.closes) ?? 9.1,
+    // Volatilidad realizada USD/MXN (proxy automático de la implícita), 21 días
+    mxnVol: mxnVolNow ?? realizedVol(c.usdmxnChart?.closes) ?? 9.1,
+    // ── Series rodantes (insumos de la normalización dinámica del índice) ──────
+    vixSeries:        tail(c.vix?.closes),
+    moveSeries:       tail(c.move?.closes),
+    mxnVolSeries:     tail(mxnVolSeries),
+    usdmxnChgSeries:  tail(dailyPct(c.usdmxnChart?.closes)),
+    spxChgSeries:     tail(dailyPct(c.spx?.closes)),
+    btcChgSeries:     tail(dailyPct(c.btc?.closes)),
+    goldChgSeries:    tail(dailyPct(c.gold?.closes)),
   };
 
   return Response.json(data, {
