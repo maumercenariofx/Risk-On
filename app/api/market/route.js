@@ -9,12 +9,15 @@ export const revalidate = 60;
 
 const YAHOO_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
 
-async function yahooChart(symbol) {
+// `live` (lo usa solo la generación del view diario vía ?live=1): trae el dato
+// fresco al instante (cache: "no-store") en vez de la versión cacheada 60s, para
+// que el correo de las 6:58 cite el mercado EXACTO de ese momento.
+async function yahooChart(symbol, { range = "1mo", interval = "1d", live = false } = {}) {
   try {
-    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?range=1mo&interval=1d`;
+    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?range=${range}&interval=${interval}`;
     const res = await fetch(url, {
       headers: { "User-Agent": YAHOO_UA, Accept: "application/json" },
-      next: { revalidate },
+      ...(live ? { cache: "no-store" } : { next: { revalidate } }),
     });
     if (!res.ok) throw new Error(res.status);
     const json = await res.json();
@@ -64,11 +67,11 @@ function rollingLevels(highs, lows, period = 10) {
   };
 }
 
-async function fxRate(base, quote) {
+async function fxRate(base, quote, { live = false } = {}) {
   try {
     const res = await fetch(
       `https://api.frankfurter.app/latest?from=${base}&to=${quote}`,
-      { next: { revalidate } }
+      live ? { cache: "no-store" } : { next: { revalidate } }
     );
     const d = await res.json();
     return d?.rates?.[quote] ?? null;
@@ -88,7 +91,20 @@ function realizedVol(closes) {
   return Math.sqrt(variance) * Math.sqrt(252) * 100;
 }
 
-export async function GET() {
+// Spot USD/MXN intradía (último candle de 1 minuto) — el más fiel al nivel real
+// de ese instante. Solo se usa en modo live; si falla, GET cae al spot diario.
+async function usdmxnIntradaySpot() {
+  const chart = await yahooChart("MXN=X", { range: "1d", interval: "1m", live: true });
+  const closes = chart?.closes;
+  if (!closes?.length) return null;
+  return Math.round(closes[closes.length - 1] * 10000) / 10000;
+}
+
+export async function GET(request) {
+  // ?live=1 → datos frescos al instante (sin caché), para la generación del view
+  // diario. Sin el parámetro, la ruta mantiene su caché de 60s/SWR para el sitio.
+  const live = new URL(request.url).searchParams.get("live") === "1";
+
   const SYMBOLS = {
     spx: "^GSPC", esfut: "ES=F", ndx: "^IXIC", vix: "^VIX", move: "^MOVE", dxy: "DX-Y.NYB",
     aapl: "AAPL", tsla: "TSLA", nvda: "NVDA", btc: "BTC-USD", eth: "ETH-USD",
@@ -100,10 +116,11 @@ export async function GET() {
   };
   const keys = Object.keys(SYMBOLS);
 
-  const [charts, usdmxn, eurusd] = await Promise.all([
-    Promise.all(keys.map((k) => yahooChart(SYMBOLS[k]))),
-    fxRate("USD", "MXN"),
-    fxRate("EUR", "USD"),
+  const [charts, usdmxn, eurusd, liveSpot] = await Promise.all([
+    Promise.all(keys.map((k) => yahooChart(SYMBOLS[k], { live }))),
+    fxRate("USD", "MXN", { live }),
+    fxRate("EUR", "USD", { live }),
+    live ? usdmxnIntradaySpot() : Promise.resolve(null),
   ]);
 
   const c = {};
@@ -128,9 +145,10 @@ export async function GET() {
     // discrepancia entre las tarjetas/ticker y el chart de Mercados)
     usdmxn:    lastClose(c.usdmxnChart) ?? c.usdmxnChart?.price ?? usdmxn ?? 18.42,
     usdmxnChg: c.usdmxnChart?.chgPct ?? null,
-    // Spot en vivo (regularMarketPrice) — más fiel a las 7am que el último cierre
-    // diario; lo usa el view premarket para citar el nivel exacto del USD/MXN.
-    usdmxnSpot: c.usdmxnChart?.price ?? lastClose(c.usdmxnChart) ?? usdmxn ?? null,
+    // Spot en vivo — lo usa el view premarket para citar el nivel exacto del
+    // USD/MXN. En modo live es el último candle de 1 minuto (lo más fiel al
+    // instante); si no, regularMarketPrice → último cierre diario → Frankfurter.
+    usdmxnSpot: liveSpot ?? c.usdmxnChart?.price ?? lastClose(c.usdmxnChart) ?? usdmxn ?? null,
     eurusd:    lastClose(c.eurusdChart) ?? c.eurusdChart?.price ?? eurusd ?? 1.084,
     eurusdChg: c.eurusdChart?.chgPct ?? null,
     eurmxn:    lastClose(c.eurmxnChart) ?? c.eurmxnChart?.price ?? null,
@@ -180,6 +198,10 @@ export async function GET() {
   };
 
   return Response.json(data, {
-    headers: { "Cache-Control": "s-maxage=60, stale-while-revalidate=300" },
+    headers: {
+      "Cache-Control": live
+        ? "no-store"
+        : "s-maxage=60, stale-while-revalidate=300",
+    },
   });
 }
