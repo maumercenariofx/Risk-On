@@ -60,21 +60,30 @@ async function handler(request) {
   if (!batch.length) return Response.json({ ok: true, done: true, remaining: 0 });
 
   const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-  const processed = await Promise.all(
+  // Traducciones en paralelo (rápido)…
+  const translated = await Promise.all(
     batch.map(async ({ slug, data, content }) => {
       try {
         const en = await translate(anthropic, content);
-        if (!en) return { slug, ok: false, error: "empty translation" };
-        // ES intacto en el cuerpo; EN completo en front-matter body_en (lo
-        // renderiza lib/posts.js → html_en). Conserva el resto del front-matter.
-        const md = matter.stringify(`\n${content.trim()}\n`, { ...data, body_en: en });
-        const pub = await publishToGitHub(slug, md);
-        return { slug, ok: pub.ok, error: pub.error };
+        return { slug, data, content, en };
       } catch (e) {
-        return { slug, ok: false, error: String(e?.message ?? e) };
+        return { slug, error: String(e?.message ?? e) };
       }
     })
   );
+  // …pero los commits a GitHub SECUENCIALES: commits concurrentes a la misma rama
+  // chocan (409). ES intacto en el cuerpo; EN completo en front-matter body_en.
+  const processed = [];
+  for (const t of translated) {
+    if (t.error || !t.en) { processed.push({ slug: t.slug, ok: false, error: t.error || "empty translation" }); continue; }
+    try {
+      const md = matter.stringify(`\n${t.content.trim()}\n`, { ...t.data, body_en: t.en });
+      const pub = await publishToGitHub(t.slug, md);
+      processed.push({ slug: t.slug, ok: pub.ok, error: pub.error });
+    } catch (e) {
+      processed.push({ slug: t.slug, ok: false, error: String(e?.message ?? e) });
+    }
+  }
 
   const okCount = processed.filter((r) => r.ok).length;
   return Response.json({ ok: true, processed, remaining: pending.length - okCount });
