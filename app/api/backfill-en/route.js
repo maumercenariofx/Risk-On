@@ -44,7 +44,7 @@ async function handler(request) {
   }
 
   const url = new URL(request.url);
-  const limit = Math.min(parseInt(url.searchParams.get("limit") || "4", 10) || 4, 6);
+  const limit = Math.min(parseInt(url.searchParams.get("limit") || "20", 10) || 20, 30);
   const onlySlug = url.searchParams.get("slug");
 
   const slugs = fs.readdirSync(DIR).filter((f) => f.endsWith(".md")).map((f) => f.replace(/\.md$/, ""));
