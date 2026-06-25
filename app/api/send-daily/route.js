@@ -242,8 +242,23 @@ async function handler(request) {
   let post = null;
   const steps = { generated: false, published: false };
   if (resend) {
-    const posts = getAllPostsMeta();
-    post = posts.find((p) => String(p.date).slice(0, 10) === slug) ?? posts[0] ?? null;
+    // Lee directo de GitHub para tener el content más reciente,
+    // independientemente del build desplegado en Vercel.
+    try {
+      const rawUrl = `https://raw.githubusercontent.com/maumercenariofx/Risk-On/main/content/${slug}.md`;
+      const res = await fetch(rawUrl, { cache: "no-store" });
+      if (res.ok) {
+        const text = await res.text();
+        const matter = (await import("gray-matter")).default;
+        const { data } = matter(text);
+        post = { slug, ...data };
+      }
+    } catch {}
+    // Fallback al build local si GitHub falla
+    if (!post) {
+      const posts = getAllPostsMeta();
+      post = posts.find((p) => String(p.date).slice(0, 10) === slug) ?? posts[0] ?? null;
+    }
   } else {
     try {
       const data = await fetchLiveData(SITE);
