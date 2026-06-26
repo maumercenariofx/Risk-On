@@ -4,9 +4,11 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 // Genera y publica el view del día en GitHub, sin enviar emails.
-// Corre via Vercel cron (~6:50 AM México) para que el content esté listo
-// cuando cronjob.org dispare el envío (~7:05 AM).
-export async function GET(request) {
+// Corre via cronjob.org (~6:50 AM México) + Vercel cron de respaldo, para que
+// el content esté listo cuando se dispare el envío (~6:58 AM).
+// Acepta GET y POST (igual que send-daily) — así no falla con 405 si el
+// disparador externo usa POST.
+async function handler(request) {
   const auth = request.headers.get("authorization") ?? "";
   if (auth !== `Bearer ${process.env.CRON_SECRET}`) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
@@ -35,3 +37,5 @@ export async function GET(request) {
 
   return Response.json({ ok: true, slug, score: view.score, riskState: view.riskState, published: pub.ok, publishError: pub.error });
 }
+
+export { handler as GET, handler as POST };
