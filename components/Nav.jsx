@@ -29,6 +29,7 @@ export default function Nav() {
     { href: "/", es: "Inicio", en: "Home" },
     { href: "/archive", es: "Archivo", en: "Archive" },
     { href: "/markets", es: "Mercados", en: "Markets" },
+    { href: "/analisis", es: "Análisis", en: "Analysis" },
     { href: "/learn", es: "Aprende", en: "Learn" },
     { href: "/about", es: "Contacto", en: "Contact" },
   ];
