@@ -242,8 +242,8 @@ async function handler(request) {
   let post = null;
   const steps = { generated: false, published: false };
   if (resend) {
-    // Lee directo de GitHub para tener el content más reciente,
-    // independientemente del build desplegado en Vercel.
+    // Lee el view de HOY directo de GitHub (content más reciente, sin depender
+    // del build desplegado en Vercel).
     try {
       const rawUrl = `https://raw.githubusercontent.com/maumercenariofx/Risk-On/main/content/${slug}.md`;
       const res = await fetch(rawUrl, { cache: "no-store" });
@@ -254,10 +254,22 @@ async function handler(request) {
         post = { slug, ...data };
       }
     } catch {}
-    // Fallback al build local si GitHub falla
+    // Si el view de HOY aún NO está publicado (p.ej. gen-daily se retrasó por el
+    // lag del cron de Vercel Hobby), genéralo AHORA mismo. NUNCA caer a un post
+    // viejo: es preferible un envío tarde y correcto que mandar el view de ayer.
     if (!post) {
-      const posts = getAllPostsMeta();
-      post = posts.find((p) => String(p.date).slice(0, 10) === slug) ?? posts[0] ?? null;
+      try {
+        const data = await fetchLiveData(SITE);
+        const view = await generateDailyView(data, dateLong, slug);
+        const md = buildMarkdown(view, slug);
+        const pub = await publishToGitHub(slug, md);
+        steps.generated = true;
+        steps.published = pub.ok;
+        if (!pub.ok) steps.publishError = pub.error;
+        post = { slug, ...view };
+      } catch (e) {
+        steps.genError = String(e?.message ?? e);
+      }
     }
   } else {
     try {
@@ -274,11 +286,18 @@ async function handler(request) {
     }
   }
 
-  // Fallback: si la generación falló, usa el último view existente.
-  if (!post) {
+  // Última red de seguridad: SOLO se envía el view de HOY. Si por lo que sea no
+  // se obtuvo (GitHub caído + generación fallida), buscar el de hoy en el build;
+  // si tampoco está, ABORTAR el envío. Jamás mandar el view de otro día.
+  if (!post || String(post.slug ?? post.date).slice(0, 10) !== slug) {
     const posts = getAllPostsMeta();
-    if (!posts.length) return Response.json({ error: "no view available", steps }, { status: 500 });
-    post = posts.find((p) => String(p.date).slice(0, 10) === slug) ?? posts[0];
+    post = posts.find((p) => String(p.date).slice(0, 10) === slug) ?? null;
+  }
+  if (!post) {
+    return Response.json(
+      { error: "no se pudo obtener el view de HOY; envío abortado para no mandar uno viejo", slug, steps },
+      { status: 503 }
+    );
   }
 
   const { title_es, summary_es, watch_es = [], support, resistance, score = 70, greeting_es, signoff_es } = post;
