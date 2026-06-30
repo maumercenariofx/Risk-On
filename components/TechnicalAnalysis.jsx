@@ -5,6 +5,7 @@
 // de indicadores + señal al instante contra /api/ta.
 import { useEffect, useState, useCallback } from "react";
 import { useLang, t } from "./Lang";
+import TAMethodology from "./TAMethodology";
 
 const GREEN = "#00C805";
 const RED = "#FF5000";
@@ -218,6 +219,8 @@ export default function TechnicalAnalysis() {
           </p>
         </Card>
       )}
+
+      <TAMethodology />
     </div>
   );
 }
@@ -276,9 +279,13 @@ function StretchGauge({ idx, lang }) {
         </div>
       </div>
 
-      {event?.impact > 0 && (
+      {event?.severity > 0 && (
         <div className="mt-2 text-[11px]" style={{ color: "#F59E0B" }}>
-          ⚠ {event.name} {t(lang, "hoy — convicción reducida por riesgo de evento", "today — conviction reduced for event risk")}
+          ⚠ {event.name} {event.daysUntil === 0
+            ? t(lang, "hoy", "today")
+            : t(lang, `en ${event.daysUntil} día${event.daysUntil > 1 ? "s" : ""} hábil${event.daysUntil > 1 ? "es" : ""}`,
+                      `in ${event.daysUntil} business day${event.daysUntil > 1 ? "s" : ""}`)
+          } — {t(lang, "convicción reducida por riesgo de evento", "conviction reduced for event risk")}
         </div>
       )}
 
