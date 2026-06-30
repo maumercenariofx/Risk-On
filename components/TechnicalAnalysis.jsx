@@ -81,6 +81,7 @@ export default function TechnicalAnalysis() {
 
   const curatedLabel = CURATED.find((c) => c.symbol === symbol)?.label;
   const bias = data ? BIAS[data.verdict.bias] : null;
+  const idx = data?.index;
   const up = (data?.chgPct ?? 0) >= 0;
 
   return (
@@ -149,11 +150,16 @@ export default function TechnicalAnalysis() {
                 {up ? "+" : ""}{data.chgPct?.toFixed(2)}%
               </div>
             </div>
-            <div className="flex items-center gap-2 rounded-md border border-edge px-3 py-2">
-              <span className="h-2.5 w-2.5 rounded-full" style={{ background: bias.dot }} />
-              <span className="text-sm font-medium text-bone">{t(lang, bias.es, bias.en)}</span>
-            </div>
+            {idx && (
+              <div className="flex items-center gap-2 rounded-md border px-3 py-2" style={{ borderColor: `${idx.band.color}66` }}>
+                <span className="h-2.5 w-2.5 rounded-full" style={{ background: idx.band.color }} />
+                <span className="text-sm font-medium text-bone">{t(lang, idx.band.es, idx.band.en)}</span>
+              </div>
+            )}
           </div>
+
+          {/* ── Índice Técnico Risk On — Oscilador de Estiramiento ── */}
+          {idx && <StretchGauge idx={idx} lang={lang} />}
 
           {/* Razones (chips) */}
           <div className="mt-4 flex flex-wrap gap-2">
@@ -223,6 +229,85 @@ function macdText(m, lang) {
   const cross = m.cross === "bull" ? (lang === "en" ? " cross▲" : " cruce▲")
     : m.cross === "bear" ? (lang === "en" ? " cross▼" : " cruce▼") : "";
   return `${sign}${m.histogram} ${dir}${cross}`;
+}
+
+function StretchGauge({ idx, lang }) {
+  const { posture, conviction, band, reading, factors, event } = idx;
+  const FACT = {
+    trend: ["Tendencia", "Trend"], momentum: ["Momentum", "Momentum"],
+    position: ["Posición", "Position"], volume: ["Volumen", "Volume"],
+  };
+  return (
+    <div className="mt-5 rounded-md border border-edge p-4" style={{ background: "rgba(255,255,255,0.02)" }}>
+      <div className="flex items-center justify-between">
+        <div className="text-xs uppercase tracking-wide text-muted">
+          {t(lang, "Índice Técnico · Estiramiento", "Technical Index · Stretch")}
+        </div>
+        <span className="rounded border border-edge px-2 py-0.5 text-[10px] text-muted"
+          title={t(lang, "Validado con backtest de 5 años (IC + walk-forward).", "Validated on a 5-year backtest (IC + walk-forward).")}>
+          ✓ {t(lang, "validado", "validated")}
+        </span>
+      </div>
+
+      <div className="mt-3 flex items-baseline gap-2">
+        <span className="font-mono text-4xl font-medium tabular-nums" style={{ color: band.color }}>{posture}</span>
+        <span className="text-sm text-muted">/ 100</span>
+        <span className="ml-auto text-sm font-semibold" style={{ color: band.color }}>{t(lang, band.es, band.en)}</span>
+      </div>
+
+      {/* Barra divergente: verde (sobreventa) → gris (equilibrio) → rojo (sobrecompra) */}
+      <div className="relative mt-3 h-2.5 w-full rounded-full"
+        style={{ background: "linear-gradient(90deg,#00C805,#5BC88A 25%,#9CA3AF 50%,#F59E0B 75%,#FF5000)" }}>
+        <div className="absolute top-1/2 h-4 w-1 -translate-y-1/2 rounded-full bg-bone" style={{ left: `calc(${posture}% - 2px)` }} />
+      </div>
+      <div className="mt-1.5 flex justify-between text-[9px] uppercase tracking-wide text-muted/70">
+        <span>{t(lang, "sobreventa", "oversold")}</span>
+        <span>{t(lang, "equilibrio", "balanced")}</span>
+        <span>{t(lang, "sobrecompra", "overbought")}</span>
+      </div>
+
+      <div className="mt-4">
+        <div className="mb-1 flex justify-between text-[11px]">
+          <span className="text-muted">{t(lang, "Convicción", "Conviction")}</span>
+          <span className="font-mono text-bone">{conviction}%</span>
+        </div>
+        <div className="h-1.5 w-full overflow-hidden rounded-full bg-edge/50">
+          <div className="h-full rounded-full" style={{ width: `${conviction}%`, background: conviction >= 60 ? "#5BC88A" : conviction >= 35 ? "#F59E0B" : "#FF8C42" }} />
+        </div>
+      </div>
+
+      {event?.impact > 0 && (
+        <div className="mt-2 text-[11px]" style={{ color: "#F59E0B" }}>
+          ⚠ {event.name} {t(lang, "hoy — convicción reducida por riesgo de evento", "today — conviction reduced for event risk")}
+        </div>
+      )}
+
+      <p className="mt-3 text-sm leading-relaxed text-bone">{lang === "en" ? reading.en : reading.es}</p>
+
+      <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {Object.entries(FACT).map(([k, lab]) => {
+          const v = factors[k];
+          return (
+            <div key={k}>
+              <div className="mb-1 flex justify-between text-[10px]">
+                <span className="text-muted">{lang === "en" ? lab[1] : lab[0]}</span>
+                <span className="font-mono text-muted">{v == null ? "N/D" : Math.round(v)}</span>
+              </div>
+              <div className="h-1 w-full overflow-hidden rounded-full bg-edge/50">
+                {v != null && <div className="h-full rounded-full" style={{ width: `${v}%`, background: v >= 60 ? "#F59E0B" : v <= 40 ? "#5BC88A" : "#9CA3AF" }} />}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <p className="mt-3 text-[11px] leading-relaxed text-muted/70">
+        {t(lang,
+          "Índice propietario de Mauricio Mercenario. Mide estiramiento técnico: en el histórico, las lecturas extremas tienden a revertir a 1-4 semanas. Indicativo, no es recomendación de inversión.",
+          "Proprietary index by Mauricio Mercenario. Measures technical stretch: historically, extreme readings tend to revert over 1-4 weeks. Informational, not investment advice.")}
+      </p>
+    </div>
+  );
 }
 
 function Card({ children }) {

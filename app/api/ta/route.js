@@ -5,6 +5,8 @@
 import {
   ema, rsi, macd, atr, bollinger, vwap, pivots, levels, verdict,
 } from "../../../lib/technicals";
+import { buildDailyBundle, computeTAIndex, taReading } from "../../../lib/taIndex";
+import { eventImpact } from "../../../lib/events";
 
 export const revalidate = 60;
 
@@ -89,6 +91,16 @@ export async function GET(request) {
 
   const v = verdict({ price, ema20, ema50, ema200, macd: macdV, rsi: rsiV });
 
+  // ── Índice Técnico Risk On (oscilador de estiramiento + convicción) ──────────
+  const ev = eventImpact();
+  const dailyVol = daily.volumes ?? [];
+  const dvSum = dailyVol.slice(-20).reduce((a, b) => a + (b || 0), 0);
+  const volRatio = dvSum > 0 ? dailyVol[dailyVol.length - 1] / (dvSum / 20) : null;
+  const bundle = buildDailyBundle(closes, highs, lows, {
+    price, vwap: vwapVal, hasVolume, volRatio, eventImpact: ev.impact,
+  });
+  const itr = computeTAIndex(bundle, { eventImpact: ev.impact });
+
   // Decimales según magnitud (FX 4, índices/cripto 2).
   const dp = price >= 1000 ? 2 : price >= 50 ? 2 : 4;
   const f = (x) => (x == null ? null : Math.round(x * 10 ** dp) / 10 ** dp);
@@ -110,6 +122,14 @@ export async function GET(request) {
     },
     levels: { pivots: piv, ...lvl, prevHigh: f(highs[n - 2]), prevLow: f(lows[n - 2]) },
     verdict: v,
+    index: itr ? {
+      posture: itr.direction,
+      conviction: itr.conviction,
+      band: itr.band,
+      reading: taReading(itr.direction),
+      factors: itr.factors,
+      event: ev,
+    } : null,
     signal,
     asOf: new Date().toISOString(),
   });
