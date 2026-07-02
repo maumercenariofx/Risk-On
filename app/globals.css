@@ -75,7 +75,9 @@ body::before {
    anima antes de que lo veas. */
 @keyframes reveal {
   from { opacity: 0; transform: translateY(18px); }
-  to   { opacity: 1; transform: translateY(0); }
+  /* `none` (no translateY(0)): un transform residual crea containing-block y
+     rompe los position:fixed descendientes (p.ej. el sticky score badge). */
+  to   { opacity: 1; transform: none; }
 }
 .reveal {
   opacity: 0;
@@ -165,6 +167,26 @@ html.io .reveal.in-view {
 }
 
 a { color: inherit; }
+
+/* Hero a pantalla completa: rompe el contenedor central (max-w-5xl) y ocupa
+   el viewport menos nav+ticker (~164px). svh evita el brinco de la barra de
+   URL en móvil. */
+.full-bleed {
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+}
+.hero-full { height: max(480px, calc(100vh - 175px)); }
+@supports (height: 100svh) {
+  .hero-full { height: max(480px, calc(100svh - 175px)); }
+}
+
+/* Invitación a scrollear al pie del hero */
+@keyframes hint-bob {
+  0%, 100% { transform: translateY(0);   opacity: 0.45; }
+  50%      { transform: translateY(6px); opacity: 0.9; }
+}
+.scroll-hint { animation: hint-bob 2.4s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .scroll-hint { animation: none; } }
 
 /* Links del nav (desktop): subrayado animado + estado activo */
 .nav-link { position: relative; padding-bottom: 2px; }

@@ -128,19 +128,24 @@ export default function RiskGauge({ post }) {
   return (
     <section className="reveal" style={{ animationDelay: "0.05s" }}>
 
-      {/* ── Hero ── */}
-      <div ref={heroRef} style={{ position: "relative", height: 520, marginBottom: 28 }}>
+      {/* ── Hero — full-bleed a pantalla completa (.full-bleed/.hero-full) ── */}
+      <div ref={heroRef} className="full-bleed hero-full" style={{ position: "relative", marginBottom: 28 }}>
 
         {/* Sphere — full hero, so intro particles can scatter to the edges */}
         <div style={{ position: "absolute", inset: 0 }}>
           <RiskSphere ref={sphereRef} height="100%" />
         </div>
 
+        {/* Overlays alineados al contenedor central; pointer-events solo en
+            los chips para no taparle la interacción al globo. OJO: los hijos
+            absolutos ignoran el padding del wrapper → usan left/right: 20. */}
+        <div className="relative mx-auto h-full max-w-5xl" style={{ pointerEvents: "none" }}>
+
         {/* Top-left: title */}
         <div style={{
           position: "absolute",
           top: 28,
-          left: 0,
+          left: 20,
           lineHeight: 0.9,
           textTransform: "uppercase",
           fontFamily: "var(--font-sans)",
@@ -171,7 +176,7 @@ export default function RiskGauge({ post }) {
           <div style={{
             position: "absolute",
             bottom: 28,
-            right: 0,
+            right: 20,
             display: "flex",
             flexDirection: "column",
             alignItems: "flex-end",
@@ -181,7 +186,7 @@ export default function RiskGauge({ post }) {
               <div style={{ fontSize: 9, letterSpacing: 2, textTransform: "uppercase", color: "#4A4A50", pointerEvents: "none" }}>
                 <T es="Países en alerta" en="Countries on alert" />
               </div>
-              <div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "flex-end" }}>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "flex-end", pointerEvents: "auto" }}>
                 {countriesByRisk.map((c) => {
                   const col = tensionColor(c.live);
                   return (
@@ -237,7 +242,7 @@ export default function RiskGauge({ post }) {
           <div style={{
             position: "absolute",
             bottom: 28,
-            left: 0,
+            left: 20,
             fontSize: 9,
             letterSpacing: 2,
             textTransform: "uppercase",
@@ -247,6 +252,12 @@ export default function RiskGauge({ post }) {
             {dataFreshness(data.asOf, lang)}
           </div>
         )}
+        </div>
+
+        {/* Hint de scroll: el hero llena la pantalla, esto invita a bajar */}
+        <div style={{ position: "absolute", bottom: 10, left: 0, right: 0, display: "flex", justifyContent: "center", pointerEvents: "none" }}>
+          <span className="scroll-hint" style={{ color: "#3A3A40", fontSize: 13, lineHeight: 1 }}>▼</span>
+        </div>
       </div>
 
       {/* ── Termómetro 0–100: lectura instantánea de la temperatura del mercado ── */}

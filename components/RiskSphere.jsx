@@ -77,16 +77,28 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
       const container = mountRef.current;
       if (!container) return;
 
+      // Presupuesto por dispositivo: la simulación corre en CPU, así que el
+      // conteo de partículas y el pixel ratio se adaptan (el módulo declara el
+      // techo; aquí se SOMBREA N con el valor efectivo para todo el efecto).
+      const isSmall = Math.min(window.innerWidth, window.innerHeight) < 768;
+      const cores   = navigator.hardwareConcurrency || 4;
+      const N   = isSmall ? 56000 : cores <= 4 ? 72000 : 110000;
+      const DPR = Math.min(window.devicePixelRatio || 1, isSmall ? 1.5 : 2);
+
       const scene  = new THREE.Scene();
       const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 100);
       camera.position.z = 6.5;
 
-      const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+      const renderer = new THREE.WebGLRenderer({ antialias: !isSmall, alpha: true });
       renderer.setClearColor(0x000000, 0);
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.setPixelRatio(DPR);
       renderer.setSize(container.clientWidth, container.clientHeight);
       const canvas = renderer.domElement;
-      canvas.style.touchAction = "none";
+      // pan-y: el swipe vertical SIGUE scrolleando la página aunque empiece
+      // sobre el globo (crítico con el hero a pantalla completa); el efecto
+      // táctil sigue vivo vía pointerdown/move y se cancela si el browser
+      // toma el gesto para scrollear.
+      canvas.style.touchAction = "pan-y";
       canvas.style.userSelect = "none";
       canvas.style.webkitUserSelect = "none";
       canvas.style.webkitTouchCallout = "none";
@@ -167,7 +179,7 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
           uOpacity:       { value: 0.715 },
           uCountryData:   { value: makeCountryDataUniform(THREE) },
           uPixelsPerUnit: { value: 1 },
-          uPixelRatio:    { value: Math.min(window.devicePixelRatio, 2) },
+          uPixelRatio:    { value: DPR },
           uSize:          { value: 0.019 },
           uTime:          { value: 0 },
           uLightDir:      { value: new THREE.Vector3(0, 0, 0) },
@@ -218,9 +230,15 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
       };
 
       // ── Hover effect state ──
-      let elapsed = 0, animId, lastFrame = 0;
+      let elapsed = 0, animId = 0, lastFrame = 0;
       let mouseActive = false;
       let lastMoveAt  = 0;
+      // settled = partículas en casa y sin interacción → se SALTA el loop de
+      // física (el costo real del jank: N iteraciones + re-subir el buffer al
+      // GPU cada frame). La rotación del grupo y el shader siguen animando.
+      let settled = false, settleFrames = 0;
+      // visible = false (hero fuera del viewport) → se detiene el rAF entero.
+      let visible = true;
       const mouseNDC    = new THREE.Vector2();
       const mouseLocal  = new THREE.Vector3();
       const raycaster   = new THREE.Raycaster();
@@ -237,6 +255,7 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
         }
         mouseNDC.x = nx; mouseNDC.y = ny;
         mouseActive = true;
+        settled = false; settleFrames = 0;
       };
       const onPointerLeave = () => { mouseActive = false; };
       const onPointerDown  = (e) => { onPointerMove(e); lastMoveAt = elapsed; };
@@ -249,6 +268,7 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
       container.addEventListener("pointercancel", onPointerLeave);
 
       function animate(ts = 0) {
+        if (!visible) { animId = 0; return; } // pausa total fuera de pantalla
         animId = requestAnimationFrame(animate);
         if (ts - lastFrame < 1000 / 60) return;
         const dt = Math.min((ts - lastFrame) / 1000, 0.05);
@@ -303,6 +323,12 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
 
         if (morphT < 1) morphT = Math.min(1, morphT + dt / morphDur);
         else introActive = false;
+
+        // El loop de N partículas + subir el buffer solo corre cuando hace
+        // falta (interacción, morph o ATOM); en reposo el globo gira vía la
+        // matriz del grupo y el shader — CPU casi en cero.
+        const needsSim = mouseActive || morphT < 1 || currentIdx === ATOM_IDX || !settled;
+        if (needsSim) {
         const mt = morphT < 1 ? eio(morphT) : 1;
 
         for (let i = 0; i < N; i++) {
@@ -370,10 +396,38 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
         }
 
         posAttr.needsUpdate = true;
+
+        // Tras ~1.5s sin interacción los resortes ya convergieron: ancla todo
+        // a su home exacto y deja de simular hasta el próximo toque/morph.
+        if (!mouseActive && morphT >= 1 && currentIdx !== ATOM_IDX) {
+          if (++settleFrames > 90) {
+            for (let i = 0; i < N; i++) {
+              const ix = i * 3;
+              dispX[i] = 0; dispY[i] = 0; dispZ[i] = 0;
+              velX[i] = 0; velY[i] = 0; velZ[i] = 0;
+              effHome[ix] = baseNow[ix]; effHome[ix + 1] = baseNow[ix + 1]; effHome[ix + 2] = baseNow[ix + 2];
+            }
+            posAttr.needsUpdate = true;
+            settled = true;
+          }
+        } else settleFrames = 0;
+        } // fin needsSim
+
         renderer.render(scene, camera);
       }
 
       animate();
+
+      // Fuera del viewport se detiene el rAF completo (render + física): el
+      // globo dejaba de verse pero seguía costando frames a toda la página.
+      const vio = new IntersectionObserver(([entry]) => {
+        if (entry.isIntersecting) {
+          if (!visible) { visible = true; lastFrame = 0; if (!animId) animate(); }
+        } else {
+          visible = false;
+        }
+      }, { threshold: 0.02 });
+      vio.observe(container);
 
       const onResize = () => {
         camera.aspect = container.clientWidth / container.clientHeight;
@@ -387,6 +441,7 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
 
       cleanup = () => {
         cancelAnimationFrame(animId);
+        vio.disconnect();
         window.removeEventListener("resize", onResize);
         container.removeEventListener("pointermove", onPointerMove);
         container.removeEventListener("pointerleave", onPointerLeave);
@@ -411,7 +466,7 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
       style={{
         width: "100%",
         height,
-        touchAction: "none",
+        touchAction: "pan-y",
         WebkitUserSelect: "none",
         userSelect: "none",
         WebkitTouchCallout: "none",
