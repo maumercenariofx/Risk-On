@@ -21,7 +21,7 @@ export default function ArchiveList({ posts }) {
           const label = riskBand(p.score || 50);
           return (
             <Link key={p.slug} href={`/archive/${p.slug}`}
-              className="reveal block rounded-xl border border-edge bg-ink2/40 p-4 transition-colors hover:border-[#3A3A3E]"
+              className="reveal block rounded-xl border border-edge bg-ink2/40 p-4 transition-[border-color,transform,box-shadow] duration-300 hover:-translate-y-0.5 hover:border-[#3A3A3E] hover:shadow-[0_8px_30px_rgba(0,0,0,0.45)]"
               style={{ animationDelay: `${0.05 + i * 0.05}s` }}>
               <div className="flex items-center justify-between gap-3">
                 <div>

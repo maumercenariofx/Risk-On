@@ -68,7 +68,11 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
     let destroyed = false;
     let cleanup   = () => {};
 
-    loadThree().then(THREE => {
+    loadThree().then(async THREE => {
+      if (destroyed) return;
+      // El geo-data del globo vive en un chunk lazy (lib/geoMasks) — se espera
+      // ANTES de crear renderer/canvas para no dejar nada a medio montar.
+      const geoTex = await makeGeoTexture(THREE);
       if (destroyed) return;
       const container = mountRef.current;
       if (!container) return;
@@ -90,7 +94,6 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
       container.appendChild(canvas);
 
       const tex = makeDotTexture(THREE);
-      const geoTex = makeGeoTexture(THREE);
 
       // Particle positions for every selectable form. ATOM's home is
       // continuously re-ticked (orbital motion) while it's active.

@@ -21,11 +21,22 @@ export default function MobileCollapse({ es, en, children, defaultOpen = false }
         className="flex w-full items-center justify-between border-b border-edge py-3 text-left md:hidden"
       >
         <span className="text-xs uppercase tracking-[3px] text-muted">{title}</span>
-        <span className="text-[10px] text-muted">{open ? "▲" : "▼"}</span>
+        <span
+          className={`text-[10px] text-muted transition-transform duration-300 ${open ? "rotate-180" : ""}`}
+        >
+          ▼
+        </span>
       </button>
 
-      {/* Contenido: en móvil se oculta si está colapsado; en desktop siempre visible */}
-      <div className={`${open ? "block" : "hidden"} md:block`}>{children}</div>
+      {/* Contenido: en móvil se despliega animado (grid-rows, sin medir alturas);
+          en desktop siempre visible */}
+      <div
+        className={`grid transition-[grid-template-rows] duration-300 ease-out md:block ${
+          open ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+        }`}
+      >
+        <div className="min-h-0 overflow-hidden md:overflow-visible">{children}</div>
+      </div>
     </div>
   );
 }

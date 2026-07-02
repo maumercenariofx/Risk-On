@@ -1,10 +1,24 @@
 // app/layout.jsx
 import "./globals.css";
 import "flag-icons/css/flag-icons.min.css";
+import { Fraunces } from "next/font/google";
+import { GeistSans } from "geist/font/sans";
+import { GeistMono } from "geist/font/mono";
 import { Analytics } from "@vercel/analytics/next";
 import { LangProvider } from "../components/Lang";
 import Nav from "../components/Nav";
 import Footer from "../components/Footer";
+import RevealObserver from "../components/RevealObserver";
+
+// Fuentes self-hosted vía next/font (antes: <link> a Google Fonts, render-blocking).
+// Fraunces variable con eje óptico; Geist/Geist Mono del paquete oficial.
+const fraunces = Fraunces({
+  subsets: ["latin"],
+  style: ["normal", "italic"],
+  axes: ["opsz"],
+  variable: "--font-serif",
+  display: "swap",
+});
 
 export const metadata = {
   metadataBase: new URL("https://riskon.lat"),
@@ -30,16 +44,19 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="es">
+    <html lang="es" className={`${fraunces.variable} ${GeistSans.variable} ${GeistMono.variable}`}>
       <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;1,9..144,400&family=Geist:wght@400;500&family=Geist+Mono:wght@400;500&display=swap"
-          rel="stylesheet"
+        {/* html.io ANTES del primer paint → el reveal por scroll no parpadea.
+            Sin IO o con reduced-motion se queda el fallback (animar al montar). */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "try{if('IntersectionObserver' in window&&!matchMedia('(prefers-reduced-motion: reduce)').matches)document.documentElement.classList.add('io')}catch(e){}",
+          }}
         />
       </head>
       <body>
+        <RevealObserver />
         <LangProvider>
           <Nav />
           <main className="mx-auto max-w-5xl px-5 pb-20 pt-6">{children}</main>

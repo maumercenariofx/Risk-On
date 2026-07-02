@@ -6,6 +6,8 @@ import { useLang, T } from "./Lang";
 import ScoreGauge from "./ScoreGauge";
 import RiskBands from "./RiskBands";
 import SubscribeForm from "./SubscribeForm";
+import ReadingProgress from "./ReadingProgress";
+import { riskBand } from "../lib/riskScore";
 
 function ShareBar({ post, lang }) {
   const [copied, setCopied] = useState(false);
@@ -66,6 +68,7 @@ export default function PostView({ post, prev, next }) {
   const { lang } = useLang();
   return (
     <article className="space-y-5 pt-4">
+      {typeof post.score === "number" && <ReadingProgress color={riskBand(post.score).color} />}
       <Link href="/" className="text-sm text-muted hover:text-bone inline-block transition-colors">
         ← <T es="Inicio" en="Home" />
       </Link>

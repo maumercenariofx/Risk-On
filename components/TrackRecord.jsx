@@ -5,6 +5,7 @@
 // eje). Cada punto enlaza a su view en /archive/<slug>.
 import { useEffect, useRef, useState } from "react";
 import { useLang, T } from "./Lang";
+import { useCountUp } from "../lib/useCountUp";
 import { BANDS, riskBand } from "../lib/riskScore";
 import {
   crosshairPlugin, makeGlowPlugin, makeTerminalDotPlugin, makeGradientFn,
@@ -42,6 +43,12 @@ function fmtDate(slug, lang) {
     lang === "en" ? "en-US" : "es-MX",
     { day: "numeric", month: "short", timeZone: "UTC" }
   );
+}
+
+// Número que cuenta de 0 a su valor al entrar al viewport.
+function CountNumber({ value, style }) {
+  const [display, ref] = useCountUp(value);
+  return <span ref={ref} style={style}>{display}</span>;
 }
 
 function BandChip({ score }) {
@@ -221,34 +228,38 @@ export default function TrackRecord({ points }) {
   const range = days <= 28 ? "30" : days <= 85 ? "90" : "365";
   const bandLast = riskBand(last.score);
 
-  const stat = (label, value, color) => (
-    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-      <span style={sectionLabel}>{label}</span>
-      <span style={{
-        fontFamily: "var(--font-sans)", fontWeight: 700, fontSize: 24,
-        lineHeight: 1, color: color ?? "#F5F5F2", fontVariantNumeric: "tabular-nums",
-        ...(color ? { textShadow: `0 0 20px ${color}55` } : {}),
-      }}>
-        {value}
-      </span>
-    </div>
-  );
+  const stat = (label, value, color) => {
+    const numStyle = {
+      fontFamily: "var(--font-sans)", fontWeight: 700, fontSize: 24,
+      lineHeight: 1, color: color ?? "#F5F5F2", fontVariantNumeric: "tabular-nums",
+      ...(color ? { textShadow: `0 0 20px ${color}55` } : {}),
+    };
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+        <span style={sectionLabel}>{label}</span>
+        {typeof value === "number"
+          ? <CountNumber value={value} style={numStyle} />
+          : <span style={numStyle}>{value}</span>}
+      </div>
+    );
+  };
 
   return (
     <div className="flex flex-col gap-5">
       {/* Stats + score histórico */}
-      <div style={{ ...cardStyle(), padding: "18px 20px" }}>
+      <div className="card-glass" style={{ ...cardStyle(), padding: "18px 20px" }}>
         <div style={{ display: "flex", alignItems: "flex-end", gap: 28, flexWrap: "wrap", marginBottom: 16 }}>
           <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
             <span style={sectionLabel}><T es="Score actual" en="Current score" /></span>
             <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{
-                fontFamily: "var(--font-sans)", fontWeight: 700, fontSize: 30, lineHeight: 1,
-                color: bandLast.color, fontVariantNumeric: "tabular-nums",
-                textShadow: `0 0 20px ${bandLast.color}55`,
-              }}>
-                {last.score}
-              </span>
+              <CountNumber
+                value={last.score}
+                style={{
+                  fontFamily: "var(--font-sans)", fontWeight: 700, fontSize: 30, lineHeight: 1,
+                  color: bandLast.color, fontVariantNumeric: "tabular-nums",
+                  textShadow: `0 0 20px ${bandLast.color}55`,
+                }}
+              />
               <BandChip score={last.score} />
             </span>
           </div>
@@ -270,7 +281,7 @@ export default function TrackRecord({ points }) {
       </div>
 
       {/* USD/MXN del mismo período */}
-      <div style={{ ...cardStyle(), padding: "18px 20px" }}>
+      <div className="card-glass" style={{ ...cardStyle(), padding: "18px 20px" }}>
         <div style={{ ...sectionLabel, marginBottom: 10 }}>
           {lang === "en" ? `USD/MXN · last ${range} days` : `USD/MXN · últimos ${range} días`}
         </div>
@@ -284,21 +295,22 @@ export default function TrackRecord({ points }) {
       </div>
 
       {/* Tabla: últimos views */}
-      <div style={{ ...cardStyle(), padding: "18px 20px" }}>
+      <div className="card-glass" style={{ ...cardStyle(), padding: "18px 20px" }}>
         <div style={{ ...sectionLabel, marginBottom: 12 }}>
           <T es="Últimos views" en="Latest views" />
         </div>
         <table className="w-full" style={{ borderCollapse: "collapse" }}>
           <tbody>
             {[...points].reverse().slice(0, 10).map((p) => (
-              <tr key={p.slug} style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+              <tr key={p.slug} className="row-hover" style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
                 <td style={{ padding: "10px 0", fontFamily: "var(--font-mono)", fontSize: 11, color: "#9CA3AF", whiteSpace: "nowrap" }}>
                   {fmtDate(p.slug, lang)}
                 </td>
                 <td style={{ padding: "10px 12px", fontFamily: "var(--font-sans)", fontWeight: 700, fontSize: 14, color: riskBand(p.score).color, fontVariantNumeric: "tabular-nums", textAlign: "right", width: 40 }}>
                   {p.score}
                 </td>
-                <td style={{ padding: "10px 12px 10px 0", width: 120 }}>
+                {/* En móvil el chip se oculta: el color del score ya dice la banda */}
+                <td className="hidden sm:table-cell" style={{ padding: "10px 12px 10px 0", width: 120 }}>
                   <BandChip score={p.score} />
                 </td>
                 <td style={{ padding: "10px 0", fontSize: 13, lineHeight: 1.5 }}>

@@ -46,15 +46,21 @@ export default function Nav() {
         </Link>
 
         <div className="hidden items-center gap-6 md:flex">
-          {links.map((l) => (
-            <Link
-              key={l.href}
-              href={l.href}
-              className="text-sm text-muted transition-colors hover:text-bone"
-            >
-              <T es={l.es} en={l.en} />
-            </Link>
-          ))}
+          {links.map((l) => {
+            const active = l.href === "/" ? pathname === "/" : pathname.startsWith(l.href);
+            return (
+              <Link
+                key={l.href}
+                href={l.href}
+                aria-current={active ? "page" : undefined}
+                className={`nav-link text-sm transition-colors hover:text-bone ${
+                  active ? "is-active text-bone" : "text-muted"
+                }`}
+              >
+                <T es={l.es} en={l.en} />
+              </Link>
+            );
+          })}
           <Link
             href="/#subscribe"
             onClick={handleSubscribe}

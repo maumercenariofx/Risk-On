@@ -40,7 +40,10 @@ export default function QuantLab() {
     let destroyed = false;
     let cleanup = () => {};
 
-    loadThree().then((THREE) => {
+    loadThree().then(async (THREE) => {
+      if (destroyed) return;
+      // Geo-data en chunk lazy (lib/geoMasks); ver nota en RiskSphere.
+      const geoTex = await makeGeoTexture(THREE);
       if (destroyed) return;
       const container = mountRef.current;
       if (!container) return;
@@ -83,7 +86,6 @@ export default function QuantLab() {
       geometry.setAttribute("jPhase",   new THREE.BufferAttribute(jPhase, 1));
 
       const dotTex     = makeDotTexture(THREE);
-      const geoTex     = makeGeoTexture(THREE);
 
       const material = new THREE.ShaderMaterial({
         uniforms: {

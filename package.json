@@ -13,6 +13,7 @@
     "@vercel/analytics": "^2.0.1",
     "chart.js": "^4.4.1",
     "flag-icons": "^7.5.0",
+    "geist": "^1.7.2",
     "gray-matter": "^4.0.3",
     "next": "14.2.5",
     "react": "^18.3.1",
