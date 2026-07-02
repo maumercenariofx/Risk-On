@@ -1,9 +1,10 @@
 // Google Apps Script — "El Pre" subscriber webhook (alta, baja y lectura).
 //
 // Hoja: columnas
-//   A: Email | B: Fecha | C: Estado | D: Nombre | E: Apellidos | F: Trato
+//   A: Email | B: Fecha | C: Estado | D: Nombre | E: Apellidos | F: Trato | G: Lang
 //   (Estado = "active" | "unsub"; D/E/F son opcionales y solo se usan para
-//    saludar por nombre en el correo diario.)
+//    saludar por nombre en el correo diario. G = "es" | "en": idioma en el que
+//    el suscriptor recibe el correo diario; vacío = español.)
 //
 // Setup / re-deploy (IMPORTANTE: edita la implementación EXISTENTE para
 // conservar la misma URL /exec — crear una NUEVA cambia el id y rompe Vercel):
@@ -29,6 +30,8 @@ function doPost(e) {
   var nombre    = String(data.nombre    || "").trim();
   var apellidos = String(data.apellidos || "").trim();
   var trato     = String(data.trato     || "").trim();
+  var lang      = String(data.lang      || "").trim().toLowerCase();
+  if (lang !== "en" && lang !== "es") lang = "";
 
   if (!email) {
     return ContentService.createTextOutput(JSON.stringify({ error: "missing email" }))
@@ -43,15 +46,16 @@ function doPost(e) {
 
   if (action === "unsubscribe") {
     if (rowIdx > 0) sheet.getRange(rowIdx, 3).setValue("unsub");
-    else sheet.appendRow([email, date, "unsub", "", "", ""]);
+    else sheet.appendRow([email, date, "unsub", "", "", "", ""]);
   } else if (rowIdx > 0) {
-    // Reactivar y completar nombre/trato sin sobrescribir con vacío lo ya guardado.
+    // Reactivar y completar nombre/trato/idioma sin sobrescribir con vacío lo ya guardado.
     sheet.getRange(rowIdx, 3).setValue("active");
     if (nombre)    sheet.getRange(rowIdx, 4).setValue(nombre);
     if (apellidos) sheet.getRange(rowIdx, 5).setValue(apellidos);
     if (trato)     sheet.getRange(rowIdx, 6).setValue(trato);
+    if (lang)      sheet.getRange(rowIdx, 7).setValue(lang);
   } else {
-    sheet.appendRow([email, date, "active", nombre, apellidos, trato]);
+    sheet.appendRow([email, date, "active", nombre, apellidos, trato, lang]);
   }
 
   return ContentService.createTextOutput(JSON.stringify({ ok: true }))
@@ -80,6 +84,7 @@ function doGet(e) {
         nombre:    String(values[i][3] || "").trim(),
         apellidos: String(values[i][4] || "").trim(),
         trato:     String(values[i][5] || "").trim(),
+        lang:      String(values[i][6] || "").trim().toLowerCase(),
       });
     }
   }

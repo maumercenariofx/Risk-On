@@ -14,8 +14,10 @@ export async function generateMetadata({ params }) {
   return {
     title,
     description,
-    openGraph: { title, description, url, type: "article", images: ["/riskon-logo.png"] },
-    twitter: { card: "summary", title, description, images: ["/riskon-logo.png"] },
+    // Sin images explícitas: Next inyecta la OG dinámica de opengraph-image.jsx
+    // (score + banda del día); X/Twitter cae al og:image.
+    openGraph: { title, description, url, type: "article" },
+    twitter: { card: "summary_large_image", title, description },
   };
 }
 

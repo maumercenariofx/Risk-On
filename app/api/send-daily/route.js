@@ -1,6 +1,7 @@
 import { Resend } from "resend";
 import { getAllPostsMeta } from "../../../lib/posts";
-import { fetchLiveData, generateDailyView, buildMarkdown, publishToGitHub } from "../../../lib/dailyView";
+import { fetchLiveData, generateDailyView, buildMarkdown, publishToGitHub, publishFileToGitHub, REPO } from "../../../lib/dailyView";
+import { alertAdmin } from "../../../lib/alertAdmin";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -34,10 +35,10 @@ const TICKERS = [
   { name: "Nasdaq 100 Fut.", symbol: "NQ=F",     kind: "index" },
   { name: "Dow Jones Fut.",  symbol: "YM=F",     kind: "index" },
   { name: "VIX",             symbol: "^VIX",     kind: "decimal" },
-  { name: "DXY (Dólar)",     symbol: "DX-Y.NYB", kind: "decimal" },
+  { name: "DXY (Dólar)",     name_en: "DXY (Dollar)", symbol: "DX-Y.NYB", kind: "decimal" },
   { name: "T-Note 10Y",      symbol: "^TNX",     kind: "yield" },
-  { name: "Oro",             symbol: "GC=F",     kind: "index" },
-  { name: "Petróleo WTI",    symbol: "CL=F",     kind: "decimal" },
+  { name: "Oro",             name_en: "Gold",    symbol: "GC=F",     kind: "index" },
+  { name: "Petróleo WTI",    name_en: "WTI Crude", symbol: "CL=F",   kind: "decimal" },
   { name: "Bitcoin",         symbol: "BTC-USD",  kind: "index" },
 ];
 
@@ -154,6 +155,9 @@ async function getSubscribers() {
             nombre:    typeof item === "object" ? cleanName(item?.nombre)    : "",
             apellidos: typeof item === "object" ? cleanName(item?.apellidos) : "",
             trato:     typeof item === "object" ? cleanName(item?.trato)     : "",
+            // Idioma del correo diario. Solo "en" cambia algo; cualquier otra
+            // cosa (columna vacía, filas viejas) cae a español.
+            lang:      typeof item === "object" && item?.lang === "en" ? "en" : "es",
           });
         });
         unsub.map((e) => clean(typeof e === "string" ? e : e?.email)).filter(Boolean).forEach((e) => map.delete(e));
@@ -161,6 +165,30 @@ async function getSubscribers() {
     } catch {}
   }
   return [...map.values()];
+}
+
+// ¿Ya salió el correo de hoy? Marcador sent/<slug>.json commiteado tras cada
+// envío exitoso a la lista completa. Se consulta vía contents API (no el raw
+// CDN) porque el raw cachea ~5 min y taparía un doble disparo de cronjob.org.
+async function sentMarkerExists(slug) {
+  const token = process.env.GITHUB_TOKEN;
+  if (!token) return false;
+  try {
+    const res = await fetch(
+      `https://api.github.com/repos/${REPO}/contents/sent/${slug}.json?ref=main`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/vnd.github+json",
+          "User-Agent": "riskon-daily-cron",
+        },
+        cache: "no-store",
+      }
+    );
+    return res.ok;
+  } catch {
+    return false;
+  }
 }
 
 async function yahooChart(symbol) {
@@ -216,14 +244,22 @@ async function handler(request) {
   const dateLong = new Date().toLocaleDateString("es-MX", {
     weekday: "long", year: "numeric", month: "long", day: "numeric", timeZone: "America/Mexico_City",
   });
-  const dateShort = new Date().toLocaleDateString("es-MX", {
-    day: "numeric", month: "long", year: "numeric", timeZone: "America/Mexico_City",
-  });
 
-  const reqUrl = new URL(request.url);
-  const only   = reqUrl.searchParams.get("only");    // ?only=a@x.com,b@y.com (subconjunto)
-  const force  = reqUrl.searchParams.get("force");   // ?force=1 ignora la guarda
-  const resend = reqUrl.searchParams.get("resend");  // ?resend=1 re-envía el view YA publicado (sin regenerar)
+  const reqUrl  = new URL(request.url);
+  const only    = reqUrl.searchParams.get("only");    // ?only=a@x.com,b@y.com (subconjunto)
+  const force   = reqUrl.searchParams.get("force");   // ?force=1 ignora la guarda
+  const resend  = reqUrl.searchParams.get("resend");  // ?resend=1 re-envía el view YA publicado (sin regenerar)
+  const preview = reqUrl.searchParams.get("preview"); // ?preview=1 diagnóstico sin enviar
+
+  // ── Guard anti-doble-envío: ?resend=1 salta la guarda de content, así que si
+  // cronjob.org dispara dos veces mandaría dos veces. El marcador sent/<slug>.json
+  // (commiteado tras cada envío exitoso a la lista completa) lo impide.
+  // ?force=1 lo salta a propósito; ?only y ?preview no envían a la lista completa.
+  if (resend && !force && !only && !preview) {
+    if (await sentMarkerExists(slug)) {
+      return Response.json({ ok: true, skipped: "already sent today", slug });
+    }
+  }
 
   // ── Idempotencia: si el view de hoy ya se publicó, no re-generar/enviar. Permite
   // tener el disparador externo (puntual 7:00) + el cron de Vercel (respaldo tardío)
@@ -294,13 +330,17 @@ async function handler(request) {
     post = posts.find((p) => String(p.date).slice(0, 10) === slug) ?? null;
   }
   if (!post) {
+    await alertAdmin(`envío diario ABORTADO — no hay view de hoy (${slug})`, {
+      slug, steps,
+      accion: "Revisar gen-daily y reintentar: curl -X POST https://riskon.lat/api/send-daily?resend=1 con el Bearer",
+    });
     return Response.json(
       { error: "no se pudo obtener el view de HOY; envío abortado para no mandar uno viejo", slug, steps },
       { status: 503 }
     );
   }
 
-  const { title_es, summary_es, watch_es = [], support, resistance, score = 70, greeting_es, signoff_es } = post;
+  const { support, resistance, score = 70 } = post;
   const { label: riskState, color } = riskStateFromScore(score);
   const articleUrl = `${SITE}/archive/${post.slug}`;
 
@@ -308,7 +348,52 @@ async function handler(request) {
   const charts = await Promise.all(TICKERS.map((t) => yahooChart(t.symbol)));
   const market = TICKERS.map((t, i) => ({ ...t, ...(charts[i] ?? {}) }));
 
-  // ── 3. Construir el correo ──────────────────────────────────────────────────
+  // ── 3. Construir el correo — una versión por idioma (EN solo si alguien la pide;
+  // los campos EN caen al ES si el view no trae traducción, views viejos incluidos).
+  const buildEmail = (lang) => {
+  const en = lang === "en";
+  const pick = (esV, enV) => (en && String(enV ?? "").trim() ? enV : esV);
+  const title    = pick(post.title_es, post.title_en);
+  const summary  = pick(post.summary_es, post.summary_en);
+  const greeting = pick(post.greeting_es, post.greeting_en);
+  const signoff  = pick(post.signoff_es, post.signoff_en);
+  const watch    = en && Array.isArray(post.watch_en) && post.watch_en.length
+    ? post.watch_en
+    : (post.watch_es ?? []);
+  const locale = en ? "en-US" : "es-MX";
+  const dateLongL = new Date().toLocaleDateString(locale, {
+    weekday: "long", year: "numeric", month: "long", day: "numeric", timeZone: "America/Mexico_City",
+  });
+  const dateShortL = new Date().toLocaleDateString(locale, {
+    day: "numeric", month: "long", year: "numeric", timeZone: "America/Mexico_City",
+  });
+  const L = en ? {
+    premarket: "The Pre-Market",
+    bandsQ: `What does “${riskState}” mean? Meet the index's 4 bands →`,
+    bandsQPlain: `What does "${riskState}" mean? The index's 4 bands:`,
+    cta: "Read the full view →",
+    marketData: "MARKET DATA",
+    watch: "WATCHLIST",
+    levels: "USD/MXN · LEVELS",
+    support: "Support", resistance: "Resistance",
+    explore: "EXPLORE", markets: "Markets", learn: "Learn",
+    advisory: "Book advisory", advisoryCta: "📅 Book a 1-on-1 advisory",
+    advisoryPlain: "Book an advisory",
+    unsub: "Unsubscribe", footerTag: "DAILY PREMARKET",
+  } : {
+    premarket: "El Pre-Market",
+    bandsQ: `¿Qué significa “${riskState}”? Conoce las 4 bandas del índice →`,
+    bandsQPlain: `¿Qué significa "${riskState}"? Las 4 bandas del índice:`,
+    cta: "Leer el view completo →",
+    marketData: "DATOS DE MERCADO",
+    watch: "A VIGILAR",
+    levels: "USD/MXN · NIVELES",
+    support: "Soporte", resistance: "Resistencia",
+    explore: "EXPLORA", markets: "Mercados", learn: "Aprende",
+    advisory: "Agenda asesoría", advisoryCta: "📅 Agenda una asesoría 1:1",
+    advisoryPlain: "Agenda una asesoría",
+    unsub: "Darse de baja", footerTag: "PREMARKET DIARIO",
+  };
   const sans = "'Helvetica Neue',Arial,sans-serif";
   const serif = "Georgia,'Times New Roman',serif";
 
@@ -316,13 +401,13 @@ async function handler(request) {
     const bb = i === market.length - 1 ? "" : `border-bottom:1px solid ${C.border};`;
     const pc = d.chgPct == null ? C.faint : d.chgPct >= 0 ? C.up : C.down;
     return `<tr>
-      <td style="padding:11px 0;${bb}color:${C.text};font-family:${sans};font-size:14px">${d.name}</td>
+      <td style="padding:11px 0;${bb}color:${C.text};font-family:${sans};font-size:14px">${en ? (d.name_en ?? d.name) : d.name}</td>
       <td style="padding:11px 0;${bb}text-align:right;color:${C.text};font-family:${sans};font-size:14px;font-weight:600;font-variant-numeric:tabular-nums">${fmtPrice(d.price, d.kind)}</td>
       <td style="padding:11px 0;${bb}text-align:right;color:${pc};font-family:${sans};font-size:14px;font-variant-numeric:tabular-nums">${fmtPct(d.chgPct)}</td>
     </tr>`;
   }).join("");
 
-  const watchRows = watch_es.map((item) => `
+  const watchRows = watch.map((item) => `
     <tr>
       <td style="padding:0;vertical-align:top;width:18px"><div style="width:6px;height:6px;border-radius:50%;background:${color};margin-top:8px"></div></td>
       <td style="padding:0 0 14px 0;font-family:${sans};font-size:14px;color:#3a3a3a;line-height:1.65">${item}</td>
@@ -335,7 +420,7 @@ async function handler(request) {
 <html>
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light only"></head>
 <body style="margin:0;padding:0;background:${C.bg};-webkit-text-size-adjust:100%">
-  <div style="display:none;max-height:0;overflow:hidden;opacity:0">◇ ${riskState} · ${score}/100 — ${title_es}</div>
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0">◇ ${riskState} · ${score}/100 — ${title}</div>
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${C.bg}">
     <tr><td align="center" style="padding:28px 16px">
 
@@ -353,13 +438,13 @@ async function handler(request) {
 
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
             <tr>
-              <td style="font-family:${sans};font-size:11px;letter-spacing:2px;color:${C.faint};font-weight:700;text-transform:uppercase">El Pre-Market</td>
-              <td style="text-align:right;font-family:${sans};font-size:12px;color:${C.muted};text-transform:capitalize">${dateLong}</td>
+              <td style="font-family:${sans};font-size:11px;letter-spacing:2px;color:${C.faint};font-weight:700;text-transform:uppercase">${L.premarket}</td>
+              <td style="text-align:right;font-family:${sans};font-size:12px;color:${C.muted};text-transform:capitalize">${dateLongL}</td>
             </tr>
           </table>
-          <div style="border-bottom:2px solid ${C.text};margin:12px 0 ${greeting_es ? "18px" : "26px"} 0"></div>
+          <div style="border-bottom:2px solid ${C.text};margin:12px 0 ${greeting ? "18px" : "26px"} 0"></div>
 
-          ${greeting_es ? `<div style="font-family:${serif};font-size:16px;font-style:italic;color:${C.text};margin-bottom:24px">${GREET_TOKEN}</div>` : ""}
+          ${greeting ? `<div style="font-family:${serif};font-size:16px;font-style:italic;color:${C.text};margin-bottom:24px">${GREET_TOKEN}</div>` : ""}
 
           <!-- Score gauge -->
           <div style="font-family:${sans};font-size:11px;letter-spacing:2px;color:${C.faint};font-weight:700;margin-bottom:10px">RISK ON SCORE</div>
@@ -378,53 +463,53 @@ async function handler(request) {
 
           <!-- Qué significa: link a la explicación de las bandas -->
           <div style="font-family:${sans};font-size:11px;color:${C.muted};margin:-14px 0 24px 0">
-            <a href="${SITE}/#bandas" style="color:${C.muted};text-decoration:underline">¿Qué significa “${riskState}”? Conoce las 4 bandas del índice →</a>
+            <a href="${SITE}/#bandas" style="color:${C.muted};text-decoration:underline">${L.bandsQ}</a>
           </div>
 
           <!-- Headline + summary -->
-          <div style="font-family:${serif};font-size:26px;line-height:1.25;color:${C.text};font-weight:700;margin-bottom:18px">${title_es}</div>
-          <div style="font-family:${sans};font-size:15px;line-height:1.7;color:#3a3a3a;margin-bottom:26px">${summary_es}</div>
+          <div style="font-family:${serif};font-size:26px;line-height:1.25;color:${C.text};font-weight:700;margin-bottom:18px">${title}</div>
+          <div style="font-family:${sans};font-size:15px;line-height:1.7;color:#3a3a3a;margin-bottom:26px">${summary}</div>
 
           <!-- Article CTA -->
           <table role="presentation" cellpadding="0" cellspacing="0" style="margin-bottom:34px">
             <tr><td style="background:${C.text};border-radius:4px">
-              <a href="${articleUrl}" style="display:inline-block;padding:13px 26px;font-family:${sans};font-size:14px;font-weight:600;color:${C.bone};text-decoration:none">Leer el view completo →</a>
+              <a href="${articleUrl}" style="display:inline-block;padding:13px 26px;font-family:${sans};font-size:14px;font-weight:600;color:${C.bone};text-decoration:none">${L.cta}</a>
             </td></tr>
           </table>
 
           <!-- Market data -->
-          <div style="font-family:${sans};font-size:11px;letter-spacing:2px;color:${C.faint};font-weight:700;margin-bottom:6px">DATOS DE MERCADO</div>
+          <div style="font-family:${sans};font-size:11px;letter-spacing:2px;color:${C.faint};font-weight:700;margin-bottom:6px">${L.marketData}</div>
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid ${C.text};margin-bottom:34px">${tableRows}</table>
 
-          ${watch_es.length ? `
-          <div style="font-family:${sans};font-size:11px;letter-spacing:2px;color:${C.faint};font-weight:700;margin-bottom:14px">A VIGILAR</div>
+          ${watch.length ? `
+          <div style="font-family:${sans};font-size:11px;letter-spacing:2px;color:${C.faint};font-weight:700;margin-bottom:14px">${L.watch}</div>
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:34px">${watchRows}</table>` : ""}
 
           ${support || resistance ? `
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${C.bg};border-radius:4px;margin-bottom:36px">
             <tr><td style="padding:18px 22px">
-              <div style="font-family:${sans};font-size:11px;letter-spacing:2px;color:${C.faint};font-weight:700;margin-bottom:12px">USD/MXN · NIVELES</div>
+              <div style="font-family:${sans};font-size:11px;letter-spacing:2px;color:${C.faint};font-weight:700;margin-bottom:12px">${L.levels}</div>
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-                <tr><td style="font-family:${sans};font-size:13px;color:${C.muted}">Soporte</td><td style="text-align:right;font-family:${sans};font-size:15px;font-weight:700;color:${C.up};font-variant-numeric:tabular-nums">${support ?? "—"}</td></tr>
-                <tr><td style="font-family:${sans};font-size:13px;color:${C.muted};padding-top:6px">Resistencia</td><td style="text-align:right;font-family:${sans};font-size:15px;font-weight:700;color:${C.down};padding-top:6px;font-variant-numeric:tabular-nums">${resistance ?? "—"}</td></tr>
+                <tr><td style="font-family:${sans};font-size:13px;color:${C.muted}">${L.support}</td><td style="text-align:right;font-family:${sans};font-size:15px;font-weight:700;color:${C.up};font-variant-numeric:tabular-nums">${support ?? "—"}</td></tr>
+                <tr><td style="font-family:${sans};font-size:13px;color:${C.muted};padding-top:6px">${L.resistance}</td><td style="text-align:right;font-family:${sans};font-size:15px;font-weight:700;color:${C.down};padding-top:6px;font-variant-numeric:tabular-nums">${resistance ?? "—"}</td></tr>
               </table>
             </td></tr>
           </table>` : ""}
 
-          ${signoff_es ? `<div style="font-family:${serif};font-size:15px;font-style:italic;color:${C.muted};text-align:center;padding:4px 10px 28px 10px">— ${signoff_es}</div>` : ""}
+          ${signoff ? `<div style="font-family:${serif};font-size:15px;font-style:italic;color:${C.muted};text-align:center;padding:4px 10px 28px 10px">— ${signoff}</div>` : ""}
 
           <!-- Nav -->
           <div style="border-top:1px solid ${C.border};padding-top:24px;text-align:center">
-            <div style="font-family:${sans};font-size:11px;letter-spacing:2px;color:${C.faint};font-weight:700;margin-bottom:14px">EXPLORA</div>
+            <div style="font-family:${sans};font-size:11px;letter-spacing:2px;color:${C.faint};font-weight:700;margin-bottom:14px">${L.explore}</div>
             <table role="presentation" cellpadding="0" cellspacing="0" align="center"><tr>
-              <td style="padding:0 14px">${navLink(SITE + "/markets", "Mercados")}</td>
+              <td style="padding:0 14px">${navLink(SITE + "/markets", L.markets)}</td>
               <td style="color:${C.border}">|</td>
-              <td style="padding:0 14px">${navLink(SITE + "/learn", "Aprende")}</td>
+              <td style="padding:0 14px">${navLink(SITE + "/learn", L.learn)}</td>
               <td style="color:${C.border}">|</td>
-              <td style="padding:0 14px">${navLink(CALENDLY, "Agenda asesoría")}</td>
+              <td style="padding:0 14px">${navLink(CALENDLY, L.advisory)}</td>
             </tr></table>
             <div style="margin-top:18px">
-              <a href="${CALENDLY}" style="display:inline-block;padding:11px 22px;border:1.5px solid ${C.text};border-radius:4px;font-family:${sans};font-size:13px;font-weight:600;color:${C.text};text-decoration:none">📅 Agenda una asesoría 1:1</a>
+              <a href="${CALENDLY}" style="display:inline-block;padding:11px 22px;border:1.5px solid ${C.text};border-radius:4px;font-family:${sans};font-size:13px;font-weight:600;color:${C.text};text-decoration:none">${L.advisoryCta}</a>
             </div>
           </div>
 
@@ -434,10 +519,10 @@ async function handler(request) {
       <!-- Footer -->
       <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%">
         <tr><td style="padding:20px 44px;text-align:center;font-family:${sans};font-size:11px;letter-spacing:1px;color:${C.faint};line-height:1.7">
-          RISKON.LAT · PREMARKET DIARIO<br>
+          RISKON.LAT · ${L.footerTag}<br>
           <a href="${SITE}" style="color:${C.muted};text-decoration:none">riskon.lat</a>
           &nbsp;·&nbsp;
-          <a href="${UNSUB}" style="color:${C.faint};text-decoration:underline">Darse de baja</a>
+          <a href="${UNSUB}" style="color:${C.faint};text-decoration:underline">${L.unsub}</a>
         </td></tr>
       </table>
 
@@ -448,31 +533,43 @@ async function handler(request) {
 
   // Versión texto plano (deliverability + accesibilidad)
   const text = [
-    `EL PRE-MARKET · ${dateLong}`,
+    `${L.premarket.toUpperCase()} · ${dateLongL}`,
     `Risk On score ${score}/100 · ${riskState}`,
-    `¿Qué significa "${riskState}"? Las 4 bandas del índice: ${SITE}/#bandas`,
+    `${L.bandsQPlain} ${SITE}/#bandas`,
     "",
-    ...(greeting_es ? [GREET_TOKEN, ""] : []),
-    title_es,
+    ...(greeting ? [GREET_TOKEN, ""] : []),
+    title,
     "",
-    summary_es,
+    summary,
     "",
-    `Leer el view completo: ${articleUrl}`,
+    `${L.cta.replace(" →", "")}: ${articleUrl}`,
     "",
-    "DATOS DE MERCADO",
-    ...market.map((d) => `  ${d.name}: ${fmtPrice(d.price, d.kind)} (${fmtPct(d.chgPct)})`),
+    L.marketData,
+    ...market.map((d) => `  ${en ? (d.name_en ?? d.name) : d.name}: ${fmtPrice(d.price, d.kind)} (${fmtPct(d.chgPct)})`),
     "",
-    ...(watch_es.length ? ["A VIGILAR", ...watch_es.map((w) => `  - ${w}`), ""] : []),
-    `USD/MXN — Soporte ${support ?? "—"} / Resistencia ${resistance ?? "—"}`,
+    ...(watch.length ? [L.watch, ...watch.map((w) => `  - ${w}`), ""] : []),
+    `USD/MXN — ${L.support} ${support ?? "—"} / ${L.resistance} ${resistance ?? "—"}`,
     "",
-    `Mercados: ${SITE}/markets`,
-    `Aprende: ${SITE}/learn`,
-    `Agenda una asesoría: ${CALENDLY}`,
+    `${L.markets}: ${SITE}/markets`,
+    `${L.learn}: ${SITE}/learn`,
+    `${L.advisoryPlain}: ${CALENDLY}`,
     "",
-    ...(signoff_es ? [`— ${signoff_es}`, ""] : []),
-    `Darse de baja: ${UNSUB}`,
+    ...(signoff ? [`— ${signoff}`, ""] : []),
+    `${L.unsub}: ${UNSUB}`,
     "riskon.lat",
   ].join("\n");
+
+  // Asunto normal + guiño ÚNICO la víspera de México–Inglaterra (octavos, dom 5
+  // jul 2026). Solo aplica al envío del viernes 3 jul; los demás días es el de
+  // siempre — se auto-revierte.
+  const subject = slug === "2026-07-03"
+    ? (en
+        ? "🇲🇽 What if this is the year? · Mexico–England on Sunday — The Pre-Market"
+        : "🇲🇽 ¿Y si sí? · México–Inglaterra el domingo — El Pre-Market")
+    : `${L.premarket} · ${riskState} ${score} · ${dateShortL}`;
+
+  return { subject, html, text, greeting };
+  }; // fin buildEmail
 
   // ── 4. Enviar (batch: 1 request para todos → sin rate-limit ni timeout) ──────
   // Con ?only mandamos solo al subconjunto pedido, pero tomamos su nombre del
@@ -487,29 +584,38 @@ async function handler(request) {
     recipients = await getSubscribers();
   }
 
-  // ?preview=1 → diagnóstico: devuelve el saludo YA personalizado por
-  // destinatario SIN enviar. Úsalo con &resend=1&only=correo para no regenerar.
-  if (reqUrl.searchParams.get("preview")) {
+  // Versión por idioma: la ES siempre; la EN solo si algún destinatario la pide.
+  const emails = { es: buildEmail("es") };
+  if (recipients.some((s) => s.lang === "en")) emails.en = buildEmail("en");
+  const emailFor = (sub) => (sub.lang === "en" && emails.en ? emails.en : emails.es);
+
+  // ?preview=1 → diagnóstico: devuelve asunto/saludo YA resueltos por
+  // destinatario (con su idioma) SIN enviar. Úsalo con &resend=1&only=correo.
+  if (preview) {
     return Response.json({
-      ok: true, preview: true, greeting_es,
-      recipients: recipients.map((s) => ({
-        email: s.email, nombre: s.nombre ?? "",
-        greeting: personalizeGreeting(greeting_es, s),
-      })),
+      ok: true, preview: true, greeting_es: emails.es.greeting,
+      recipients: recipients.map((s) => {
+        const v = emailFor(s);
+        return {
+          email: s.email, nombre: s.nombre ?? "", lang: s.lang ?? "es",
+          subject: v.subject,
+          greeting: personalizeGreeting(v.greeting, s),
+        };
+      }),
     });
   }
 
   const from = '"Análisis FX · Mauricio Mercenario | Riskon" <view@riskon.lat>';
-  const subject = `El Pre-Market · ${riskState} ${score} · ${dateShort}`;
   const payloads = recipients.map((sub) => {
+    const v = emailFor(sub);
     const email = sub.email;
     const unsubUrl = `${SITE}/api/unsubscribe?email=${encodeURIComponent(email)}`;
     // Saludo personalizado por destinatario (genérico si no llenó su nombre).
-    const greet = personalizeGreeting(greeting_es, sub);
+    const greet = personalizeGreeting(v.greeting, sub);
     return {
-      from, to: email, subject,
-      html: html.split(UNSUB).join(unsubUrl).split(GREET_TOKEN).join(greet ?? ""),
-      text: text.split(UNSUB).join(unsubUrl).split(GREET_TOKEN).join(greet ?? ""),
+      from, to: email, subject: v.subject,
+      html: v.html.split(UNSUB).join(unsubUrl).split(GREET_TOKEN).join(greet ?? ""),
+      text: v.text.split(UNSUB).join(unsubUrl).split(GREET_TOKEN).join(greet ?? ""),
       headers: {
         "List-Unsubscribe": `<${unsubUrl}>, <mailto:view@riskon.lat?subject=unsubscribe>`,
         "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
@@ -525,6 +631,23 @@ async function handler(request) {
     sent = { ok: !error, count: data?.data?.length ?? (error ? 0 : recipients.length), error: error?.message };
   } catch (e) {
     sent = { ok: false, error: String(e?.message ?? e) };
+  }
+
+  // Marcador anti-doble-envío: solo tras envío exitoso a la lista COMPLETA
+  // (las pruebas ?only= no cuentan). El commit dispara un redeploy extra, ok.
+  if (sent.ok && !only) {
+    const marker = JSON.stringify({ slug, sentAt: new Date().toISOString(), count: recipients.length }) + "\n";
+    const mk = await publishFileToGitHub(`sent/${slug}.json`, marker, `auto: sent marker ${slug}`);
+    sent.marker = mk.ok ? "ok" : mk.error;
+  }
+
+  // Alertas operativas a Mauricio (solo en envíos reales, no en pruebas ?only=).
+  if (!only) {
+    if (!sent.ok) {
+      await alertAdmin(`envío diario FALLÓ (${slug})`, { slug, sent, steps });
+    } else if (steps.genError || steps.publishError) {
+      await alertAdmin(`envío OK pero el pipeline tuvo errores (${slug})`, { slug, steps });
+    }
   }
 
   return Response.json({ ok: true, riskState, score, steps, recipients: recipients.length, sent });

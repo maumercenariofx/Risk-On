@@ -1,0 +1,47 @@
+// app/indice/page.jsx
+// Track record público del Índice Risk On: histórico completo del score diario
+// contra el mercado. Los datos salen del front-matter de content/*.md, así que
+// la página se refresca sola con el redeploy diario del cron.
+import { getAllPostsMeta } from "../../lib/posts";
+import TrackRecord from "../../components/TrackRecord";
+import RiskBands from "../../components/RiskBands";
+import { T } from "../../components/Lang";
+
+export const metadata = {
+  title: "Índice Risk On · Track record",
+  description:
+    "Histórico completo del Índice Risk On: el score publicado cada mañana a las 7:00, día por día, contra el mercado. Sin ediciones retroactivas.",
+};
+
+export default function IndicePage() {
+  const points = getAllPostsMeta()
+    .filter((p) => p.score != null && !isNaN(Number(p.score)))
+    .map(({ slug, score, title_es, title_en }) => ({
+      slug, score: Number(score), title_es, title_en,
+    }))
+    .sort((a, b) => (a.slug < b.slug ? -1 : 1));
+
+  return (
+    <div className="space-y-6 pt-4">
+      <div className="reveal">
+        <h1 className="font-serif text-3xl font-medium text-bone">
+          <T es="Track record del índice" en="Index track record" />
+        </h1>
+        <p className="mt-1 text-sm text-muted">
+          <T
+            es="Cada score se publica antes de la apertura y queda escrito en el archivo — nada se edita después. Esto es el histórico completo."
+            en="Every score is published before the open and written to the archive — nothing is edited after the fact. This is the complete history."
+          />
+        </p>
+      </div>
+
+      <div className="reveal">
+        <TrackRecord points={points} />
+      </div>
+
+      <div className="reveal">
+        <RiskBands />
+      </div>
+    </div>
+  );
+}

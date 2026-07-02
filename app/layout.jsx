@@ -1,6 +1,7 @@
 // app/layout.jsx
 import "./globals.css";
 import "flag-icons/css/flag-icons.min.css";
+import { Analytics } from "@vercel/analytics/next";
 import { LangProvider } from "../components/Lang";
 import Nav from "../components/Nav";
 import Footer from "../components/Footer";
@@ -44,6 +45,7 @@ export default function RootLayout({ children }) {
           <main className="mx-auto max-w-5xl px-5 pb-20 pt-6">{children}</main>
           <Footer />
         </LangProvider>
+        <Analytics />
       </body>
     </html>
   );

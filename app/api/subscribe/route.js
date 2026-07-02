@@ -140,7 +140,7 @@ export async function POST(request) {
     const res = await fetch(webhook, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, nombre, apellidos, trato, date: new Date().toISOString() }),
+      body: JSON.stringify({ email, nombre, apellidos, trato, lang, date: new Date().toISOString() }),
     });
     if (!res.ok) throw new Error(String(res.status));
   } catch {

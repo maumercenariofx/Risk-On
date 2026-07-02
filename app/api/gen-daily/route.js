@@ -1,4 +1,5 @@
 import { fetchLiveData, generateDailyView, buildMarkdown, publishToGitHub } from "../../../lib/dailyView";
+import { alertAdmin } from "../../../lib/alertAdmin";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -30,12 +31,22 @@ async function handler(request) {
     if (exists) return Response.json({ ok: true, skipped: "already generated today", slug });
   }
 
-  const data = await fetchLiveData("https://riskon.lat");
-  const view = await generateDailyView(data, dateLong, slug);
-  const md = buildMarkdown(view, slug);
-  const pub = await publishToGitHub(slug, md);
+  try {
+    const data = await fetchLiveData("https://riskon.lat");
+    const view = await generateDailyView(data, dateLong, slug);
+    const md = buildMarkdown(view, slug);
+    const pub = await publishToGitHub(slug, md);
 
-  return Response.json({ ok: true, slug, score: view.score, riskState: view.riskState, published: pub.ok, publishError: pub.error });
+    // Si la publicación falló, send-daily (7:00) intentará generar inline, pero
+    // avisa desde ya para poder intervenir antes del envío.
+    if (!pub.ok) await alertAdmin(`gen-daily no pudo publicar el view (${slug})`, pub.error);
+
+    return Response.json({ ok: true, slug, score: view.score, riskState: view.riskState, published: pub.ok, publishError: pub.error });
+  } catch (e) {
+    const error = String(e?.message ?? e);
+    await alertAdmin(`gen-daily falló (${slug})`, { error });
+    return Response.json({ ok: false, slug, error }, { status: 500 });
+  }
 }
 
 export { handler as GET, handler as POST };

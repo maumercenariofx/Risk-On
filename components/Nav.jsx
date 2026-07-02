@@ -30,6 +30,7 @@ export default function Nav() {
     { href: "/archive", es: "Archivo", en: "Archive" },
     { href: "/markets", es: "Mercados", en: "Markets" },
     { href: "/analisis", es: "Análisis", en: "Analysis" },
+    { href: "/indice", es: "Índice", en: "Index" },
     { href: "/learn", es: "Aprende", en: "Learn" },
     { href: "/about", es: "Contacto", en: "Contact" },
   ];
@@ -95,7 +96,7 @@ export default function Nav() {
       {/* Mobile dropdown panel */}
       <div
         className="overflow-hidden border-t border-edge transition-[max-height,opacity] duration-300 ease-in-out md:hidden"
-        style={{ maxHeight: open ? 280 : 0, opacity: open ? 1 : 0 }}
+        style={{ maxHeight: open ? 340 : 0, opacity: open ? 1 : 0 }}
       >
         <div className="mx-auto flex max-w-5xl flex-col px-5 py-2">
           {links.map((l) => (
