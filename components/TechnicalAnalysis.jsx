@@ -68,6 +68,14 @@ export default function TechnicalAnalysis() {
     }
   }, []);
 
+  // Deep-link: /analisis?symbol=AAPL (los items del ticker llegan así).
+  useEffect(() => {
+    try {
+      const s = new URLSearchParams(window.location.search).get("symbol");
+      if (s) setSymbol(s.toUpperCase());
+    } catch {}
+  }, []);
+
   useEffect(() => { load(symbol); }, [symbol, load]);
 
   const submitSearch = (e) => {

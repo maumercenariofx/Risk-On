@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { useLang, T } from "./Lang";
+import Skeleton from "./Skeleton";
 import {
   crosshairPlugin, makeGlowPlugin, makeTerminalDotPlugin,
   makeGradientFn, tooltipDefaults, xScaleDefaults, yScaleDefaults,
@@ -106,7 +107,12 @@ export default function YieldCurveChart() {
           <span style={{ fontFamily: "var(--font-sans)", fontWeight: 700, fontSize: 26, letterSpacing: "-0.02em", lineHeight: 1, color: status?.color ?? "#F5F5F2", fontVariantNumeric: "tabular-nums", textShadow: `0 0 20px ${status?.color ?? "#F5F5F2"}55` }}>
             {data.spread2s10s > 0 ? "+" : ""}{data.spread2s10s}%
           </span>
-          <span style={{ fontSize: 9, color: "#4B5563", fontFamily: "var(--font-mono)" }}>
+          <span
+            style={{ fontSize: 9, color: "#4B5563", fontFamily: "var(--font-mono)" }}
+            data-tip={lang === "en"
+              ? "10-year yield minus 2-year yield. Negative (inverted) has historically preceded recessions."
+              : "Tasa a 10 años menos tasa a 2 años. En negativo (invertida) históricamente precede recesiones."}
+          >
             <T es="spread 2s10s" en="2s10s spread" />
           </span>
           {status && (
@@ -121,9 +127,13 @@ export default function YieldCurveChart() {
         </div>
       )}
 
-      <div style={{ position: "relative", height: 165 }}>
-        <canvas ref={canvasRef} />
-      </div>
+      {!data?.points?.length ? (
+        <Skeleton height={165} />
+      ) : (
+        <div style={{ position: "relative", height: 165 }}>
+          <canvas ref={canvasRef} />
+        </div>
+      )}
 
       {status && (
         <div style={{ borderTop: "1px solid rgba(255,255,255,0.05)", paddingTop: 10, marginTop: 8 }}>

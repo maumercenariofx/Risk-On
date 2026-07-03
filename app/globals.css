@@ -53,6 +53,38 @@ body::before {
               0 8px 40px rgba(0,0,0,0.5);
 }
 
+/* Spotlight: brillo radial que sigue al cursor sobre la card (--mx/--my los
+   pone el listener global de RevealObserver). Aplica a .card-glass y .card-spot. */
+.card-glass, .card-spot { position: relative; }
+.card-glass::after, .card-spot::after {
+  content: '';
+  position: absolute; inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(300px circle at var(--mx, 50%) var(--my, 50%), rgba(255, 255, 255, 0.05), transparent 65%);
+  opacity: 0;
+  transition: opacity 0.35s ease;
+  pointer-events: none;
+}
+.card-glass:hover::after, .card-spot:hover::after { opacity: 1; }
+@media (hover: none) { .card-glass::after, .card-spot::after { display: none; } }
+
+/* Skeleton shimmer para charts en carga */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
+}
+.skeleton::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, 0.05) 50%, transparent 70%);
+  transform: translateX(-100%);
+  animation: shimmer 1.6s ease-in-out infinite;
+}
+@keyframes shimmer { to { transform: translateX(100%); } }
+@media (prefers-reduced-motion: reduce) { .skeleton::after { animation: none; } }
+
 /* Brackets de esquina para elementos sin border-radius */
 .tron-corner { position: relative; }
 .tron-corner::before,
@@ -222,3 +254,61 @@ button, a[class*="rounded"] { transition-property: color, background-color, bord
   from { opacity: 0; transform: translateY(10px); }
   to   { opacity: 1; transform: translateY(0); }
 }
+
+/* Fade de entrada entre páginas (app/template.jsx se re-monta por navegación).
+   Termina en transform:none para no romper position:fixed descendientes. */
+@keyframes pageFade {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: none; }
+}
+.page-fade { animation: pageFade 0.28s ease both; }
+
+/* Items clickeables del ticker */
+.ticker-item { transition: filter 0.2s; border-radius: 4px; }
+.ticker-item:hover { filter: brightness(1.5); }
+
+/* Tooltip ligero: <span data-tip="texto"> */
+[data-tip] {
+  position: relative;
+  cursor: help;
+  border-bottom: 1px dotted #5A5A62;
+}
+[data-tip]::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%) translateY(3px);
+  width: max-content;
+  max-width: 240px;
+  padding: 8px 11px;
+  border-radius: 8px;
+  background: rgba(10, 10, 12, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #C9CDD3;
+  font-size: 11px;
+  line-height: 1.5;
+  letter-spacing: 0;
+  text-transform: none;
+  font-family: var(--font-sans);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  pointer-events: none;
+  z-index: 60;
+  white-space: normal;
+}
+[data-tip]:hover::after {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-fade { animation: none; }
+}
+
+/* Badge flotante clickeable (score + Suscríbete) */
+.badge-cta { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+.badge-cta:hover { transform: translateY(-2px); }
+.badge-cta:active { transform: scale(0.98); }

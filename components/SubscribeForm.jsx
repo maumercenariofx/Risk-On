@@ -14,6 +14,11 @@ export default function SubscribeForm() {
   const [nombre,    setNombre]    = useState("");
   const [apellidos, setApellidos] = useState("");
   const [trato,     setTrato]     = useState(""); // "" | "Sr." | "Sra."
+  const [count,     setCount]     = useState(null); // social proof (lectores activos)
+
+  useEffect(() => {
+    fetch("/api/subscribe").then((r) => r.json()).then((d) => setCount(d?.count ?? null)).catch(() => {});
+  }, []);
 
   // Si se llega con #subscribe (p.ej. desde otra página), hace scroll al form
   // con reintentos, porque el contenido async empuja el layout tras montar.
@@ -36,6 +41,8 @@ export default function SubscribeForm() {
       });
       if (!res.ok) throw new Error();
       setStatus("done");
+      // El badge flotante deja de ofrecer "Suscríbete" a quien ya está dentro.
+      try { localStorage.setItem("riskon-sub", "1"); } catch {}
     } catch {
       setStatus("error");
     }
@@ -57,8 +64,13 @@ export default function SubscribeForm() {
         <T es="Recibe Pre-market cada mañana" en="Get Pre-market every morning" />
       </p>
       <p className="mb-3 text-xs text-muted">
-        <T es="Un correo corto antes de la apertura, sin spam."
-           en="One short email before the open, no spam." />
+        {count != null && count >= 15 ? (
+          <T es={`Únete a ${count}+ lectores — un correo corto antes de la apertura, sin spam.`}
+             en={`Join ${count}+ readers — one short email before the open, no spam.`} />
+        ) : (
+          <T es="Un correo corto antes de la apertura, sin spam."
+             en="One short email before the open, no spam." />
+        )}
       </p>
 
       {status === "done" ? (

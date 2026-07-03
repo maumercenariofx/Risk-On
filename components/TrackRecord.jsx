@@ -7,11 +7,18 @@ import { useEffect, useRef, useState } from "react";
 import { useLang, T } from "./Lang";
 import { useCountUp } from "../lib/useCountUp";
 import { BANDS, riskBand } from "../lib/riskScore";
+import Skeleton from "./Skeleton";
 import {
   crosshairPlugin, makeGlowPlugin, makeTerminalDotPlugin, makeGradientFn,
   semanticColor, tooltipDefaults, xScaleDefaults, yScaleDefaults,
-  cardStyle, sectionLabel,
+  cardStyle, sectionLabel, progressiveLine,
 } from "../lib/chartHelpers";
+
+// Draw-on solo si el sistema no pide reduced-motion.
+const lineAnim = (count) =>
+  typeof matchMedia !== "undefined" && matchMedia("(prefers-reduced-motion: reduce)").matches
+    ? false
+    : progressiveLine(count);
 
 // Líneas punteadas en los cortes de banda (29/48/72) con etiqueta discreta.
 const bandLinesPlugin = {
@@ -102,6 +109,7 @@ function ScoreHistoryChart({ points }) {
         options: {
           responsive:          true,
           maintainAspectRatio: false,
+          animation:           lineAnim(points.length),
           interaction:         { intersect: false, mode: "index" },
           onClick: (_e, els) => {
             const i = els?.[0]?.index;
@@ -188,6 +196,7 @@ function UsdMxnChart({ range }) {
         options: {
           responsive:          true,
           maintainAspectRatio: false,
+          animation:           lineAnim(data.prices.length),
           interaction:         { intersect: false, mode: "index" },
           plugins: {
             legend:  { display: false },
@@ -209,6 +218,7 @@ function UsdMxnChart({ range }) {
     return () => { cancelled = true; chartRef.current?.destroy(); };
   }, [data]);
 
+  if (!data?.prices?.length) return <Skeleton height={160} />;
   return (
     <div style={{ position: "relative", height: 160 }}>
       <canvas ref={canvasRef} />

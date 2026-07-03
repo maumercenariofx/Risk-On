@@ -113,6 +113,25 @@ function welcomeEmail({ name, lang }) {
   return { subject, html, text };
 }
 
+// GET → conteo de suscriptores activos (para el social proof del form).
+// Cacheado 1h en CDN; si el Sheet falla devuelve null y el form usa copy genérico.
+export async function GET() {
+  try {
+    const url = process.env.SHEETS_LIST_URL;
+    if (!url) return Response.json({ count: null });
+    const res = await fetch(url, { cache: "no-store" });
+    if (!res.ok) throw new Error(String(res.status));
+    const data = await res.json();
+    const active = Array.isArray(data) ? data.length : (data?.active?.length ?? 0);
+    return Response.json(
+      { count: active > 0 ? active : null },
+      { headers: { "Cache-Control": "s-maxage=3600, stale-while-revalidate=86400" } }
+    );
+  } catch {
+    return Response.json({ count: null });
+  }
+}
+
 export async function POST(request) {
   let body;
   try {

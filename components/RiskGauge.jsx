@@ -53,6 +53,7 @@ export default function RiskGauge({ post }) {
   const [news, setNews]               = useState([]);
   const [newsLoading, setNewsLoading] = useState(false);
   const [heroGone, setHeroGone]       = useState(false);
+  const [isSub, setIsSub]             = useState(false); // ya suscrito → sin CTA en el badge
   const [cScores, setCScores]         = useState(null); // riesgo por país en vivo
   const sphereRef = useRef(null);
   const heroRef   = useRef(null);
@@ -81,6 +82,7 @@ export default function RiskGauge({ post }) {
     fetch("/api/rates").then((r) => r.json()).then(setRates).catch(() => setRates(null));
     fetch("/api/curve").then((r) => r.json()).then(setCurve).catch(() => setCurve(null));
     fetch("/api/country-risk").then((r) => r.json()).then((d) => setCScores(d.scores || null)).catch(() => {});
+    try { setIsSub(localStorage.getItem("riskon-sub") === "1"); } catch {}
   }, []);
 
   // Aplica el riesgo por país en vivo al globo (reintenta hasta que monte el 3D).
@@ -286,38 +288,61 @@ export default function RiskGauge({ post }) {
         </div>
       )}
 
-      {/* ── Sticky score badge (appears when hero scrolls out of view) ── */}
+      {/* ── Sticky score badge (aparece al scrollear fuera del hero) ──
+          Ahora es CTA: click → form de suscripción. Si ya se suscribió
+          (localStorage riskon-sub) el renglón "Suscríbete" no se muestra. */}
       {heroGone && result && (
-        <div style={{
-          position: "fixed",
-          bottom: 24,
-          right: 24,
-          zIndex: 200,
-          background: "rgba(9,9,11,0.96)",
-          backdropFilter: "blur(16px)",
-          WebkitBackdropFilter: "blur(16px)",
-          border: `1px solid ${accentColor}44`,
-          borderRadius: 14,
-          padding: "11px 16px",
-          display: "flex",
-          alignItems: "center",
-          gap: 10,
-          boxShadow: `0 4px 32px rgba(0,0,0,0.7), 0 0 0 1px ${accentColor}18`,
-          pointerEvents: "none",
-          animation: "fadeInUp .25s ease both",
-        }}>
-          <div style={{ fontFamily: "var(--font-sans)", fontWeight: 800, fontSize: 30, lineHeight: 1, color: accentColor, letterSpacing: "-0.02em" }}>
-            {display}
-          </div>
-          <div style={{ lineHeight: 1.5 }}>
-            <div style={{ fontSize: 7.5, letterSpacing: 2.5, color: "#3A3A40", textTransform: "uppercase", fontFamily: "var(--font-mono)" }}>
-              RISK ON
+        <a
+          href="#subscribe"
+          onClick={(e) => {
+            e.preventDefault();
+            const go = () => document.getElementById("subscribe")?.scrollIntoView({ behavior: "smooth", block: "start" });
+            go(); setTimeout(go, 300);
+          }}
+          className="badge-cta"
+          style={{
+            position: "fixed",
+            bottom: 24,
+            right: 24,
+            zIndex: 200,
+            background: "rgba(9,9,11,0.96)",
+            backdropFilter: "blur(16px)",
+            WebkitBackdropFilter: "blur(16px)",
+            border: `1px solid ${accentColor}44`,
+            borderRadius: 14,
+            padding: "11px 16px",
+            display: "flex",
+            flexDirection: "column",
+            gap: 8,
+            boxShadow: `0 4px 32px rgba(0,0,0,0.7), 0 0 0 1px ${accentColor}18`,
+            textDecoration: "none",
+            cursor: "pointer",
+            animation: "fadeInUp .25s ease both",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ fontFamily: "var(--font-sans)", fontWeight: 800, fontSize: 30, lineHeight: 1, color: accentColor, letterSpacing: "-0.02em" }}>
+              {display}
             </div>
-            <div style={{ fontSize: 8.5, letterSpacing: 2, color: accentColor, textTransform: "uppercase", fontFamily: "var(--font-mono)" }}>
-              {lang === "en" ? label.en : label.es}
+            <div style={{ lineHeight: 1.5 }}>
+              <div style={{ fontSize: 7.5, letterSpacing: 2.5, color: "#3A3A40", textTransform: "uppercase", fontFamily: "var(--font-mono)" }}>
+                RISK ON
+              </div>
+              <div style={{ fontSize: 8.5, letterSpacing: 2, color: accentColor, textTransform: "uppercase", fontFamily: "var(--font-mono)" }}>
+                {lang === "en" ? label.en : label.es}
+              </div>
             </div>
           </div>
-        </div>
+          {!isSub && (
+            <div style={{
+              borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: 7,
+              fontSize: 10, letterSpacing: 1.5, textTransform: "uppercase",
+              fontFamily: "var(--font-mono)", color: "#F5F5F2", textAlign: "center",
+            }}>
+              <T es="Suscríbete →" en="Subscribe →" />
+            </div>
+          )}
+        </a>
       )}
 
       {/* ── Country news panel ── */}

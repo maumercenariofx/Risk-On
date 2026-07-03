@@ -48,7 +48,22 @@ export default function RevealObserver() {
     );
     mo.observe(document.body, { childList: true, subtree: true });
 
-    return () => { io.disconnect(); mo.disconnect(); };
+    // Spotlight: coordenadas del cursor como CSS vars en la card bajo el mouse
+    // (el gradiente vive en globals.css). Delegado: un solo listener global.
+    const onMove = (e) => {
+      const card = e.target?.closest?.(".card-glass, .card-spot");
+      if (!card) return;
+      const r = card.getBoundingClientRect();
+      card.style.setProperty("--mx", `${e.clientX - r.left}px`);
+      card.style.setProperty("--my", `${e.clientY - r.top}px`);
+    };
+    document.addEventListener("pointermove", onMove, { passive: true });
+
+    return () => {
+      io.disconnect();
+      mo.disconnect();
+      document.removeEventListener("pointermove", onMove);
+    };
   }, []);
 
   return null;

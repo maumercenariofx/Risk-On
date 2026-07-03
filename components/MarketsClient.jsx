@@ -173,6 +173,14 @@ export default function MarketsClient({ embed = false }) {
   const currentPair = PAIRS.find((p) => p.key === pair) || PAIRS[0];
   const isIntraday  = range === "1d";
 
+  // Deep-link: /markets?pair=EURUSD (los items FX del ticker llegan así).
+  useEffect(() => {
+    try {
+      const p = new URLSearchParams(window.location.search).get("pair");
+      if (p && PAIRS.some((x) => x.key === p.toUpperCase())) setPair(p.toUpperCase());
+    } catch {}
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
     setLoading(true);

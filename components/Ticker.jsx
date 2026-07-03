@@ -1,5 +1,25 @@
 "use client";
 import { useEffect, useState } from "react";
+import Link from "next/link";
+
+// Cada item del ticker es un link: pares FX → /markets con el par abierto;
+// lo demás → /analisis con la lectura técnica del símbolo.
+const HREF = {
+  "S&P 500": "/analisis?symbol=%5EGSPC",
+  "NASDAQ":  "/analisis?symbol=%5EIXIC",
+  "IPC":     "/analisis?symbol=%5EMXX",
+  "USD/MXN": "/markets?pair=USDMXN",
+  "EUR/USD": "/markets?pair=EURUSD",
+  "USD/JPY": "/markets?pair=USDJPY",
+  "AAPL":    "/analisis?symbol=AAPL",
+  "TSLA":    "/analisis?symbol=TSLA",
+  "NVDA":    "/analisis?symbol=NVDA",
+  "BTC":     "/analisis?symbol=BTC-USD",
+  "ETH":     "/analisis?symbol=ETH-USD",
+  "WTI":     "/analisis?symbol=CL%3DF",
+  "Gold":    "/analisis?symbol=GC%3DF",
+  "US 10Y":  "/analisis?symbol=%5ETNX",
+};
 
 const FALLBACK = [
   ["S&P 500",  "5,412",   1, "+0.82%"],
@@ -52,16 +72,28 @@ export default function Ticker() {
   const color = (dir) => (dir === 1 ? "#0F8A5F" : dir === 0 ? "#A32D2D" : "#8A8A8E");
 
   const row = (key) =>
-    items.map((t, i) => (
-      <span key={`${key}-${i}`} style={{
+    items.map((t, i) => {
+      const inner = (
+        <>
+          <span style={{ color: "#8A8A8E", letterSpacing: 1 }}>{t[0]}</span>
+          <span style={{ color: "#F5F5F2", fontWeight: 500 }}>{t[1]}</span>
+          <span style={{ color: color(t[2]), fontSize: 10 }}>{arrow(t[2])} {t[3]}</span>
+        </>
+      );
+      const style = {
         fontFamily: "var(--font-mono)", fontSize: 12,
         display: "inline-flex", alignItems: "baseline", gap: 5,
-      }}>
-        <span style={{ color: "#8A8A8E", letterSpacing: 1 }}>{t[0]}</span>
-        <span style={{ color: "#F5F5F2", fontWeight: 500 }}>{t[1]}</span>
-        <span style={{ color: color(t[2]), fontSize: 10 }}>{arrow(t[2])} {t[3]}</span>
-      </span>
-    ));
+        textDecoration: "none",
+      };
+      const href = HREF[t[0]];
+      return href ? (
+        <Link key={`${key}-${i}`} href={href} className="ticker-item" style={style}>
+          {inner}
+        </Link>
+      ) : (
+        <span key={`${key}-${i}`} style={style}>{inner}</span>
+      );
+    });
 
   return (
     <div style={{
