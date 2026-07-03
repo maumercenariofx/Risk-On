@@ -220,6 +220,7 @@ function fmtPrice(v, kind) {
 }
 
 async function handler(request) {
+  const t0 = Date.now(); // presupuesto de la invocación (Vercel Hobby mata a los 60s)
   const auth = request.headers.get("authorization") ?? "";
   if (auth !== `Bearer ${process.env.CRON_SECRET}`) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
@@ -278,21 +279,41 @@ async function handler(request) {
   let post = null;
   const steps = { generated: false, published: false };
   if (resend) {
-    // Lee el view de HOY directo de GitHub (content más reciente, sin depender
-    // del build desplegado en Vercel).
+    // Lee el view de HOY directo de GitHub. Contents API con token (sin el
+    // CDN de raw, que cachea ~5 min y puede servir un 404 viejo); raw queda
+    // de fallback si la API falla.
     try {
-      const rawUrl = `https://raw.githubusercontent.com/maumercenariofx/Risk-On/main/content/${slug}.md`;
-      const res = await fetch(rawUrl, { cache: "no-store" });
-      if (res.ok) {
-        const text = await res.text();
+      let text = null;
+      const token = process.env.GITHUB_TOKEN;
+      if (token) {
+        const apiRes = await fetch(
+          `https://api.github.com/repos/${REPO}/contents/content/${slug}.md?ref=main`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              Accept: "application/vnd.github.raw",
+              "User-Agent": "riskon-daily-cron",
+            },
+            cache: "no-store",
+          }
+        );
+        if (apiRes.ok) text = await apiRes.text();
+      }
+      if (text == null) {
+        const rawRes = await fetch(
+          `https://raw.githubusercontent.com/${REPO}/main/content/${slug}.md`,
+          { cache: "no-store" }
+        );
+        if (rawRes.ok) text = await rawRes.text();
+      }
+      if (text != null) {
         const matter = (await import("gray-matter")).default;
         const { data } = matter(text);
         post = { slug, ...data };
       }
     } catch {}
-    // Si el view de HOY aún NO está publicado (p.ej. gen-daily se retrasó por el
-    // lag del cron de Vercel Hobby), genéralo AHORA mismo. NUNCA caer a un post
-    // viejo: es preferible un envío tarde y correcto que mandar el view de ayer.
+    // Si el view de HOY aún NO está publicado (gen-daily falló o va tarde),
+    // genéralo AHORA mismo. NUNCA caer a un post viejo.
     if (!post) {
       try {
         const data = await fetchLiveData(SITE);
@@ -303,6 +324,25 @@ async function handler(request) {
         steps.published = pub.ok;
         if (!pub.ok) steps.publishError = pub.error;
         post = { slug, ...view };
+
+        // ── Presupuesto 60s (Vercel Hobby): si la generación se comió la
+        // ventana, NO intentar enviar en esta invocación — el 2026-07-03 la
+        // función murió publicando a los ~78s y el correo nunca salió. Se
+        // publica, se avisa, y el envío lo hace el siguiente disparo (retry de
+        // cronjob.org o el respaldo de Vercel 7:10), que ya encontrará el
+        // content listo y entrará por el camino rápido.
+        const elapsedS = (Date.now() - t0) / 1000;
+        if (elapsedS > 30) {
+          await alertAdmin(
+            `view generado TARDE (${slug}) — envío diferido al siguiente disparo`,
+            { elapsedS: Math.round(elapsedS), steps,
+              nota: "gen-daily no publicó a tiempo; send generó el view pero difiere el correo para no morir en el límite de 60s" }
+          );
+          return Response.json({
+            ok: true, slug, steps, deferred: true,
+            detail: "view publicado; el correo lo enviará el reintento/respaldo",
+          });
+        }
       } catch (e) {
         steps.genError = String(e?.message ?? e);
       }

@@ -32,11 +32,31 @@ async function handler(request) {
   }
 
   try {
-    const data = await fetchLiveData("https://riskon.lat");
-    const view = await generateDailyView(data, dateLong, slug);
-    const md = buildMarkdown(view, slug);
-    const pub = await publishToGitHub(slug, md);
+    // Carrera contra el límite de 60s de Vercel Hobby: si el trabajo no acabó
+    // a los 50s, alcanzamos a AVISAR antes de que la plataforma mate la función
+    // (la muerte dura no ejecuta el catch — así se perdió el view del
+    // 2026-07-03 sin dejar rastro).
+    const work = (async () => {
+      const data = await fetchLiveData("https://riskon.lat");
+      const view = await generateDailyView(data, dateLong, slug);
+      const md = buildMarkdown(view, slug);
+      const pub = await publishToGitHub(slug, md);
+      return { view, pub };
+    })();
+    const timeout = new Promise((resolve) =>
+      setTimeout(() => resolve("TIMEOUT"), 50000)
+    );
+    const result = await Promise.race([work, timeout]);
 
+    if (result === "TIMEOUT") {
+      await alertAdmin(`gen-daily EXCEDIÓ los 50s (${slug}) — probable kill de Vercel sin publicar`, {
+        slug,
+        nota: "Claude/datos lentos. El envío de las 7:00-7:10 auto-generará el view (y diferirá el correo si va tarde).",
+      });
+      return Response.json({ ok: false, slug, error: "timeout >50s" }, { status: 504 });
+    }
+
+    const { view, pub } = result;
     // Si la publicación falló, send-daily (7:00) intentará generar inline, pero
     // avisa desde ya para poder intervenir antes del envío.
     if (!pub.ok) await alertAdmin(`gen-daily no pudo publicar el view (${slug})`, pub.error);
