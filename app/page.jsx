@@ -17,11 +17,8 @@ export default function Home() {
 
   return (
     <div className="space-y-8">
-      <div className="reveal" style={{ animationDelay: "0.1s" }}>
-        <Ticker />
-      </div>
-
-      <RiskGauge post={latest} />
+      {/* El ticker vive DENTRO del gauge, justo bajo el hero a pantalla completa */}
+      <RiskGauge post={latest} ticker={<Ticker />} />
 
       <div className="reveal"><RiskBands /></div>
 

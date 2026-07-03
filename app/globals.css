@@ -200,25 +200,60 @@ html.io .reveal.in-view {
 
 a { color: inherit; }
 
-/* Hero a pantalla completa: rompe el contenedor central (max-w-5xl) y ocupa
-   el viewport menos nav+ticker (~164px). svh evita el brinco de la barra de
+/* Hero a pantalla COMPLETA: rompe el contenedor central (max-w-5xl), se jala
+   hacia arriba para quedar DEBAJO del nav transparente (-86px = nav 62 + pt-6
+   de main 24) y mide el viewport entero. svh evita el brinco de la barra de
    URL en móvil. */
 .full-bleed {
   width: 100vw;
   margin-left: calc(50% - 50vw);
 }
-.hero-full { height: max(480px, calc(100vh - 175px)); }
-@supports (height: 100svh) {
-  .hero-full { height: max(480px, calc(100svh - 175px)); }
+.hero-full {
+  height: max(560px, 100vh);
+  margin-top: -94px; /* nav real 70px + pt-6 de main 24px */
 }
+@supports (height: 100svh) {
+  .hero-full { height: max(560px, 100svh); }
+}
+
+/* ── Intro escénica del hero ── */
+/* Título: cada línea emerge desde abajo con máscara (wrapper overflow hidden) */
+@keyframes riseIn {
+  from { transform: translateY(110%); }
+  to   { transform: none; }
+}
+.hero-line { overflow: hidden; }
+.hero-line > span {
+  display: block;
+  transform: translateY(110%);
+  animation: riseIn 0.8s cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
+}
+.hero-line:nth-child(1) > span { animation-delay: 0.15s; }
+.hero-line:nth-child(2) > span { animation-delay: 0.28s; }
+.hero-line:nth-child(3) > span { animation-delay: 0.41s; }
+
+/* Globo: se materializa escalando desde 1.12 mientras las partículas forman
+   el planeta (la doble capa — CSS + morph de partículas — es lo que impresiona) */
+@keyframes heroCanvasIn {
+  from { opacity: 0; transform: scale(1.12); }
+  to   { opacity: 1; transform: none; }
+}
+.hero-canvas { animation: heroCanvasIn 1.5s cubic-bezier(0.2, 0.7, 0.3, 1) 0.1s both; }
+
+/* Bloques laterales (subtítulo, score, chips, timestamp): entran al final */
+.hero-late { opacity: 0; animation: fadeInUp 0.7s ease 0.85s forwards; }
 
 /* Invitación a scrollear al pie del hero */
 @keyframes hint-bob {
   0%, 100% { transform: translateY(0);   opacity: 0.45; }
   50%      { transform: translateY(6px); opacity: 0.9; }
 }
-.scroll-hint { animation: hint-bob 2.4s ease-in-out infinite; }
-@media (prefers-reduced-motion: reduce) { .scroll-hint { animation: none; } }
+.scroll-hint { opacity: 0; animation: hint-bob 2.4s ease-in-out 1.8s infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .scroll-hint { animation: none; opacity: 0.45; }
+  .hero-line > span, .hero-canvas, .hero-late { animation: none; transform: none; opacity: 1; }
+}
 
 /* Links del nav (desktop): subrayado animado + estado activo */
 .nav-link { position: relative; padding-bottom: 2px; }
@@ -256,12 +291,14 @@ button, a[class*="rounded"] { transition-property: color, background-color, bord
 }
 
 /* Fade de entrada entre páginas (app/template.jsx se re-monta por navegación).
-   Termina en transform:none para no romper position:fixed descendientes. */
+   SOLO opacity: una animación de transform en este wrapper (aunque termine en
+   none) deja containing-block en Chrome y "captura" a los position:fixed
+   descendientes — así se rompió el badge flotante el 2026-07-03. */
 @keyframes pageFade {
-  from { opacity: 0; transform: translateY(6px); }
-  to   { opacity: 1; transform: none; }
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
-.page-fade { animation: pageFade 0.28s ease both; }
+.page-fade { animation: pageFade 0.3s ease both; }
 
 /* Items clickeables del ticker */
 .ticker-item { transition: filter 0.2s; border-radius: 4px; }

@@ -1,7 +1,7 @@
 "use client";
 // components/Nav.jsx
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { useLang, T } from "./Lang";
 
@@ -9,6 +9,18 @@ export default function Nav() {
   const { lang, setLang } = useLang();
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 40);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  // En la landing, arriba de todo, el nav flota TRANSPARENTE sobre el globo
+  // (hero a pantalla completa); se vuelve sólido al scrollear o abrir el menú.
+  const overlay = pathname === "/" && !scrolled && !open;
 
   // Scroll al formulario de suscripción. En móvil el contenido async (cards,
   // datos) carga DESPUÉS y empuja el form hacia abajo, así que el hash nativo
@@ -36,7 +48,11 @@ export default function Nav() {
   ];
 
   return (
-    <header className="sticky top-0 z-50 border-b border-edge bg-black">
+    <header
+      className={`sticky top-0 z-50 border-b transition-colors duration-500 ${
+        overlay ? "border-transparent bg-transparent" : "border-edge bg-black"
+      }`}
+    >
       <nav className="mx-auto flex max-w-5xl items-center justify-between px-5 py-3">
         <Link href="/" className="flex flex-col leading-tight" onClick={() => setOpen(false)}>
           <span className="font-serif text-2xl font-medium tracking-tight text-bone">Risk On</span>
@@ -99,12 +115,15 @@ export default function Nav() {
         </div>
       </nav>
 
-      {/* Mobile dropdown panel */}
+      {/* Mobile dropdown panel — grid-rows: se anima sin adivinar alturas
+          (con maxHeight fijo el menú se cortaba al crecer la lista de links) */}
       <div
-        className="overflow-hidden border-t border-edge transition-[max-height,opacity] duration-300 ease-in-out md:hidden"
-        style={{ maxHeight: open ? 340 : 0, opacity: open ? 1 : 0 }}
+        className={`grid transition-[grid-template-rows,opacity] duration-300 ease-in-out md:hidden ${
+          open ? "grid-rows-[1fr] border-t border-edge" : "grid-rows-[0fr]"
+        }`}
+        style={{ opacity: open ? 1 : 0 }}
       >
-        <div className="mx-auto flex max-w-5xl flex-col px-5 py-2">
+        <div className={`mx-auto flex min-h-0 w-full max-w-5xl flex-col overflow-hidden px-5 ${open ? "py-2" : "py-0"}`}>
           {links.map((l) => (
             <Link
               key={l.href}

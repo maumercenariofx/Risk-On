@@ -41,7 +41,7 @@ function tensionColor(s) {
   return "#3FA77E";
 }
 
-export default function RiskGauge({ post }) {
+export default function RiskGauge({ post, ticker = null }) {
   const { lang } = useLang();
   const [data, setData]         = useState(null); // /api/market
   const [rates, setRates]       = useState(null); // /api/rates
@@ -55,8 +55,40 @@ export default function RiskGauge({ post }) {
   const [heroGone, setHeroGone]       = useState(false);
   const [isSub, setIsSub]             = useState(false); // ya suscrito → sin CTA en el badge
   const [cScores, setCScores]         = useState(null); // riesgo por país en vivo
-  const sphereRef = useRef(null);
-  const heroRef   = useRef(null);
+  const sphereRef     = useRef(null);
+  const heroRef       = useRef(null);
+  const sphereWrapRef = useRef(null); // capa scroll-linked del globo
+  const overlayRef    = useRef(null); // textos del hero (parallax de salida)
+
+  // Salida cinematográfica: al scrollear, el globo se encoge/desvanece y los
+  // textos suben más rápido — "dejar atrás el planeta". Solo transform/opacity
+  // (GPU) + rAF-throttle; nada si el sistema pide reduced-motion.
+  useEffect(() => {
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    let raf = 0;
+    const onScroll = () => {
+      if (raf) return;
+      raf = requestAnimationFrame(() => {
+        raf = 0;
+        const h = heroRef.current?.offsetHeight || window.innerHeight;
+        const p = Math.min(Math.max(window.scrollY / (h * 0.9), 0), 1);
+        if (sphereWrapRef.current) {
+          sphereWrapRef.current.style.transform = `scale(${1 - p * 0.15}) translateY(${p * 60}px)`;
+          sphereWrapRef.current.style.opacity = String(1 - p * 0.85);
+        }
+        if (overlayRef.current) {
+          overlayRef.current.style.transform = `translateY(${p * 70}px)`;
+          overlayRef.current.style.opacity = String(Math.max(1 - p * 1.15, 0));
+        }
+      });
+    };
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      cancelAnimationFrame(raf);
+    };
+  }, []);
 
   useEffect(() => {
     const el = heroRef.current;
@@ -130,36 +162,40 @@ export default function RiskGauge({ post }) {
   return (
     <section className="reveal" style={{ animationDelay: "0.05s" }}>
 
-      {/* ── Hero — full-bleed a pantalla completa (.full-bleed/.hero-full) ── */}
+      {/* ── Hero — pantalla COMPLETA: full-bleed, bajo el nav transparente ── */}
       <div ref={heroRef} className="full-bleed hero-full" style={{ position: "relative", marginBottom: 28 }}>
 
-        {/* Sphere — full hero, so intro particles can scatter to the edges */}
-        <div style={{ position: "absolute", inset: 0 }}>
-          <RiskSphere ref={sphereRef} height="100%" />
+        {/* Sphere — capa externa controlada por el scroll (shrink/fade al salir);
+            la interna (.hero-canvas) trae la animación de entrada. Separadas
+            porque una animación con fill pisaría el transform inline del scroll. */}
+        <div ref={sphereWrapRef} style={{ position: "absolute", inset: 0, willChange: "transform, opacity" }}>
+          <div className="hero-canvas" style={{ position: "absolute", inset: 0 }}>
+            <RiskSphere ref={sphereRef} height="100%" />
+          </div>
         </div>
 
         {/* Overlays alineados al contenedor central; pointer-events solo en
             los chips para no taparle la interacción al globo. OJO: los hijos
             absolutos ignoran el padding del wrapper → usan left/right: 20. */}
-        <div className="relative mx-auto h-full max-w-5xl" style={{ pointerEvents: "none" }}>
+        <div ref={overlayRef} className="relative mx-auto h-full max-w-5xl" style={{ pointerEvents: "none", willChange: "transform, opacity" }}>
 
-        {/* Top-left: title */}
+        {/* Top-left: title (bajo el nav transparente → top 104) */}
         <div style={{
           position: "absolute",
-          top: 28,
+          top: 104,
           left: 20,
           lineHeight: 0.9,
           textTransform: "uppercase",
           fontFamily: "var(--font-sans)",
           fontWeight: 800,
-          fontSize: "clamp(30px, 6.5vw, 80px)",
+          fontSize: "clamp(30px, 6.5vw, 84px)",
           letterSpacing: "-0.03em",
           pointerEvents: "none",
         }}>
-          <div style={{ color: "#F5F5F2" }}>WHAT'S</div>
-          <div style={{ color: "#F5F5F2" }}>TODAY'S</div>
-          <div style={{ color: "#2E2E34" }}>RISK?</div>
-          <div style={{
+          <div className="hero-line"><span style={{ color: "#F5F5F2" }}>WHAT'S</span></div>
+          <div className="hero-line"><span style={{ color: "#F5F5F2" }}>TODAY'S</span></div>
+          <div className="hero-line"><span style={{ color: "#2E2E34" }}>RISK?</span></div>
+          <div className="hero-late" style={{
             fontFamily: "var(--font-mono)",
             fontSize: "clamp(8px, 0.85vw, 11px)",
             fontWeight: 400,
@@ -175,7 +211,7 @@ export default function RiskGauge({ post }) {
 
         {/* Bottom-right: alert countries + score + label — score-blink starts after counter settles */}
         {result && (
-          <div style={{
+          <div className="hero-late" style={{
             position: "absolute",
             bottom: 28,
             right: 20,
@@ -241,7 +277,7 @@ export default function RiskGauge({ post }) {
 
         {/* Bottom-left: timestamp */}
         {data?.asOf && (
-          <div style={{
+          <div className="hero-late" style={{
             position: "absolute",
             bottom: 28,
             left: 20,
@@ -261,6 +297,9 @@ export default function RiskGauge({ post }) {
           <span className="scroll-hint" style={{ color: "#3A3A40", fontSize: 13, lineHeight: 1 }}>▼</span>
         </div>
       </div>
+
+      {/* Ticker: vive justo debajo del hero (llega como prop desde la página) */}
+      {ticker}
 
       {/* ── Termómetro 0–100: lectura instantánea de la temperatura del mercado ── */}
       {result && (
