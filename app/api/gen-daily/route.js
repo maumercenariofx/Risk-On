@@ -1,3 +1,4 @@
+import { waitUntil } from "@vercel/functions";
 import { fetchLiveData, generateDailyView, buildMarkdown, publishToGitHub } from "../../../lib/dailyView";
 import { alertAdmin } from "../../../lib/alertAdmin";
 
@@ -31,42 +32,48 @@ async function handler(request) {
     if (exists) return Response.json({ ok: true, skipped: "already generated today", slug });
   }
 
-  try {
-    // Carrera contra el límite de 60s de Vercel Hobby: si el trabajo no acabó
-    // a los 50s, alcanzamos a AVISAR antes de que la plataforma mate la función
-    // (la muerte dura no ejecuta el catch — así se perdió el view del
-    // 2026-07-03 sin dejar rastro).
-    const work = (async () => {
-      const data = await fetchLiveData("https://riskon.lat");
-      const view = await generateDailyView(data, dateLong, slug);
-      const md = buildMarkdown(view, slug);
-      const pub = await publishToGitHub(slug, md);
-      return { view, pub };
-    })();
-    const timeout = new Promise((resolve) =>
-      setTimeout(() => resolve("TIMEOUT"), 50000)
-    );
-    const result = await Promise.race([work, timeout]);
+  // El trabajo pesado corre en segundo plano (waitUntil) y la respuesta sale
+  // en ~1s: así cronjob.org (timeout máx 30s < duración real de gen) deja de
+  // marcar "Fallido" cada día por ruido — el 2026-07-03 ese ruido diario
+  // enmascaró un fallo real. Los errores se reportan por alertAdmin.
+  waitUntil((async () => {
+    try {
+      // Carrera contra el límite de 60s de Vercel Hobby: si el trabajo no
+      // acabó a los 50s, alcanzamos a AVISAR antes del kill (la muerte dura
+      // no ejecuta el catch — así se perdió el view del 2026-07-03).
+      const work = (async () => {
+        const data = await fetchLiveData("https://riskon.lat");
+        const view = await generateDailyView(data, dateLong, slug);
+        const md = buildMarkdown(view, slug);
+        const pub = await publishToGitHub(slug, md);
+        return { view, pub };
+      })();
+      const timeout = new Promise((resolve) =>
+        setTimeout(() => resolve("TIMEOUT"), 50000)
+      );
+      const result = await Promise.race([work, timeout]);
 
-    if (result === "TIMEOUT") {
-      await alertAdmin(`gen-daily EXCEDIÓ los 50s (${slug}) — probable kill de Vercel sin publicar`, {
-        slug,
-        nota: "Claude/datos lentos. El envío de las 7:00-7:10 auto-generará el view (y diferirá el correo si va tarde).",
-      });
-      return Response.json({ ok: false, slug, error: "timeout >50s" }, { status: 504 });
+      if (result === "TIMEOUT") {
+        await alertAdmin(`gen-daily EXCEDIÓ los 50s (${slug}) — probable kill de Vercel sin publicar`, {
+          slug,
+          nota: "Claude/datos lentos. El envío de las 7:00-7:10 auto-generará el view (y diferirá el correo si va tarde).",
+        });
+        return;
+      }
+
+      const { pub } = result;
+      // Si la publicación falló, send-daily (7:00) intentará generar inline,
+      // pero avisa desde ya para poder intervenir antes del envío.
+      if (!pub.ok) await alertAdmin(`gen-daily no pudo publicar el view (${slug})`, pub.error);
+    } catch (e) {
+      await alertAdmin(`gen-daily falló (${slug})`, { error: String(e?.message ?? e) });
     }
+  })());
 
-    const { view, pub } = result;
-    // Si la publicación falló, send-daily (7:00) intentará generar inline, pero
-    // avisa desde ya para poder intervenir antes del envío.
-    if (!pub.ok) await alertAdmin(`gen-daily no pudo publicar el view (${slug})`, pub.error);
-
-    return Response.json({ ok: true, slug, score: view.score, riskState: view.riskState, published: pub.ok, publishError: pub.error });
-  } catch (e) {
-    const error = String(e?.message ?? e);
-    await alertAdmin(`gen-daily falló (${slug})`, { error });
-    return Response.json({ ok: false, slug, error }, { status: 500 });
-  }
+  return Response.json({
+    ok: true, slug, started: true,
+    detail: "generación en curso en segundo plano; si falla llega alerta por correo",
+  });
 }
 
 export { handler as GET, handler as POST };
