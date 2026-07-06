@@ -3,9 +3,15 @@
 // contra el mercado. Los datos salen del front-matter de content/*.md, así que
 // la página se refresca sola con el redeploy diario del cron.
 import { getAllPostsMeta } from "../../lib/posts";
+import { computeForwardReturns } from "../../lib/forwardReturns";
 import TrackRecord from "../../components/TrackRecord";
+import WhatHappenedNext from "../../components/WhatHappenedNext";
 import RiskBands from "../../components/RiskBands";
 import { T } from "../../components/Lang";
+
+// La página se regenera con el redeploy diario del cron; el revalidate cubre
+// además el paso de los días (los forward returns maduran solos).
+export const revalidate = 3600;
 
 export const metadata = {
   title: "Índice Risk On · Track record",
@@ -13,13 +19,15 @@ export const metadata = {
     "Histórico completo del Índice Risk On: el score publicado cada mañana a las 7:00, día por día, contra el mercado. Sin ediciones retroactivas.",
 };
 
-export default function IndicePage() {
+export default async function IndicePage() {
   const points = getAllPostsMeta()
     .filter((p) => p.score != null && !isNaN(Number(p.score)))
     .map(({ slug, score, title_es, title_en }) => ({
       slug, score: Number(score), title_es, title_en,
     }))
     .sort((a, b) => (a.slug < b.slug ? -1 : 1));
+
+  const fwd = await computeForwardReturns(points);
 
   return (
     <div className="space-y-6 pt-4">
@@ -38,6 +46,12 @@ export default function IndicePage() {
       <div className="reveal">
         <TrackRecord points={points} />
       </div>
+
+      {fwd && (
+        <div className="reveal">
+          <WhatHappenedNext data={fwd} />
+        </div>
+      )}
 
       <div className="reveal">
         <RiskBands />

@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useLang, T } from "./Lang";
 import Skeleton from "./Skeleton";
+import SourceTag from "./SourceTag";
 import {
   crosshairPlugin, makeGlowPlugin, makeTerminalDotPlugin,
   makeGradientFn, tooltipDefaults, xScaleDefaults, yScaleDefaults,
@@ -137,9 +138,10 @@ export default function YieldCurveChart() {
 
       {status && (
         <div style={{ borderTop: "1px solid rgba(255,255,255,0.05)", paddingTop: 10, marginTop: 8 }}>
-          <p style={{ fontSize: 11, color: "#9CA3AF", lineHeight: 1.65, margin: 0 }}>
+          <p style={{ fontSize: 11, color: "#9CA3AF", lineHeight: 1.65, margin: "0 0 8px 0" }}>
             {lang === "en" ? status.en2 : status.es2}
           </p>
+          <SourceTag source="US Treasury · Yahoo" asOf={data?.asOf} />
         </div>
       )}
     </div>

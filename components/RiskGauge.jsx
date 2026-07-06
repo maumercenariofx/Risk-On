@@ -34,6 +34,17 @@ function accent(score) {
   return riskBand(score).color;
 }
 
+// FX opera 24/5: cierra vie ~16:00 CT (22:00 UTC) y reabre dom ~16:00 CT.
+// En esa ventana el "índice en vivo" es en realidad el cierre del viernes —
+// decirlo es parte de la veracidad del sitio.
+function fxClosed(now = new Date()) {
+  const d = now.getUTCDay(), h = now.getUTCHours();
+  if (d === 6) return true;                 // sábado
+  if (d === 5 && h >= 22) return true;      // viernes noche
+  if (d === 0 && h < 22) return true;       // domingo antes de reapertura
+  return false;
+}
+
 // Color por tensión de país (0 = calma/verde → 100 = estrés/rojo).
 function tensionColor(s) {
   if (s >= 66) return "#D85A30";
@@ -269,7 +280,11 @@ export default function RiskGauge({ post, ticker = null }) {
                 fontSize: 9, letterSpacing: 2.5, fontWeight: 400,
                 color: "#2A2A30", marginTop: 6, lineHeight: 1,
               }}>
-                ▲ <T es="ÍNDICE EN VIVO" en="LIVE INDEX" />
+                {fxClosed() ? (
+                  <T es="MERCADO CERRADO · CIERRE DEL VIERNES" en="MARKET CLOSED · FRIDAY'S CLOSE" />
+                ) : (
+                  <>▲ <T es="ÍNDICE EN VIVO" en="LIVE INDEX" /></>
+                )}
               </div>
             </div>
           </div>

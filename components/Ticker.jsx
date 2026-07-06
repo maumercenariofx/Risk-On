@@ -21,48 +21,40 @@ const HREF = {
   "US 10Y":  "/analisis?symbol=%5ETNX",
 };
 
-const FALLBACK = [
-  ["S&P 500",  "5,412",   1, "+0.82%"],
-  ["NASDAQ",   "17,890",  1, "+1.10%"],
-  ["IPC",      "55,100",  1, "+0.40%"],
-  ["USD/MXN",  "18.420",  0, "-0.18%"],
-  ["EUR/USD",  "1.0840",  1, "+0.09%"],
-  ["AAPL",     "213.49",  1, "+0.61%"],
-  ["TSLA",     "248.12",  0, "-1.43%"],
-  ["NVDA",     "1,074",   1, "+2.30%"],
-  ["BTC",      "67,420",  1, "+1.82%"],
-  ["ETH",      "3,512",   1, "+0.94%"],
-  ["WTI",      "72.40",   0, "-0.55%"],
-  ["Gold",     "3,320",   1, "+0.30%"],
-  ["USD/JPY",  "154.20",  1, "+0.22%"],
-  ["US 10Y",   "4.42",    0, "-0.03%"],
+// Veracidad: NADA de precios hardcodeados de respaldo (llegaron a mostrarse
+// valores con meses de antigüedad como si fueran en vivo). Mientras carga o si
+// el feed falla, cada instrumento muestra "—".
+const NAMES = [
+  "S&P 500", "NASDAQ", "IPC", "USD/MXN", "EUR/USD", "AAPL", "TSLA",
+  "NVDA", "BTC", "ETH", "WTI", "Gold", "USD/JPY", "US 10Y",
 ];
+const EMPTY = NAMES.map((n) => [n, "—", 2, ""]);
 
 export default function Ticker() {
-  const [items, setItems] = useState(FALLBACK);
+  const [items, setItems] = useState(EMPTY);
 
   useEffect(() => {
     fetch("/api/market")
       .then((r) => r.json())
       .then((d) => {
-        const fmt = (v, d2) => v != null ? (d2 === 0 ? Math.round(v).toLocaleString() : v.toFixed(d2)) : null;
-        const chg = (v, fb) => v != null ? (v >= 0 ? "+" : "") + v.toFixed(2) + "%" : fb;
+        const fmt = (v, d2) => v != null ? (d2 === 0 ? Math.round(v).toLocaleString() : v.toFixed(d2)) : "—";
+        const chg = (v) => v != null ? (v >= 0 ? "+" : "") + v.toFixed(2) + "%" : "";
         const dir = (v) => v == null ? 2 : v >= 0 ? 1 : 0;
         setItems([
-          ["S&P 500", fmt(d.spx,  0) ?? FALLBACK[0][1],  dir(d.spxChg),  chg(d.spxChg,  FALLBACK[0][3])],
-          ["NASDAQ",  fmt(d.ndx,  0) ?? FALLBACK[1][1],  dir(d.ndxChg),  chg(d.ndxChg,  FALLBACK[1][3])],
-          ["IPC",     fmt(d.ipc,  0) ?? FALLBACK[2][1],  dir(d.ipcChg),  chg(d.ipcChg,  FALLBACK[2][3])],
-          ["USD/MXN", fmt(d.usdmxn,4) ?? FALLBACK[3][1], dir(d.usdmxnChg), chg(d.usdmxnChg, FALLBACK[3][3])],
-          ["EUR/USD", fmt(d.eurusd,4) ?? FALLBACK[4][1], dir(d.eurusdChg), chg(d.eurusdChg, FALLBACK[4][3])],
-          ["AAPL",    fmt(d.aapl, 2) ?? FALLBACK[5][1],  dir(d.aaplChg), chg(d.aaplChg, FALLBACK[5][3])],
-          ["TSLA",    fmt(d.tsla, 2) ?? FALLBACK[6][1],  dir(d.tslaChg), chg(d.tslaChg, FALLBACK[6][3])],
-          ["NVDA",    fmt(d.nvda, 2) ?? FALLBACK[7][1],  dir(d.nvdaChg), chg(d.nvdaChg, FALLBACK[7][3])],
-          ["BTC",     fmt(d.btc,  0) ?? FALLBACK[8][1],  dir(d.btcChg),  chg(d.btcChg,  FALLBACK[8][3])],
-          ["ETH",     fmt(d.eth,  0) ?? FALLBACK[9][1],  dir(d.ethChg),  chg(d.ethChg,  FALLBACK[9][3])],
-          ["WTI",     fmt(d.wti,  2) ?? FALLBACK[10][1], dir(d.wtiChg),  chg(d.wtiChg,  FALLBACK[10][3])],
-          ["Gold",    fmt(d.gold, 0) ?? FALLBACK[11][1], dir(d.goldChg), chg(d.goldChg, FALLBACK[11][3])],
-          ["USD/JPY", fmt(d.usdjpy,2) ?? FALLBACK[12][1],dir(d.usdjpyChg),chg(d.usdjpyChg,FALLBACK[12][3])],
-          ["US 10Y",  fmt(d.us10y, 2) ?? FALLBACK[13][1],dir(d.us10yChg), chg(d.us10yChg, FALLBACK[13][3])],
+          ["S&P 500", fmt(d.spx,  0),   dir(d.spxChg),   chg(d.spxChg)],
+          ["NASDAQ",  fmt(d.ndx,  0),   dir(d.ndxChg),   chg(d.ndxChg)],
+          ["IPC",     fmt(d.ipc,  0),   dir(d.ipcChg),   chg(d.ipcChg)],
+          ["USD/MXN", fmt(d.usdmxn, 4), dir(d.usdmxnChg), chg(d.usdmxnChg)],
+          ["EUR/USD", fmt(d.eurusd, 4), dir(d.eurusdChg), chg(d.eurusdChg)],
+          ["AAPL",    fmt(d.aapl, 2),   dir(d.aaplChg),  chg(d.aaplChg)],
+          ["TSLA",    fmt(d.tsla, 2),   dir(d.tslaChg),  chg(d.tslaChg)],
+          ["NVDA",    fmt(d.nvda, 2),   dir(d.nvdaChg),  chg(d.nvdaChg)],
+          ["BTC",     fmt(d.btc,  0),   dir(d.btcChg),   chg(d.btcChg)],
+          ["ETH",     fmt(d.eth,  0),   dir(d.ethChg),   chg(d.ethChg)],
+          ["WTI",     fmt(d.wti,  2),   dir(d.wtiChg),   chg(d.wtiChg)],
+          ["Gold",    fmt(d.gold, 0),   dir(d.goldChg),  chg(d.goldChg)],
+          ["USD/JPY", fmt(d.usdjpy, 2), dir(d.usdjpyChg), chg(d.usdjpyChg)],
+          ["US 10Y",  fmt(d.us10y, 2),  dir(d.us10yChg), chg(d.us10yChg)],
         ]);
       })
       .catch(() => {});

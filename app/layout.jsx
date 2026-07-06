@@ -40,6 +40,31 @@ export const metadata = {
     description: "FX y mercados explicados para todos. ¿Cuanto risk hay hoy?",
     images: ["/riskon-logo.png"],
   },
+  alternates: {
+    types: { "application/rss+xml": "https://riskon.lat/feed.xml" },
+  },
+};
+
+// JSON-LD del sitio (Organization + WebSite) — datos estructurados para Google.
+const SITE_LD = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": "https://riskon.lat/#org",
+      name: "Risk On",
+      url: "https://riskon.lat",
+      logo: "https://riskon.lat/riskon-logo.png",
+      founder: { "@type": "Person", name: "Mauricio Mercenario" },
+    },
+    {
+      "@type": "WebSite",
+      url: "https://riskon.lat",
+      name: "Risk On",
+      publisher: { "@id": "https://riskon.lat/#org" },
+      inLanguage: ["es-MX", "en"],
+    },
+  ],
 };
 
 export default function RootLayout({ children }) {
@@ -56,6 +81,10 @@ export default function RootLayout({ children }) {
         />
       </head>
       <body>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(SITE_LD) }}
+        />
         <RevealObserver />
         <LangProvider>
           <Nav />

@@ -24,5 +24,28 @@ export async function generateMetadata({ params }) {
 export default async function PostPage({ params }) {
   const post = await getPost(params.slug);
   const { prev, next } = getAdjacentPosts(params.slug);
-  return <PostView post={post} prev={prev} next={next} />;
+
+  // JSON-LD NewsArticle → elegible para resultados enriquecidos en Google.
+  const ld = {
+    "@context": "https://schema.org",
+    "@type": "NewsArticle",
+    headline: post.title_es,
+    description: post.summary_es,
+    datePublished: `${params.slug}T13:00:00Z`,
+    inLanguage: "es-MX",
+    mainEntityOfPage: `https://riskon.lat/archive/${params.slug}`,
+    image: [`https://riskon.lat/archive/${params.slug}/opengraph-image`],
+    author: { "@type": "Person", name: "Mauricio Mercenario", url: "https://riskon.lat/about" },
+    publisher: { "@id": "https://riskon.lat/#org" },
+  };
+
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(ld) }}
+      />
+      <PostView post={post} prev={prev} next={next} />
+    </>
+  );
 }

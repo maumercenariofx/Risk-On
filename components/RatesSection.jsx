@@ -1,8 +1,11 @@
 "use client";
 import { useEffect, useState } from "react";
 import { T } from "./Lang";
+import SourceTag from "./SourceTag";
 
-const FALLBACK = { tiie28: 6.60, banxico: 6.50, fed: 3.625, fedRange: "3.5–3.75%" };
+// Veracidad: sin números inventados. Mientras carga (o si una fuente falla)
+// se muestra "—" — nunca un valor viejo hardcodeado disfrazado de actual.
+const fmt = (v, suffix = "%") => (v == null ? "—" : v.toFixed(2) + suffix);
 
 export default function RatesSection() {
   const [rates, setRates] = useState(null);
@@ -11,18 +14,23 @@ export default function RatesSection() {
     fetch("/api/rates")
       .then((r) => r.json())
       .then(setRates)
-      .catch(() => setRates(FALLBACK));
+      .catch(() => setRates({ error: true }));
   }, []);
 
-  const r = rates ?? FALLBACK;
-  const spread = (r.banxico - r.fed).toFixed(2);
+  const r = rates ?? {};
+  const spread = r.banxico != null && r.fed != null ? (r.banxico - r.fed).toFixed(2) : null;
 
   const items = [
-    { label: "TIIE 28d",  value: r.tiie28.toFixed(2) + "%" },
-    { label: "Banxico",   value: r.banxico.toFixed(2) + "%" },
-    { label: "Fed Funds", value: r.fedRange ?? (r.fed.toFixed(3) + "%") },
+    { label: "TIIE 28d",  value: fmt(r.tiie28) },
+    { label: "Banxico",   value: fmt(r.banxico) },
+    { label: "Fed Funds", value: r.fedRange ?? (r.fed != null ? r.fed.toFixed(3) + "%" : "—") },
     { label_es: "Diferencial MX–US", label_en: "MX–US Spread",
-      value: "+" + spread + "%", highlight: true },
+      value: spread != null ? `+${spread}%` : "—", highlight: spread != null },
+    // FIX oficial de Banxico: el tipo de cambio para liquidar obligaciones en
+    // México (se publica una vez al día hábil) — contraste institucional del
+    // spot de mercado que corre en el resto del sitio.
+    { label_es: "FIX Banxico", label_en: "Banxico FIX",
+      value: r.fix != null ? r.fix.toFixed(4) : "—", sub: r.fixDate ?? null },
   ];
 
   return (
@@ -42,24 +50,35 @@ export default function RatesSection() {
               </div>
               <div style={{
                 fontFamily: "var(--font-mono)", fontSize: 26, fontWeight: 500, lineHeight: 1,
-                color: item.highlight ? "#0F8A5F" : rates ? "#F5F5F2" : "#3A3A3E",
+                fontVariantNumeric: "tabular-nums",
+                color: item.highlight ? "#0F8A5F" : rates && !rates.error ? "#F5F5F2" : "#3A3A3E",
                 transition: "color .4s",
               }}>
                 {item.value}
               </div>
+              {item.sub && (
+                <div style={{ fontSize: 8.5, color: "#3A3A3E", fontFamily: "var(--font-mono)", marginTop: 4 }}>
+                  {item.sub}
+                </div>
+              )}
             </div>
           ))}
         </div>
         <div style={{ borderTop: "1px solid #141416", paddingTop: 14 }}>
-          <div style={{ fontSize: 9, letterSpacing: 2, textTransform: "uppercase", color: "#3A3A3E", marginBottom: 6 }}>
-            <T es="¿Qué es el carry?" en="What is carry?" />
-          </div>
-          <p style={{ fontSize: 12, color: "#5A5A60", lineHeight: 1.75 }}>
-            <T
-              es={`El diferencial de +${spread}% (Banxico vs Fed) hace que el peso sea atractivo para el carry trade: inversionistas piden prestado en dólares (tasa baja) e invierten en pesos (tasa alta), ganando la diferencia. Eso sostiene la demanda de pesos — hasta que el riesgo sube y todos salen corriendo al mismo tiempo.`}
-              en={`The +${spread}% spread (Banxico vs Fed) makes the peso attractive for carry trades: investors borrow dollars at low rates and place that money in pesos at high rates, pocketing the difference. That supports peso demand — until risk spikes and everyone exits at once.`}
-            />
-          </p>
+          {spread != null && (
+            <>
+              <div style={{ fontSize: 9, letterSpacing: 2, textTransform: "uppercase", color: "#3A3A3E", marginBottom: 6 }}>
+                <T es="¿Qué es el carry?" en="What is carry?" />
+              </div>
+              <p style={{ fontSize: 12, color: "#5A5A60", lineHeight: 1.75, marginBottom: 10 }}>
+                <T
+                  es={`El diferencial de +${spread}% (Banxico vs Fed) hace que el peso sea atractivo para el carry trade: inversionistas piden prestado en dólares (tasa baja) e invierten en pesos (tasa alta), ganando la diferencia. Eso sostiene la demanda de pesos — hasta que el riesgo sube y todos salen corriendo al mismo tiempo.`}
+                  en={`The +${spread}% spread (Banxico vs Fed) makes the peso attractive for carry trades: investors borrow dollars at low rates and place that money in pesos at high rates, pocketing the difference. That supports peso demand — until risk spikes and everyone exits at once.`}
+                />
+              </p>
+            </>
+          )}
+          <SourceTag source="Banxico SIE · FRED" asOf={r.asOf} />
         </div>
       </div>
     </section>

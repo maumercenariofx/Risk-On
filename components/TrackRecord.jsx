@@ -8,6 +8,7 @@ import { useLang, T } from "./Lang";
 import { useCountUp } from "../lib/useCountUp";
 import { BANDS, riskBand } from "../lib/riskScore";
 import Skeleton from "./Skeleton";
+import SourceTag from "./SourceTag";
 import {
   crosshairPlugin, makeGlowPlugin, makeTerminalDotPlugin, makeGradientFn,
   semanticColor, tooltipDefaults, xScaleDefaults, yScaleDefaults,
@@ -158,10 +159,13 @@ function UsdMxnChart({ range }) {
   const canvasRef = useRef(null);
   const chartRef  = useRef(null);
   const [data, setData] = useState(null);
+  const [asOf, setAsOf] = useState(null); // momento real de la carga (veracidad)
 
   useEffect(() => {
     fetch(`/api/history?range=${range}&symbol=USDMXN`)
-      .then((r) => r.json()).then(setData).catch(() => {});
+      .then((r) => r.json())
+      .then((d) => { setData(d); setAsOf(new Date().toISOString()); })
+      .catch(() => {});
   }, [range]);
 
   useEffect(() => {
@@ -220,9 +224,12 @@ function UsdMxnChart({ range }) {
 
   if (!data?.prices?.length) return <Skeleton height={160} />;
   return (
-    <div style={{ position: "relative", height: 160 }}>
-      <canvas ref={canvasRef} />
-    </div>
+    <>
+      <div style={{ position: "relative", height: 160 }}>
+        <canvas ref={canvasRef} />
+      </div>
+      <SourceTag source="Yahoo Finance" asOf={asOf} style={{ marginTop: 8 }} />
+    </>
   );
 }
 
