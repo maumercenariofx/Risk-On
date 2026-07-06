@@ -70,7 +70,7 @@ export default function RatesSection() {
               <div style={{ fontSize: 9, letterSpacing: 2, textTransform: "uppercase", color: "#3A3A3E", marginBottom: 6 }}>
                 <T es="¿Qué es el carry?" en="What is carry?" />
               </div>
-              <p style={{ fontSize: 12, color: "#5A5A60", lineHeight: 1.75, marginBottom: 10 }}>
+              <p style={{ fontSize: 13, color: "#9CA3AF", lineHeight: 1.75, marginBottom: 10 }}>
                 <T
                   es={`El diferencial de +${spread}% (Banxico vs Fed) hace que el peso sea atractivo para el carry trade: inversionistas piden prestado en dólares (tasa baja) e invierten en pesos (tasa alta), ganando la diferencia. Eso sostiene la demanda de pesos — hasta que el riesgo sube y todos salen corriendo al mismo tiempo.`}
                   en={`The +${spread}% spread (Banxico vs Fed) makes the peso attractive for carry trades: investors borrow dollars at low rates and place that money in pesos at high rates, pocketing the difference. That supports peso demand — until risk spikes and everyone exits at once.`}

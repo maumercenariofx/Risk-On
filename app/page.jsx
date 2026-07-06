@@ -9,20 +9,22 @@ import RatesSection from "../components/RatesSection";
 import EconCalendar from "../components/EconCalendar";
 import AdvancedData from "../components/AdvancedData";
 import MobileCollapse from "../components/MobileCollapse";
-import { getAllPostsMeta } from "../lib/posts";
+import { getAllPostsMeta, getPost } from "../lib/posts";
 
-export default function Home() {
-  const posts  = getAllPostsMeta();
-  const latest = posts[0] || null;
+export default async function Home() {
+  const posts = getAllPostsMeta();
+  // Post completo (con html) para el overlay lector de la landing.
+  const latest = posts[0] ? await getPost(posts[0].slug) : null;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-10">
       {/* El ticker vive DENTRO del gauge, justo bajo el hero a pantalla completa */}
       <RiskGauge post={latest} ticker={<Ticker />} />
 
-      <div className="reveal"><RiskBands /></div>
-
+      {/* Primero el contenido DEL DÍA; la enciclopedia (bandas) después */}
       {latest && <DailyWatch post={latest} />}
+
+      <div className="reveal pt-4"><RiskBands /></div>
 
       <ProjectCards />
       <CountdownTimers />

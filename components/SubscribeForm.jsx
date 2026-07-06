@@ -61,7 +61,7 @@ export default function SubscribeForm() {
       style={{ background: "rgba(11,11,12,0.92)" }}
     >
       <p className="mb-2 text-sm font-medium text-bone">
-        <T es="Recibe Pre-market cada mañana" en="Get Pre-market every morning" />
+        <T es="Recibe El Pre-Market cada mañana" en="Get The Pre-Market every morning" />
       </p>
       <p className="mb-3 text-xs text-muted">
         {count != null && count >= 15 ? (

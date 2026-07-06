@@ -65,6 +65,7 @@ export default function RiskGauge({ post, ticker = null }) {
   const [newsLoading, setNewsLoading] = useState(false);
   const [heroGone, setHeroGone]       = useState(false);
   const [isSub, setIsSub]             = useState(false); // ya suscrito → sin CTA en el badge
+  const [thermoIn, setThermoIn]       = useState(false); // desliza el termómetro 0→score
   const [cScores, setCScores]         = useState(null); // riesgo por país en vivo
   const sphereRef     = useRef(null);
   const heroRef       = useRef(null);
@@ -126,6 +127,8 @@ export default function RiskGauge({ post, ticker = null }) {
     fetch("/api/curve").then((r) => r.json()).then(setCurve).catch(() => setCurve(null));
     fetch("/api/country-risk").then((r) => r.json()).then((d) => setCScores(d.scores || null)).catch(() => {});
     try { setIsSub(localStorage.getItem("riskon-sub") === "1"); } catch {}
+    const t = setTimeout(() => setThermoIn(true), 150);
+    return () => clearTimeout(t);
   }, []);
 
   // Aplica el riesgo por país en vivo al globo (reintenta hasta que monte el 3D).
@@ -316,7 +319,8 @@ export default function RiskGauge({ post, ticker = null }) {
       {/* Ticker: vive justo debajo del hero (llega como prop desde la página) */}
       {ticker}
 
-      {/* ── Termómetro 0–100: lectura instantánea de la temperatura del mercado ── */}
+      {/* ── Termómetro 0–100: lectura instantánea de la temperatura del mercado.
+          El marcador se DESLIZA de 0 al score al montar (thermoIn). ── */}
       {result && (
         <div style={{ margin: "0 0 22px" }}>
           <div style={{
@@ -324,9 +328,10 @@ export default function RiskGauge({ post, ticker = null }) {
             background: "linear-gradient(90deg,#5B7FB9 0%,#D9A227 34%,#2FB89A 60%,#19C39B 100%)",
           }}>
             <div style={{
-              position: "absolute", top: -3, left: `${score}%`, transform: "translateX(-50%)",
+              position: "absolute", top: -3, left: `${thermoIn ? score : 0}%`, transform: "translateX(-50%)",
               width: 3, height: 14, background: "#F5F5F2", borderRadius: 2,
               boxShadow: "0 0 0 1px rgba(0,0,0,0.55)",
+              transition: "left 1.3s cubic-bezier(0.2, 0.7, 0.3, 1)",
             }} />
           </div>
           <div style={{
@@ -393,7 +398,7 @@ export default function RiskGauge({ post, ticker = null }) {
               fontSize: 10, letterSpacing: 1.5, textTransform: "uppercase",
               fontFamily: "var(--font-mono)", color: "#F5F5F2", textAlign: "center",
             }}>
-              <T es="Suscríbete →" en="Subscribe →" />
+              <T es="Recibe El Pre-Market →" en="Get The Pre-Market →" />
             </div>
           )}
         </a>

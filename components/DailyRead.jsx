@@ -1,11 +1,13 @@
 "use client";
 // components/DailyRead.jsx
-import Link from "next/link";
+import { useState } from "react";
 import { useLang, T } from "./Lang";
 import SubscribeForm from "./SubscribeForm";
+import ViewOverlay from "./ViewOverlay";
 
 export default function DailyRead({ post }) {
   const { lang } = useLang();
+  const [readerOpen, setReaderOpen] = useState(false);
   const title = lang === "en" ? post.title_en : post.title_es;
   const summary = lang === "en" ? post.summary_en : post.summary_es;
 
@@ -13,7 +15,7 @@ export default function DailyRead({ post }) {
     <section className="reveal" style={{ animationDelay: "0.2s" }}>
       <div className="mb-3 flex items-baseline gap-3 flex-wrap">
         <span className="font-serif text-3xl font-semibold tracking-tight text-bone">
-          Pre-market
+          El Pre-Market
         </span>
         <span className="text-xs text-muted">{post.date}</span>
         {post.score && (
@@ -36,12 +38,17 @@ export default function DailyRead({ post }) {
       </p>
       <p className="text-[15px] leading-relaxed text-bone/80">{summary}</p>
 
-      <Link
-        href={`/archive/${post.slug}`}
+      {/* Abre el view completo en un overlay lector — sin navegar, así al
+          cerrar sigues exactamente donde ibas (petición explícita del usuario:
+          el link a /archive te regresaba al inicio de la landing). */}
+      <button
+        onClick={() => setReaderOpen(true)}
         className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-bone transition-transform hover:translate-x-1"
       >
-        <T es="Leer completa" en="Read full note" /> →
-      </Link>
+        <T es="Leer el view completo" en="Read the full view" /> →
+      </button>
+
+      <ViewOverlay post={post} open={readerOpen} onClose={() => setReaderOpen(false)} />
 
       <SubscribeForm />
     </section>

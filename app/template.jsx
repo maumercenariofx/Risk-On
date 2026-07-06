@@ -1,6 +1,12 @@
 // app/template.jsx
-// Se re-monta en cada navegación → la clase .page-fade re-dispara el fade de
-// entrada entre páginas (definido en globals.css, respeta reduced-motion).
+// Se re-monta en cada navegación → re-dispara el fade de entrada + el barrido
+// luminoso (.page-sweep, elemento fixed propio — no transforma al wrapper,
+// que rompería los position:fixed hijos). Respeta reduced-motion.
 export default function Template({ children }) {
-  return <div className="page-fade">{children}</div>;
+  return (
+    <div className="page-fade">
+      <div className="page-sweep" aria-hidden />
+      {children}
+    </div>
+  );
 }

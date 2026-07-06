@@ -8,6 +8,7 @@ import RiskBands from "./RiskBands";
 import SubscribeForm from "./SubscribeForm";
 import ReadingProgress from "./ReadingProgress";
 import { riskBand } from "../lib/riskScore";
+import { ARTICLE_CLS } from "../lib/articleStyle";
 
 function ShareBar({ post, lang }) {
   const [copied, setCopied] = useState(false);
@@ -89,7 +90,7 @@ export default function PostView({ post, prev, next }) {
         <RiskBands />
       </div>
       <div
-        className="reveal prose-invert max-w-none text-[15px] leading-relaxed text-bone/85 [&>p]:mb-4 [&_strong]:text-bone [&>p:first-of-type]:text-[17px] [&>p:first-of-type]:text-bone [&>p:first-of-type]:font-medium [&_h3]:mb-2 [&_h3]:mt-7 [&_h3]:font-mono [&_h3]:text-[10px] [&_h3]:uppercase [&_h3]:tracking-[3px] [&_h3]:text-muted"
+        className={`reveal ${ARTICLE_CLS}`}
         style={{ animationDelay: "0.1s" }}
         dangerouslySetInnerHTML={{ __html: (lang === "en" ? post.html_en : post.html_es) ?? post.html }}
       />

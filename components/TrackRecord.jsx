@@ -63,7 +63,7 @@ function BandChip({ score }) {
   const b = riskBand(score);
   return (
     <span style={{
-      fontSize: 8, letterSpacing: 2, fontFamily: "var(--font-mono)",
+      fontSize: 9, letterSpacing: 2, fontFamily: "var(--font-mono)",
       color: b.color, border: `1px solid ${b.color}44`,
       borderRadius: 20, padding: "3px 9px", whiteSpace: "nowrap",
     }}>
@@ -289,7 +289,7 @@ export default function TrackRecord({ points }) {
           <T es="Índice Risk On · un punto por view publicado" en="Risk On Index · one point per published view" />
         </div>
         <ScoreHistoryChart points={points} />
-        <p style={{ fontSize: 11, color: "#9CA3AF", lineHeight: 1.65, margin: "10px 0 0 0" }}>
+        <p style={{ fontSize: 12, color: "#9CA3AF", lineHeight: 1.65, margin: "10px 0 0 0" }}>
           <T
             es="Cada punto es el score publicado esa mañana a las 7:00 (hora CDMX), antes de la apertura. Haz clic en un punto para leer el view de ese día. El histórico crece un punto por día hábil."
             en="Each point is the score published that morning at 7:00 AM (Mexico City), before the open. Click any point to read that day's view. The history grows one point per trading day."
@@ -303,7 +303,7 @@ export default function TrackRecord({ points }) {
           {lang === "en" ? `USD/MXN · last ${range} days` : `USD/MXN · últimos ${range} días`}
         </div>
         <UsdMxnChart range={range} />
-        <p style={{ fontSize: 11, color: "#9CA3AF", lineHeight: 1.65, margin: "10px 0 0 0" }}>
+        <p style={{ fontSize: 12, color: "#9CA3AF", lineHeight: 1.65, margin: "10px 0 0 0" }}>
           <T
             es="El peso en el mismo período, para contrastar el score contra el mercado. Van en paneles separados a propósito: comparar dos escalas en un mismo eje engaña al ojo."
             en="The peso over the same period, to contrast the score against the market. Shown as separate panels on purpose: overlaying two scales on one axis misleads the eye."

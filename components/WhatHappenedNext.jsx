@@ -57,7 +57,7 @@ export default function WhatHappenedNext({ data }) {
               <tr key={r.band} style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}>
                 <td style={{ padding: "10px 8px 10px 0" }}>
                   <span style={{
-                    fontSize: 8, letterSpacing: 2, fontFamily: "var(--font-mono)",
+                    fontSize: 9, letterSpacing: 2, fontFamily: "var(--font-mono)",
                     color: r.color, border: `1px solid ${r.color}44`,
                     borderRadius: 20, padding: "3px 9px", whiteSpace: "nowrap",
                   }}>
@@ -82,7 +82,7 @@ export default function WhatHappenedNext({ data }) {
         </table>
       </div>
 
-      <p style={{ fontSize: 10.5, color: "#5A5A60", lineHeight: 1.6, margin: "12px 0 0 0" }}>
+      <p style={{ fontSize: 11.5, color: "#8A8A8E", lineHeight: 1.6, margin: "12px 0 0 0" }}>
         <T
           es={`Muestra: ${data.usable} views con al menos 5 días de historia posterior. La muestra aún es chica y crece un view por día hábil — esto es evidencia en construcción, no una promesa de retornos. No es recomendación de inversión.`}
           en={`Sample: ${data.usable} views with at least 5 days of subsequent history. The sample is still small and grows by one view per trading day — this is evidence under construction, not a promise of returns. Not investment advice.`}

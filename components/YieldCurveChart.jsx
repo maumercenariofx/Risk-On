@@ -138,7 +138,7 @@ export default function YieldCurveChart() {
 
       {status && (
         <div style={{ borderTop: "1px solid rgba(255,255,255,0.05)", paddingTop: 10, marginTop: 8 }}>
-          <p style={{ fontSize: 11, color: "#9CA3AF", lineHeight: 1.65, margin: "0 0 8px 0" }}>
+          <p style={{ fontSize: 12, color: "#9CA3AF", lineHeight: 1.65, margin: "0 0 8px 0" }}>
             {lang === "en" ? status.en2 : status.es2}
           </p>
           <SourceTag source="US Treasury · Yahoo" asOf={data?.asOf} />

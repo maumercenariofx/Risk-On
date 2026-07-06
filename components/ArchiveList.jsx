@@ -57,7 +57,7 @@ export default function ArchiveList({ posts }) {
               onClick={() => setBand(band === b.key ? null : b.key)}
               aria-pressed={band === b.key}
               style={{
-                fontSize: 8, letterSpacing: 1.5, fontFamily: "var(--font-mono)",
+                fontSize: 9, letterSpacing: 1.5, fontFamily: "var(--font-mono)",
                 color: b.color, borderRadius: 20, padding: "4px 10px",
                 border: `1px solid ${b.color}${band === b.key ? "" : "44"}`,
                 background: band === b.key ? `${b.color}22` : "transparent",

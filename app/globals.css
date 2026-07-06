@@ -177,13 +177,14 @@ html.io .reveal.in-view {
   filter: brightness(1.8);
 }
 
-/* Score blink — applied to risk number in hero */
+/* Score pulse — antes parpadeaba a 0.18 (leía como glitch); ahora es una
+   respiración suave y lenta */
 @keyframes score-blink {
   0%, 100% { opacity: 1; }
-  50%       { opacity: 0.18; }
+  50%       { opacity: 0.55; }
 }
 .score-blink {
-  animation: score-blink 2.8s ease-in-out 2s infinite;
+  animation: score-blink 5s ease-in-out 2s infinite;
 }
 
 /* Aguja del medidor */
@@ -298,7 +299,47 @@ button, a[class*="rounded"] { transition-property: color, background-color, bord
   from { opacity: 0; }
   to   { opacity: 1; }
 }
-.page-fade { animation: pageFade 0.3s ease both; }
+.page-fade { animation: pageFade 0.35s ease both; }
+
+/* Barrido luminoso al cambiar de página: una línea de luz cruza la parte alta
+   del viewport. Es un elemento propio (fixed) — no toca el transform del
+   wrapper, así que no rompe los position:fixed (lección aprendida). */
+@keyframes pageSweep {
+  from { transform: translateX(-100%); opacity: 1; }
+  70%  { opacity: 1; }
+  to   { transform: translateX(100%); opacity: 0; }
+}
+.page-sweep {
+  position: fixed; top: 0; left: 0; right: 0; height: 2px;
+  z-index: 130; pointer-events: none;
+  background: linear-gradient(90deg, transparent 10%, rgba(245,245,242,0.55) 50%, transparent 90%);
+  animation: pageSweep 0.65s cubic-bezier(0.55, 0, 0.2, 1) both;
+}
+
+/* Entrada del sheet del lector (ViewOverlay) */
+@keyframes sheetIn {
+  from { opacity: 0; transform: translateY(26px) scale(0.985); }
+  to   { opacity: 1; transform: none; }
+}
+.view-sheet { animation: sheetIn 0.35s cubic-bezier(0.2, 0.7, 0.3, 1) both; }
+
+/* Flash de llegada de datos (ticker): pulso de brillo cuando pasa de "—" a
+   precios reales, como terminal que cobra vida */
+@keyframes dataArrive {
+  0%   { filter: brightness(2.1); }
+  100% { filter: brightness(1); }
+}
+.data-arrive { animation: dataArrive 0.9s ease-out; }
+
+/* Grano sutil sobre las cards (profundidad tipo editorial/Linear) */
+.card-glass::before, .card-spot::before {
+  content: '';
+  position: absolute; inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0.5;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.05 0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E");
+}
 
 /* Items clickeables del ticker */
 .ticker-item { transition: filter 0.2s; border-radius: 4px; }
@@ -342,7 +383,8 @@ button, a[class*="rounded"] { transition-property: color, background-color, bord
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .page-fade { animation: none; }
+  .page-fade, .view-sheet, .data-arrive { animation: none; }
+  .page-sweep { display: none; }
 }
 
 /* Badge flotante clickeable (score + Suscríbete) */

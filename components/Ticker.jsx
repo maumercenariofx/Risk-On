@@ -32,6 +32,7 @@ const EMPTY = NAMES.map((n) => [n, "—", 2, ""]);
 
 export default function Ticker() {
   const [items, setItems] = useState(EMPTY);
+  const [arrived, setArrived] = useState(false); // flash al llegar datos reales
 
   useEffect(() => {
     fetch("/api/market")
@@ -56,6 +57,7 @@ export default function Ticker() {
           ["USD/JPY", fmt(d.usdjpy, 2), dir(d.usdjpyChg), chg(d.usdjpyChg)],
           ["US 10Y",  fmt(d.us10y, 2),  dir(d.us10yChg), chg(d.us10yChg)],
         ]);
+        setArrived(true);
       })
       .catch(() => {});
   }, []);
@@ -96,7 +98,7 @@ export default function Ticker() {
       overflow: "hidden",
     }}>
       <div className="ticker-band" style={{ padding: "11px 0" }}>
-        <div className="ticker-track">
+        <div className={`ticker-track${arrived ? " data-arrive" : ""}`}>
           {row("a")}
           {row("b")}
         </div>
