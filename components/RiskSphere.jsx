@@ -62,7 +62,13 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
     focusCountry: (lat, lon) => selectRef.current?.focusCountry(lat, lon),
     select: (idx) => selectRef.current?.select(idx),
     setCountryScores: (map) => selectRef.current?.setCountryScores(map),
-    setCountries: (list) => selectRef.current?.setCountries(list),
+    // Devuelve false si el 3D interno aún no monta (el handle externo existe
+    // desde el primer render) — el caller debe REINTENTAR, no asumir éxito.
+    setCountries: (list) => {
+      if (!selectRef.current?.setCountries) return false;
+      selectRef.current.setCountries(list);
+      return true;
+    },
   }), []);
 
   useEffect(() => {
@@ -239,13 +245,14 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
         // (los 5 más calientes del universo) y con qué score/fase.
         setCountries: (list) => {
           const data = material.uniforms.uCountryData.value;
-          const sel  = material.uniforms.uSelIds.value;
           list.slice(0, 5).forEach((c, i) => {
             if (!data[i]) return;
-            sel[i]    = c.maskId ?? 0;
             data[i].x = Math.max(0, Math.min(100, c.score ?? 50)) / 100;
             data[i].y = c.phase ?? i * 1.3;
           });
+          // Arreglo NUEVO (no mutar): el cache de uniforms de three puede
+          // saltarse un re-upload de arrays planos mutados in place.
+          material.uniforms.uSelIds.value = list.slice(0, 5).map((c) => c.maskId ?? 0);
         },
       };
 
@@ -356,6 +363,10 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
         }
 
         const idleTime = elapsed - lastMoveAt;
+        // Cursor ESTACIONADO (>6s sin moverse): libera el efecto — si no, un
+        // mouse olvidado sobre el hero dejaba un vórtice permanente de
+        // partículas desplazadas ("puntitos en el mar") y simulación eterna.
+        if (mouseActive && idleTime > 6) mouseActive = false;
         const isAttract = mouseActive && idleTime >= IDLE_THRESHOLD;
         const attractAccel = isAttract
           ? ATTRACT_ACCEL_BASE + Math.min(idleTime - IDLE_THRESHOLD, ATTRACT_RAMP) * ATTRACT_ACCEL_GROWTH

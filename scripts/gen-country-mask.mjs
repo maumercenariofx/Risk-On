@@ -30,11 +30,22 @@ const ORDER = [
   ["170", 14], // co
 ];
 
+// Solo polígonos con bounding box >= 1.5 deg²: los islotes remotos de un país
+// (Noronha, Pascua, etc.) se veían como pixeles sueltos brillando en el mar.
+function bboxArea(ring) {
+  let minX = 1e9, maxX = -1e9, minY = 1e9, maxY = -1e9;
+  for (const [x, y] of ring) {
+    if (x < minX) minX = x; if (x > maxX) maxX = x;
+    if (y < minY) minY = y; if (y > maxY) maxY = y;
+  }
+  return (maxX - minX) * (maxY - minY);
+}
+
 const polys = ORDER.map(([iso, id]) => {
   const f = geo.features.find((f) => f.id === iso);
   const geom = f.geometry;
   const rings = geom.type === "Polygon" ? [geom.coordinates] : geom.coordinates;
-  return { id, rings: rings.map((poly) => poly[0]) }; // outer ring only
+  return { id, rings: rings.map((poly) => poly[0]).filter((r) => bboxArea(r) >= 1.5) };
 });
 
 function pointInRing(lon, lat, ring) {

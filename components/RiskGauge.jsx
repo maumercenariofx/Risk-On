@@ -144,8 +144,11 @@ export default function RiskGauge({ post, ticker = null }) {
       .map((c) => ({ maskId: c.maskId, score: c.live, phase: c.phase }));
     let tries = 0, id;
     const apply = () => {
-      if (sphereRef.current?.setCountries) sphereRef.current.setCountries(top5);
-      else if (tries++ < 25) id = setTimeout(apply, 300);
+      // setCountries devuelve false mientras el 3D no monta → reintentar.
+      // (El bug anterior: el handle existe desde el primer render, así que
+      // "existe el método" NO significa "ya aplicó".)
+      const ok = sphereRef.current?.setCountries?.(top5) === true;
+      if (!ok && tries++ < 40) id = setTimeout(apply, 300);
     };
     apply();
     return () => clearTimeout(id);
