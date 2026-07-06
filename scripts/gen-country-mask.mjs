@@ -1,9 +1,10 @@
-// One-off generator/inserter for COUNTRY_MASK_B64 in lib/quantForms.js.
-// Rasterizes the 5 RISK_COUNTRIES (mx, us, cn, br, tr) into a 360x180
-// (1deg) grid using real point-in-polygon against world-atlas 50m
-// country boundaries, packing 2 cells (4-bit country id, 0-5) per byte —
-// same row-major, north-pole-first convention as LAND_MASK_B64. Inserts
-// the result as a new const right after LAND_MASK_B64 in quantForms.js.
+// Generator for COUNTRY_MASK_B64 in lib/geoMasks.js.
+// Rasterizes the COUNTRY_UNIVERSE (14 países candidatos; el sitio elige los 5
+// más calientes cada hora) into a 360x180 (1deg) grid using real
+// point-in-polygon against world-atlas 50m country boundaries, packing
+// 2 cells (4-bit country id, 0-15) per byte — same row-major,
+// north-pole-first convention as LAND_MASK_B64. REPLACES the existing
+// COUNTRY_MASK_B64 line in lib/geoMasks.js.
 import atlas from "world-atlas/countries-50m.json" with { type: "json" };
 import * as topojson from "topojson-client";
 import fs from "fs";
@@ -11,13 +12,22 @@ import fs from "fs";
 const COLS = 360, ROWS = 180;
 const geo = topojson.feature(atlas, atlas.objects.countries);
 
-// id order matches RISK_COUNTRIES in lib/quantForms.js -> country id 1-5
+// maskId order MUST match COUNTRY_UNIVERSE in lib/quantForms.js (1-14).
 const ORDER = [
-  ["484", 1], // mx
-  ["840", 2], // us
-  ["156", 3], // cn
-  ["076", 4], // br
-  ["792", 5], // tr
+  ["484", 1],  // mx
+  ["840", 2],  // us
+  ["156", 3],  // cn
+  ["076", 4],  // br
+  ["792", 5],  // tr
+  ["392", 6],  // jp
+  ["826", 7],  // gb
+  ["276", 8],  // de
+  ["356", 9],  // in
+  ["410", 10], // kr
+  ["710", 11], // za
+  ["032", 12], // ar
+  ["152", 13], // cl
+  ["170", 14], // co
 ];
 
 const polys = ORDER.map(([iso, id]) => {
@@ -65,22 +75,10 @@ for (let i = 0; i < COLS * ROWS; i++) {
 
 const b64 = Buffer.from(packed).toString("base64");
 
-const file = "lib/quantForms.js";
+// Reemplaza la línea existente de COUNTRY_MASK_B64 en lib/geoMasks.js.
+const file = "lib/geoMasks.js";
 const src = fs.readFileSync(file, "utf8");
-const marker = 'const LAND_MASK_B64 = ';
-const idx = src.indexOf(marker);
-if (idx === -1) throw new Error("LAND_MASK_B64 not found");
-const lineEnd = src.indexOf("\n", idx);
-
-const insertion =
-  `\n\n// Country-id mask for the curated RISK_COUNTRIES (mx=1, us=2, cn=3, br=4,\n` +
-  `// tr=5; 0=none) at the same 360x180 (1deg) resolution as the land mask,\n` +
-  `// packed 2 cells per byte (4-bit ids). Built via real point-in-polygon\n` +
-  `// against world-atlas 50m country boundaries (scripts/gen-country-mask.mjs)\n` +
-  `// so the per-country highlight in the GLOBE shader respects real borders.\n` +
-  `const COUNTRY_COLS = 360, COUNTRY_ROWS = 180;\n` +
-  `const COUNTRY_MASK_B64 = "${b64}";`;
-
-const out = src.slice(0, lineEnd + 1) + insertion.slice(1) + src.slice(lineEnd + 1);
-fs.writeFileSync(file, out);
-console.log("inserted", b64.length, "base64 chars after line", src.slice(0, idx).split("\n").length);
+const re = /export const COUNTRY_MASK_B64 = "[^"]*";/;
+if (!re.test(src)) throw new Error("COUNTRY_MASK_B64 not found in " + file);
+fs.writeFileSync(file, src.replace(re, `export const COUNTRY_MASK_B64 = "${b64}";`));
+console.log("replaced COUNTRY_MASK_B64:", b64.length, "base64 chars,", ORDER.length, "countries");

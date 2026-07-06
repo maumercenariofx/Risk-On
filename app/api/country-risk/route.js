@@ -11,13 +11,26 @@ export const revalidate = 3600;
 const YAHOO_UA =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
 
-// fx = par USD/local (sube = divisa local más débil = más tensión)
+// UNIVERSO completo de candidatos (debe cubrir COUNTRY_UNIVERSE de
+// lib/quantForms.js): se puntúan TODOS y el front muestra los 5 más calientes.
+// fx = par USD/local (sube = divisa local más débil = más tensión).
+// za/co usan ETF en USD como proxy de bolsa (sus índices locales son
+// inestables en Yahoo); la fórmula tolera componentes faltantes.
 const COUNTRIES = [
   { id: "mx", fx: "MXN=X", eq: "^MXX",      fallback: 62 },
   { id: "br", fx: "BRL=X", eq: "^BVSP",     fallback: 65 },
   { id: "tr", fx: "TRY=X", eq: "XU100.IS",  fallback: 88 },
   { id: "cn", fx: "CNY=X", eq: "000001.SS", fallback: 70 },
   { id: "us", fx: null,    eq: "^GSPC",     vix: "^VIX", fallback: 48 },
+  { id: "jp", fx: "JPY=X", eq: "^N225",     fallback: 40 },
+  { id: "gb", fx: "GBP=X", eq: "^FTSE",     fallback: 38 },
+  { id: "de", fx: "EUR=X", eq: "^GDAXI",    fallback: 36 },
+  { id: "in", fx: "INR=X", eq: "^BSESN",    fallback: 45 },
+  { id: "kr", fx: "KRW=X", eq: "^KS11",     fallback: 42 },
+  { id: "za", fx: "ZAR=X", eq: "EZA",       fallback: 55 },
+  { id: "ar", fx: "ARS=X", eq: "^MERV",     fallback: 58 },
+  { id: "cl", fx: "CLP=X", eq: "^IPSA",     fallback: 44 },
+  { id: "co", fx: "COP=X", eq: "GXG",       fallback: 50 },
 ];
 
 async function closes(symbol) {

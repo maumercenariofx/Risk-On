@@ -4,7 +4,7 @@ import { T } from "./Lang";
 import {
   eio, genSphere, genThomas, genVoronoi, genAtom, tickAtom, genChainEdges,
   makeDotTexture, LAB_FORMS,
-  makeGeoTexture, makeCountryDataUniform,
+  makeGeoTexture, makeCountryDataUniform, makeSelIdsUniform,
   GLOBE_VERTEX_SHADER, GLOBE_FRAGMENT_SHADER,
 } from "../lib/quantForms";
 
@@ -94,6 +94,7 @@ export default function QuantLab() {
           uColorT:        { value: 0 },
           uOpacity:       { value: 0.7 },
           uCountryData:   { value: makeCountryDataUniform(THREE) },
+          uSelIds:        { value: makeSelIdsUniform() },
           uPixelsPerUnit: { value: 1 },
           uPixelRatio:    { value: Math.min(window.devicePixelRatio, 2) },
           uSize:          { value: 0.0175 },

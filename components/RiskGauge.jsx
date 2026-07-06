@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLang, T } from "./Lang";
 import { SIGNALS, computeRiskScore, riskBand } from "../lib/riskScore";
-import { RISK_COUNTRIES } from "../lib/quantForms";
+import { RISK_COUNTRIES, COUNTRY_UNIVERSE } from "../lib/quantForms";
 import RiskSphere from "./RiskSphere";
 import MarketsClient from "./MarketsClient";
 import DailyRead from "./DailyRead";
@@ -133,12 +133,18 @@ export default function RiskGauge({ post, ticker = null }) {
     return () => clearTimeout(t);
   }, []);
 
-  // Aplica el riesgo por país en vivo al globo (reintenta hasta que monte el 3D).
+  // Aplica al globo la SELECCIÓN dinámica (los 5 más calientes del universo)
+  // con sus scores en vivo (reintenta hasta que monte el 3D).
   useEffect(() => {
     if (!cScores) return;
+    const top5 = COUNTRY_UNIVERSE
+      .map((c) => ({ ...c, live: cScores?.[c.id] ?? c.score }))
+      .sort((a, b) => b.live - a.live)
+      .slice(0, 5)
+      .map((c) => ({ maskId: c.maskId, score: c.live, phase: c.phase }));
     let tries = 0, id;
     const apply = () => {
-      if (sphereRef.current?.setCountryScores) sphereRef.current.setCountryScores(cScores);
+      if (sphereRef.current?.setCountries) sphereRef.current.setCountries(top5);
       else if (tries++ < 25) id = setTimeout(apply, 300);
     };
     apply();
@@ -146,10 +152,15 @@ export default function RiskGauge({ post, ticker = null }) {
   }, [cScores]);
 
   // Lista de países ordenada por tensión en vivo (con fallback al valor curado).
+  // Radar dinámico: puntúa TODO el universo y muestra los 5 más calientes —
+  // si un día explota Argentina o Japón, entra al radar solo. Sin feed en
+  // vivo cae a los 5 clásicos con sus scores curados.
   const countriesByRisk = useMemo(() => {
-    return RISK_COUNTRIES
+    const pool = cScores ? COUNTRY_UNIVERSE : RISK_COUNTRIES;
+    return pool
       .map((c) => ({ ...c, live: cScores?.[c.id] ?? c.score }))
-      .sort((a, b) => b.live - a.live);
+      .sort((a, b) => b.live - a.live)
+      .slice(0, 5);
   }, [cScores]);
 
   // Mismo modelo que el view diario (lib/riskScore.js) → portada y nota coinciden.
@@ -414,7 +425,7 @@ export default function RiskGauge({ post, ticker = null }) {
 
       {/* ── Country news panel ── */}
       {newsCountry && (() => {
-        const c = RISK_COUNTRIES.find((rc) => rc.id === newsCountry);
+        const c = COUNTRY_UNIVERSE.find((rc) => rc.id === newsCountry);
         return (
           <div
             className="card-glass"

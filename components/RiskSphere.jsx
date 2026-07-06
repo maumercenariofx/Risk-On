@@ -2,7 +2,7 @@
 import { useEffect, useRef, forwardRef, useImperativeHandle } from "react";
 import {
   genGlobe, genSphere, genThomas, genVoronoi, genAtom, tickAtom, eio,
-  makeDotTexture, makeGeoTexture, makeCountryDataUniform, latLonToDir,
+  makeDotTexture, makeGeoTexture, makeCountryDataUniform, makeSelIdsUniform, latLonToDir,
   HERO_FORMS, RISK_COUNTRIES, GLOBE_VERTEX_SHADER, GLOBE_FRAGMENT_SHADER,
 } from "../lib/quantForms";
 
@@ -62,6 +62,7 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
     focusCountry: (lat, lon) => selectRef.current?.focusCountry(lat, lon),
     select: (idx) => selectRef.current?.select(idx),
     setCountryScores: (map) => selectRef.current?.setCountryScores(map),
+    setCountries: (list) => selectRef.current?.setCountries(list),
   }), []);
 
   useEffect(() => {
@@ -178,6 +179,7 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
           uColorT:        { value: 1 },
           uOpacity:       { value: 0.715 },
           uCountryData:   { value: makeCountryDataUniform(THREE) },
+          uSelIds:        { value: makeSelIdsUniform() },
           uPixelsPerUnit: { value: 1 },
           uPixelRatio:    { value: DPR },
           uSize:          { value: 0.019 },
@@ -225,6 +227,18 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
           const arr = material.uniforms.uCountryData.value;
           RISK_COUNTRIES.forEach((c, i) => {
             if (map?.[c.id] != null && arr[i]) arr[i].x = Math.max(0, Math.min(100, map[c.id])) / 100;
+          });
+        },
+        // Selección dinámica: reemplaza QUÉ 5 países ilumina el globo
+        // (los 5 más calientes del universo) y con qué score/fase.
+        setCountries: (list) => {
+          const data = material.uniforms.uCountryData.value;
+          const sel  = material.uniforms.uSelIds.value;
+          list.slice(0, 5).forEach((c, i) => {
+            if (!data[i]) return;
+            sel[i]    = c.maskId ?? 0;
+            data[i].x = Math.max(0, Math.min(100, c.score ?? 50)) / 100;
+            data[i].y = c.phase ?? i * 1.3;
           });
         },
       };

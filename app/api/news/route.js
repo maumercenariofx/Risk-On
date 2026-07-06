@@ -8,6 +8,15 @@ const QUERIES = {
   cn: { es: "China economía mercados",                       en: "China economy markets" },
   br: { es: "Brasil economía OR real mercados",              en: "Brazil economy OR real markets" },
   tr: { es: "Turquía economía OR lira mercados",             en: "Turkey economy OR lira markets" },
+  jp: { es: "Japón economía OR yen OR BOJ mercados",         en: "Japan economy OR yen OR BOJ markets" },
+  gb: { es: "Reino Unido economía OR libra mercados",        en: "UK economy OR pound OR BOE markets" },
+  de: { es: "Alemania economía OR euro OR BCE mercados",     en: "Germany economy OR euro OR ECB markets" },
+  in: { es: "India economía OR rupia mercados",              en: "India economy OR rupee markets" },
+  kr: { es: "Corea del Sur economía OR won mercados",        en: "South Korea economy OR won markets" },
+  za: { es: "Sudáfrica economía OR rand mercados",           en: "South Africa economy OR rand markets" },
+  ar: { es: "Argentina economía OR peso argentino mercados", en: "Argentina economy OR peso markets" },
+  cl: { es: "Chile economía OR peso chileno mercados",       en: "Chile economy OR peso markets" },
+  co: { es: "Colombia economía OR peso colombiano mercados", en: "Colombia economy OR peso markets" },
 };
 
 const LOCALE = {
