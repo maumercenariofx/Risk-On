@@ -387,6 +387,16 @@ button, a[class*="rounded"] { transition-property: color, background-color, bord
   .page-sweep { display: none; }
 }
 
+/* Chips de países en alerta: pulso de brillo con glow (currentColor toma el
+   color del semáforo de cada chip). Duración/desfase se dan inline por chip —
+   el país más caliente pulsa más rápido. */
+@keyframes alert-pulse {
+  0%, 100% { box-shadow: 0 0 4px -2px currentColor; filter: brightness(1); }
+  50%      { box-shadow: 0 0 13px 0 currentColor;   filter: brightness(1.4); }
+}
+.alert-chip { animation-name: alert-pulse; animation-timing-function: ease-in-out; animation-iteration-count: infinite; }
+@media (prefers-reduced-motion: reduce) { .alert-chip { animation: none; } }
+
 /* Badge flotante clickeable (score + Suscríbete) */
 .badge-cta { transition: transform 0.2s ease, box-shadow 0.2s ease; }
 .badge-cta:hover { transform: translateY(-2px); }
