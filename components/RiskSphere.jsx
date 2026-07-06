@@ -284,13 +284,16 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
       };
       const onPointerLeave = () => { mouseActive = false; };
       const onPointerDown  = (e) => { onPointerMove(e); lastMoveAt = elapsed; };
-      container.addEventListener("pointermove", onPointerMove);
-      container.addEventListener("pointerleave", onPointerLeave);
-      // Touch has no hover/leave — track the finger while down and release
-      // on lift/cancel so the effect works the same way on mobile.
-      container.addEventListener("pointerdown",   onPointerDown);
-      container.addEventListener("pointerup",     onPointerLeave);
-      container.addEventListener("pointercancel", onPointerLeave);
+      // El efecto cráter/hoyo negro es SOLO desktop (decisión 2026-07-06): en
+      // móvil competía con el scroll, costaba física y no aportaba — sin
+      // listeners, mouseActive nunca se enciende y la simulación no corre.
+      if (!isSmall) {
+        container.addEventListener("pointermove", onPointerMove);
+        container.addEventListener("pointerleave", onPointerLeave);
+        container.addEventListener("pointerdown",   onPointerDown);
+        container.addEventListener("pointerup",     onPointerLeave);
+        container.addEventListener("pointercancel", onPointerLeave);
+      }
 
       function animate(ts = 0) {
         if (!visible) { animId = 0; return; } // pausa total fuera de pantalla
@@ -300,7 +303,10 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
         const dt = Math.min(rawDt / 1000, 0.05);
         lastFrame = ts; elapsed += dt;
 
-        if (!qDone && rawDt < 500) { // ignora hitches gigantes (tab en segundo plano)
+        // Calidad adaptativa: medir SOLO en reposo (sin morph/interacción).
+        // Contar la intro degradaba hasta a un iPhone tope de gama — la intro
+        // es pesada A PROPÓSITO y no representa el costo permanente.
+        if (!qDone && rawDt < 500 && morphT >= 1 && !mouseActive) {
           if (rawDt > 26) qSlow++;
           if (++qFrames >= 90) {
             qDone = true;

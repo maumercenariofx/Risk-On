@@ -252,15 +252,13 @@ export default function RiskGauge({ post, ticker = null }) {
                 <T es="Países en alerta" en="Countries on alert" />
               </div>
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "flex-end", pointerEvents: "auto" }}>
-                {countriesByRisk.map((c, i) => {
+                {/* Chips en CALMA (sin pulso/glow — decisión 2026-07-06): el
+                    brillo y el parpadeo viven solo en el globo. */}
+                {countriesByRisk.map((c) => {
                   const col = tensionColor(c.live);
-                  // El país más caliente pulsa más rápido (1.4s en pánico,
-                  // 2.8s en calma), cada uno desfasado — igual que en el globo.
-                  const dur = Math.max(1.4, 2.8 - c.live / 60);
                   return (
                     <button
                       key={c.id}
-                      className="alert-chip"
                       onClick={() => {
                         sphereRef.current?.focusCountry(c.lat, c.lon);
                         setNewsCountry((cur) => (cur === c.id ? null : c.id));
@@ -269,15 +267,13 @@ export default function RiskGauge({ post, ticker = null }) {
                         display: "flex", alignItems: "center", gap: 5,
                         fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: 1, textTransform: "uppercase",
                         padding: "3px 8px", borderRadius: 5, cursor: "pointer",
-                        background: newsCountry === c.id ? `${col}42` : `${col}24`,
-                        border: `1px solid ${col}AA`,
+                        background: newsCountry === c.id ? `${col}38` : `${col}1A`,
+                        border: `1px solid ${col}66`,
                         color: col, transition: "background .2s, border-color .2s",
-                        animationDuration: `${dur.toFixed(2)}s`,
-                        animationDelay: `${(i * 0.45).toFixed(2)}s`,
                       }}
                     >
                       {lang === "es" ? c.name_es : c.name_en}
-                      <span style={{ opacity: 0.9 }}>{c.live}</span>
+                      <span style={{ opacity: 0.85 }}>{c.live}</span>
                     </button>
                   );
                 })}
