@@ -13,18 +13,31 @@ export default function MobileCollapse({ es, en, children, defaultOpen = false }
 
   return (
     <div>
-      {/* Botón colapsable — solo móvil */}
+      {/* Botón colapsable — solo móvil. Misma afordancia que Collapse.jsx:
+          etiqueta hueso seminegrita + hint "Ver +" + chevron en círculo. */}
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
-        className="flex w-full items-center justify-between border-b border-edge py-3 text-left md:hidden"
+        className="group flex w-full items-center justify-between gap-3 border-b border-edge py-3 text-left md:hidden"
       >
-        <span className="text-xs uppercase tracking-[3px] text-muted">{title}</span>
-        <span
-          className={`text-[10px] text-muted transition-transform duration-300 ${open ? "rotate-180" : ""}`}
-        >
-          ▼
+        <span className="text-[12px] font-semibold uppercase tracking-[2.5px] text-bone transition-colors group-hover:text-white">
+          {title}
+        </span>
+        <span className="flex items-center gap-2.5">
+          {!open && (
+            <span className="font-mono text-[9px] uppercase tracking-[1.5px] text-muted">
+              {lang === "en" ? "Show" : "Ver"} +
+            </span>
+          )}
+          <span
+            className={`flex h-6 w-6 items-center justify-center rounded-full border transition-all duration-300 ${
+              open ? "rotate-180 border-bone/40 text-bone" : "border-edge text-muted"
+            }`}
+            style={{ fontSize: 9, lineHeight: 1 }}
+          >
+            ▼
+          </span>
         </span>
       </button>
 

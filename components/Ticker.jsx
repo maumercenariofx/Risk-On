@@ -97,8 +97,10 @@ export default function Ticker() {
       width: "100vw",
       overflow: "hidden",
     }}>
-      <div className="ticker-band" style={{ padding: "11px 0" }}>
-        <div className={`ticker-track${arrived ? " data-arrive" : ""}`}>
+      {/* El flash va en la BANDA, no en la pista: .data-arrive define animation
+          y en la pista pisaría el ticker-scroll (así se detuvo el marquee). */}
+      <div className={`ticker-band${arrived ? " data-arrive" : ""}`} style={{ padding: "11px 0" }}>
+        <div className="ticker-track">
           {row("a")}
           {row("b")}
         </div>

@@ -6,6 +6,7 @@ import { RISK_COUNTRIES } from "../lib/quantForms";
 import RiskSphere from "./RiskSphere";
 import MarketsClient from "./MarketsClient";
 import DailyRead from "./DailyRead";
+import Collapse from "./Collapse";
 
 // Frescura del dato, frase completa según idioma (antes mezclaba "Data ahora ago").
 function dataFreshness(isoStr, lang) {
@@ -473,13 +474,15 @@ export default function RiskGauge({ post, ticker = null }) {
         );
       })()}
 
-      {/* ── Component cards (9 señales, mismo modelo que la nota) ── */}
+      {/* ── Component cards (9 señales) — desplegable: quitaban mucho espacio
+          siempre visibles; el score del hero ya cuenta la historia ── */}
       {result && data && (
-        <>
-          <div style={{ fontSize: 10, letterSpacing: 3, textTransform: "uppercase", color: "#4A4A50", margin: "0 0 10px" }}>
-            &mdash; <T es="Componentes del índice" en="Index components" />
-          </div>
-
+        <Collapse
+          es="Componentes del índice · 9 señales"
+          en="Index components · 9 signals"
+          hint_es="Ver desglose"
+          hint_en="See breakdown"
+        >
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 10 }}>
             {SIGNALS.map((s) => {
               const compScore = result.components[s.key];
@@ -574,7 +577,7 @@ export default function RiskGauge({ post, ticker = null }) {
               </div>
             </div>
           )}
-        </>
+        </Collapse>
       )}
 
       {/* ── Pre-market ── */}
