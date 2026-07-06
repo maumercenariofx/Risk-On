@@ -79,12 +79,16 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
       if (!container) return;
 
       // Presupuesto por dispositivo: la simulación corre en CPU, así que el
-      // conteo de partículas y el pixel ratio se adaptan (el módulo declara el
-      // techo; aquí se SOMBREA N con el valor efectivo para todo el efecto).
+      // conteo de partículas se adapta (el módulo declara el techo; aquí se
+      // SOMBREA N con el valor efectivo para todo el efecto). El DPR va a
+      // resolución NATIVA (cap 2… o 3 en pantallas chicas: un iPhone 3x
+      // renderizado a 1.5 se re-escala BORROSO — eso se veía "sucio"; el
+      // canvas chico hace baratos esos píxeles, y el settle-skip ya mantiene
+      // el CPU en cero en reposo).
       const isSmall = Math.min(window.innerWidth, window.innerHeight) < 768;
       const cores   = navigator.hardwareConcurrency || 4;
-      const N   = isSmall ? 56000 : cores <= 4 ? 72000 : 110000;
-      const DPR = Math.min(window.devicePixelRatio || 1, isSmall ? 1.5 : 2);
+      const N   = isSmall ? 84000 : cores <= 4 ? 72000 : 110000;
+      let DPR = Math.min(window.devicePixelRatio || 1, isSmall ? 2.5 : 2);
 
       const scene  = new THREE.Scene();
       const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 100);
@@ -182,7 +186,9 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
           uSelIds:        { value: makeSelIdsUniform() },
           uPixelsPerUnit: { value: 1 },
           uPixelRatio:    { value: DPR },
-          uSize:          { value: 0.019 },
+          // Puntos ~15% más grandes en pantallas chicas: con menos partículas
+          // los continentes se rellenan y el mapa se lee sólido, no raleado.
+          uSize:          { value: isSmall ? 0.022 : 0.019 },
           uTime:          { value: 0 },
           uLightDir:      { value: new THREE.Vector3(0, 0, 0) },
           uUseViewFacing: { value: 1 },
@@ -253,6 +259,11 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
       let settled = false, settleFrames = 0;
       // visible = false (hero fuera del viewport) → se detiene el rAF entero.
       let visible = true;
+      // Calidad adaptativa: arranca nítido y si el dispositivo no sostiene
+      // ~38fps en los primeros segundos, baja el pixel ratio UNA vez (a 1.5).
+      // Así los iPhone se ven a resolución casi nativa y un Android débil no
+      // se arrastra.
+      let qFrames = 0, qSlow = 0, qDone = DPR <= 1.5;
       const mouseNDC    = new THREE.Vector2();
       const mouseLocal  = new THREE.Vector3();
       const raycaster   = new THREE.Raycaster();
@@ -285,8 +296,22 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
         if (!visible) { animId = 0; return; } // pausa total fuera de pantalla
         animId = requestAnimationFrame(animate);
         if (ts - lastFrame < 1000 / 60) return;
-        const dt = Math.min((ts - lastFrame) / 1000, 0.05);
+        const rawDt = ts - lastFrame;
+        const dt = Math.min(rawDt / 1000, 0.05);
         lastFrame = ts; elapsed += dt;
+
+        if (!qDone && rawDt < 500) { // ignora hitches gigantes (tab en segundo plano)
+          if (rawDt > 26) qSlow++;
+          if (++qFrames >= 90) {
+            qDone = true;
+            if (qSlow > 30) { // >1/3 de frames lentos → baja resolución
+              DPR = 1.5;
+              renderer.setPixelRatio(DPR);
+              renderer.setSize(container.clientWidth, container.clientHeight);
+              material.uniforms.uPixelRatio.value = DPR;
+            }
+          }
+        }
 
         if (focusTarget !== null) {
           // Shortest-path turn toward the selected country, recentering tilt.
