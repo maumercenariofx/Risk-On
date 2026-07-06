@@ -1,0 +1,83 @@
+# Pipeline PRIMARIO del view diario: GENERA y luego ENVÍA, en cadena.
+# Vive en GitHub Actions porque la generación bilingüe (~4200 tokens de Claude
+# ≈ 55-85s) NO cabe en el límite de 60s de Vercel Hobby — causa raíz de los
+# fallos del 3 y 6 de julio 2026. Encadenar gen→send mantiene los datos
+# frescos: el correo sale ~2-4 min después de cotizar (no 30 min después).
+#
+# Cadena completa de respaldos (cualquier eslabón que falle, el siguiente
+# recoge; el marcador sent/<fecha>.json evita duplicados):
+#   6:52  Actions: gen → push → send   (primario, correo ~6:56-6:58)
+#   7:00  cronjob.org: send-daily?resend=1  (si Actions falló: inline-gen+defer)
+#   7:10  Vercel cron: send-daily?resend=1  (último respaldo, lag Hobby ~1h)
+# Si este workflow falla, GitHub manda correo automático al dueño del repo.
+name: gen-daily
+
+on:
+  schedule:
+    # 12:52 UTC = 6:52 AM CDMX (México ya no tiene horario de verano).
+    # Minuto impar a propósito: los crons de Actions en :00/:30 arrancan con
+    # más retraso por congestión.
+    - cron: "52 12 * * 1-5"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "1 = generar sin escribir, sin commitear y SIN enviar (prueba)"
+        default: "0"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: gen-daily
+  cancel-in-progress: false
+
+jobs:
+  gen-and-send:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci --omit=dev --ignore-scripts
+
+      - name: Generar view del día (datos en vivo + Claude, sin límite de tiempo)
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          DRY_RUN: ${{ github.event.inputs.dry_run || '0' }}
+        run: node scripts/gen-daily-action.mjs
+
+      - name: Commit y push (dispara redeploy de Vercel)
+        if: ${{ (github.event.inputs.dry_run || '0') != '1' }}
+        run: |
+          git config user.name "riskon-bot"
+          git config user.email "view@riskon.lat"
+          git add content/
+          if git diff --cached --quiet; then
+            echo "Nada nuevo que commitear (view ya existía o fin de semana)."
+          else
+            git commit -m "auto: pre-market view $(TZ=America/Mexico_City date +%F) [actions]"
+            git pull --rebase origin main
+            git push origin main
+          fi
+
+      - name: Enviar el correo (send-daily lee el content vía contents API)
+        if: ${{ (github.event.inputs.dry_run || '0') != '1' }}
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          # El guard sent/<fecha>.json hace esto idempotente: si ya se envió
+          # (p.ej. reintento del workflow), responde "already sent today".
+          code=$(curl -s -o /tmp/send.json -w "%{http_code}" -X POST \
+            "https://riskon.lat/api/send-daily?resend=1" \
+            -H "Authorization: Bearer ${CRON_SECRET}")
+          cat /tmp/send.json
+          echo
+          if [ "$code" != "200" ]; then
+            echo "::error::send-daily respondió HTTP $code"
+            exit 1
+          fi
