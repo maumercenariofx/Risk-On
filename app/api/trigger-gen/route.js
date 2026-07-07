@@ -18,9 +18,10 @@ async function handler(request) {
   }
 
   const slug = new Date().toLocaleDateString("sv-SE", { timeZone: "America/Mexico_City" });
+  const force = new URL(request.url).searchParams.get("force"); // prueba: salta la guarda
 
   // Si el correo de hoy YA salió, ni molestamos a Actions.
-  try {
+  if (!force) try {
     const marker = await fetch(
       `https://api.github.com/repos/${REPO}/contents/sent/${slug}.json?ref=main`,
       {
