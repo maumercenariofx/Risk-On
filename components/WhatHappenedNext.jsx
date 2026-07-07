@@ -44,7 +44,7 @@ export default function WhatHappenedNext({ data }) {
               ].map((h, i) => (
                 <th key={i} style={{
                   textAlign: i === 0 ? "left" : "right", padding: "6px 8px 10px 0",
-                  fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: 1.5,
+                  fontFamily: "var(--font-mono)", fontSize: 9.5, letterSpacing: 1.5,
                   textTransform: "uppercase", color: "#4B5563", fontWeight: 400,
                 }}>
                   {lang === "en" ? h.en : h.es}
@@ -57,7 +57,7 @@ export default function WhatHappenedNext({ data }) {
               <tr key={r.band} style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}>
                 <td style={{ padding: "10px 8px 10px 0" }}>
                   <span style={{
-                    fontSize: 9, letterSpacing: 2, fontFamily: "var(--font-mono)",
+                    fontSize: 9.5, letterSpacing: 2, fontFamily: "var(--font-mono)",
                     color: r.color, border: `1px solid ${r.color}44`,
                     borderRadius: 20, padding: "3px 9px", whiteSpace: "nowrap",
                   }}>

@@ -554,7 +554,7 @@ export default function TronCanvas() {
         style={{
           position: "absolute", bottom: 14, right: 14, zIndex: 10,
           fontFamily: "var(--font-mono, monospace)",
-          fontSize: 9, letterSpacing: 2.5, textTransform: "uppercase",
+          fontSize: 9.5, letterSpacing: 2.5, textTransform: "uppercase",
           color: "rgba(255,255,255,0.45)",
           background: "rgba(0,0,0,0.5)",
           border: "1px solid rgba(255,255,255,0.10)",

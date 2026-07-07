@@ -6,7 +6,8 @@ import {
   HERO_FORMS, RISK_COUNTRIES, GLOBE_VERTEX_SHADER, GLOBE_FRAGMENT_SHADER,
 } from "../lib/quantForms";
 
-const THREE_SRC = "https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js";
+// Self-hosted (antes cdnjs): mismo dominio = más rápido y sin punto de fallo externo.
+const THREE_SRC = "/vendor/three-r128.min.js";
 
 function loadThree() {
   if (typeof window !== "undefined" && window.THREE) return Promise.resolve(window.THREE);
@@ -302,6 +303,33 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
         container.addEventListener("pointercancel", onPointerLeave);
       }
 
+      // ── Giroscopio (solo móvil): el globo se inclina sutilmente con el
+      // teléfono — parallax físico. iOS exige permiso desde un gesto: se pide
+      // en el PRIMER tap sobre el globo (discreto; si dicen no, no pasa nada).
+      // Baseline = primera lectura, para que el tilt sea relativo a cómo
+      // sostienes el teléfono, no a un "cero" absoluto.
+      let gyroTilt = 0, gyroBase = null;
+      const onGyro = (e) => {
+        if (e.beta == null) return;
+        if (gyroBase === null) gyroBase = e.beta;
+        gyroTilt = Math.max(-0.09, Math.min(0.09, (e.beta - gyroBase) / 320));
+      };
+      const armGyro = async () => {
+        try {
+          if (typeof DeviceOrientationEvent?.requestPermission === "function") {
+            if ((await DeviceOrientationEvent.requestPermission()) !== "granted") return;
+          }
+          window.addEventListener("deviceorientation", onGyro);
+        } catch {}
+      };
+      if (isSmall && typeof DeviceOrientationEvent !== "undefined") {
+        if (typeof DeviceOrientationEvent.requestPermission === "function") {
+          container.addEventListener("touchend", armGyro, { once: true, passive: true });
+        } else {
+          window.addEventListener("deviceorientation", onGyro); // Android: sin permiso
+        }
+      }
+
       function animate(ts = 0) {
         if (!visible) { animId = 0; return; } // pausa total fuera de pantalla
         animId = requestAnimationFrame(animate);
@@ -340,8 +368,8 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
           }
         } else {
           group.rotation.y += 0.0036;
-          // Idle wobble oscillates around 0.
-          group.rotation.x += (Math.sin(elapsed * 0.2) * 0.07 - group.rotation.x) * 0.03;
+          // Idle wobble alrededor de 0 + inclinación del giroscopio (móvil).
+          group.rotation.x += (Math.sin(elapsed * 0.2) * 0.07 + gyroTilt - group.rotation.x) * 0.03;
         }
 
         material.uniforms.uTime.value = elapsed;
@@ -504,6 +532,8 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
         container.removeEventListener("pointerdown", onPointerDown);
         container.removeEventListener("pointerup", onPointerLeave);
         container.removeEventListener("pointercancel", onPointerLeave);
+        container.removeEventListener("touchend", armGyro);
+        window.removeEventListener("deviceorientation", onGyro);
         geometry.dispose();
         tex.dispose(); geoTex.dispose();
         material.dispose();

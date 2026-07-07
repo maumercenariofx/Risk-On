@@ -36,7 +36,7 @@ export default function Collapse({ es, en, hint_es, hint_en, defaultOpen = false
                 ? "rotate-180 border-bone/40 text-bone"
                 : "border-edge text-muted group-hover:border-bone/40 group-hover:text-bone"
             }`}
-            style={{ fontSize: 9, lineHeight: 1 }}
+            style={{ fontSize: 9.5, lineHeight: 1 }}
           >
             ▼
           </span>

@@ -133,7 +133,7 @@ export default function CorrelationScatter() {
             r = {data.corr}
           </span>
           <span style={{
-            fontSize: 8, letterSpacing: 2, fontFamily: "var(--font-mono)",
+            fontSize: 9.5, letterSpacing: 2, fontFamily: "var(--font-mono)",
             color: strength.color,
             border: `1px solid ${strength.color}44`,
             borderRadius: 20, padding: "3px 9px",
@@ -153,7 +153,7 @@ export default function CorrelationScatter() {
         <svg width="22" height="8">
           <line x1="0" y1="4" x2="22" y2="4" stroke={GREEN} strokeWidth="2" style={{ filter: `drop-shadow(0 0 3px ${GREEN})` }} />
         </svg>
-        <span style={{ fontSize: 9, color: "#4B5563", letterSpacing: 1, fontFamily: "var(--font-mono)" }}>
+        <span style={{ fontSize: 9.5, color: "#4B5563", letterSpacing: 1, fontFamily: "var(--font-mono)" }}>
           <T es="Regresión lineal" en="Linear trend" />
         </span>
       </div>

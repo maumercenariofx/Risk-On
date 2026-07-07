@@ -15,11 +15,19 @@ export default async function Home() {
   const posts = getAllPostsMeta();
   // Post completo (con html) para el overlay lector de la landing.
   const latest = posts[0] ? await getPost(posts[0].slug) : null;
+  // Contexto diario del hero: score de AYER (view previo) + serie de 30 días
+  // para el sparkline. posts viene desc → [1] es el view anterior.
+  const prevScore = posts[1]?.score ?? null;
+  const scoreHistory = posts
+    .slice(0, 22)
+    .map((p) => ({ slug: p.slug, score: Number(p.score) }))
+    .filter((p) => !isNaN(p.score))
+    .reverse();
 
   return (
     <div className="space-y-10">
       {/* El ticker vive DENTRO del gauge, justo bajo el hero a pantalla completa */}
-      <RiskGauge post={latest} ticker={<Ticker />} />
+      <RiskGauge post={latest} prevScore={prevScore} scoreHistory={scoreHistory} ticker={<Ticker />} />
 
       {/* Primero el contenido DEL DÍA; la enciclopedia (bandas) después */}
       {latest && <DailyWatch post={latest} />}

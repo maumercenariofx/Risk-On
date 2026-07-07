@@ -538,7 +538,7 @@ export default function MarketsClient({ embed = false }) {
                       boxShadow:  `0 0 6px ${s.color}`,
                       flexShrink: 0,
                     }} />
-                    <span style={{ fontSize: 9, color: "#6B7280", letterSpacing: 1 }}>
+                    <span style={{ fontSize: 9.5, color: "#6B7280", letterSpacing: 1 }}>
                       {lang === "en" ? s.en : s.es}
                     </span>
                     <span style={{ fontSize: 12, fontWeight: 600, color: up ? "#00C805" : "#FF5000", fontVariantNumeric: "tabular-nums" }}>
@@ -557,7 +557,7 @@ export default function MarketsClient({ embed = false }) {
                     <line x1="0" y1="3" x2="18" y2="3" stroke={s.color} strokeWidth="2"
                       style={{ filter: `drop-shadow(0 0 2px ${s.color})` }} />
                   </svg>
-                  <span style={{ fontSize: 9, color: "#4B5563", fontFamily: "var(--font-mono)", letterSpacing: 1 }}>
+                  <span style={{ fontSize: 9.5, color: "#4B5563", fontFamily: "var(--font-mono)", letterSpacing: 1 }}>
                     {lang === "en" ? s.en.toUpperCase() : s.es.toUpperCase()}
                   </span>
                 </div>
@@ -566,7 +566,7 @@ export default function MarketsClient({ embed = false }) {
                 <svg width="18" height="6">
                   <line x1="0" y1="3" x2="18" y2="3" stroke={QUIET_COLOR} strokeWidth="2" strokeDasharray="4 2" />
                 </svg>
-                <span style={{ fontSize: 9, color: "#374151", fontFamily: "var(--font-mono)", letterSpacing: 1 }}>
+                <span style={{ fontSize: 9.5, color: "#374151", fontFamily: "var(--font-mono)", letterSpacing: 1 }}>
                   <T es="SILENCIO" en="QUIET" />
                 </span>
               </div>

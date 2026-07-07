@@ -374,7 +374,7 @@ export default function PortfolioSection() {
                       {name}
                     </span>
                     {sym !== TBILL_KEY && (
-                      <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, color: "#374151", letterSpacing: 0.5 }}>{sym}</span>
+                      <span style={{ fontFamily: "var(--font-mono)", fontSize: 9.5, color: "#374151", letterSpacing: 0.5 }}>{sym}</span>
                     )}
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">

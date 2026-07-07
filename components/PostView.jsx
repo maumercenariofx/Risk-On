@@ -26,7 +26,7 @@ function ShareBar({ post, lang }) {
 
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 10, paddingTop: 4 }}>
-      <span style={{ fontSize: 9, letterSpacing: 2, textTransform: "uppercase", color: "#4A4A50" }}>
+      <span style={{ fontSize: 9.5, letterSpacing: 2, textTransform: "uppercase", color: "#4A4A50" }}>
         <T es="Compartir" en="Share" />
       </span>
       <a
@@ -65,7 +65,45 @@ function ShareBar({ post, lang }) {
   );
 }
 
-export default function PostView({ post, prev, next }) {
+// Auto-evaluación del view: qué hizo el mercado después de publicarse.
+// Peso: negativo (USD/MXN baja) = peso apreció = verde.
+function WhatHappenedCard({ fwd, lang }) {
+  if (!fwd) return null;
+  const fmt = (v) => (v == null ? "—" : `${v >= 0 ? "+" : ""}${v.toFixed(2)}%`);
+  const col = (v, invert) =>
+    v == null ? "#5A5A62" : (invert ? v < 0 : v > 0) ? "#3FA77E" : "#C0392B";
+  const cell = (label, v, invert) => (
+    <div>
+      <div style={{ fontFamily: "var(--font-mono)", fontSize: 9.5, letterSpacing: 1.2, textTransform: "uppercase", color: "#4A4A50", marginBottom: 4 }}>
+        {label}
+      </div>
+      <div style={{ fontFamily: "var(--font-mono)", fontSize: 15, fontWeight: 600, fontVariantNumeric: "tabular-nums", color: col(v, invert) }}>
+        {fmt(v)}
+      </div>
+    </div>
+  );
+  return (
+    <div className="reveal card-spot rounded-xl border border-edge p-4" style={{ background: "rgba(11,11,12,0.92)" }}>
+      <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: 2, textTransform: "uppercase", color: "#8A8A8E", marginBottom: 10 }}>
+        <T es="¿Qué pasó después de este view?" en="What happened after this view?" />
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))", gap: 12 }}>
+        {cell("USD/MXN +5d", fwd.mxn5, true)}
+        {cell("USD/MXN +10d", fwd.mxn10, true)}
+        {cell("S&P +5d", fwd.spx5, false)}
+        {cell("S&P +10d", fwd.spx10, false)}
+      </div>
+      <p style={{ fontSize: 11, color: "#5A5A62", lineHeight: 1.6, margin: "10px 0 0 0" }}>
+        <T
+          es="Retorno del mercado en los días hábiles posteriores a la publicación. En USD/MXN, negativo = el peso se apreció. Evaluación automática — no es recomendación."
+          en="Market return over the trading days after publication. For USD/MXN, negative = the peso appreciated. Automatic evaluation — not investment advice."
+        />
+      </p>
+    </div>
+  );
+}
+
+export default function PostView({ post, prev, next, fwd = null }) {
   const { lang } = useLang();
   return (
     <article className="space-y-5 pt-4">
@@ -94,6 +132,8 @@ export default function PostView({ post, prev, next }) {
         style={{ animationDelay: "0.1s" }}
         dangerouslySetInnerHTML={{ __html: (lang === "en" ? post.html_en : post.html_es) ?? post.html }}
       />
+      <WhatHappenedCard fwd={fwd} lang={lang} />
+
       <div className="border-t border-edge pt-4">
         <ShareBar post={post} lang={lang} />
       </div>

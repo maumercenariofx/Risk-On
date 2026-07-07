@@ -52,7 +52,7 @@ function FXCard({ label, price, chg, decimals }) {
       padding: "14px 16px",
       transition: "border-color .4s",
     }}>
-      <div style={{ fontSize: 9, letterSpacing: 2, textTransform: "uppercase", color: "#4B5563", marginBottom: 6, fontFamily: "var(--font-mono)" }}>
+      <div style={{ fontSize: 9.5, letterSpacing: 2, textTransform: "uppercase", color: "#4B5563", marginBottom: 6, fontFamily: "var(--font-mono)" }}>
         {label}
       </div>
       <div style={{ fontFamily: "var(--font-sans)", fontWeight: 700, fontSize: 22, lineHeight: 1, color: "#F5F5F2", fontVariantNumeric: "tabular-nums", letterSpacing: "-0.02em", marginBottom: 5 }}>
@@ -127,7 +127,7 @@ export default function DailyWatch({ post }) {
                 <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 9, marginBottom: i < bullets.length - 1 ? 10 : 0 }}>
                   {chip ? (
                     <span style={{
-                      fontSize: 7.5, letterSpacing: 1.5, fontFamily: "var(--font-mono)",
+                      fontSize: 9.5, letterSpacing: 1.5, fontFamily: "var(--font-mono)",
                       color: chip.color, background: chip.bg,
                       border: `1px solid ${chip.color}40`,
                       borderRadius: 4, padding: "2px 5px",
@@ -183,7 +183,7 @@ export default function DailyWatch({ post }) {
                   </div>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
                     <div>
-                      <div style={{ fontSize: 8, color: "#4B5563", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 4, fontFamily: "var(--font-mono)" }}>
+                      <div style={{ fontSize: 9.5, color: "#4B5563", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 4, fontFamily: "var(--font-mono)" }}>
                         {usingApiRange ? <T es="Mín 10d" en="10d Low" /> : <T es="Soporte" en="Support" />}
                       </div>
                       <div style={{ fontFamily: "var(--font-mono)", fontSize: 15, color: GREEN, fontVariantNumeric: "tabular-nums" }}>
@@ -191,7 +191,7 @@ export default function DailyWatch({ post }) {
                       </div>
                     </div>
                     <div style={{ textAlign: "center" }}>
-                      <div style={{ fontSize: 8, color: "#4B5563", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 4, fontFamily: "var(--font-mono)" }}>
+                      <div style={{ fontSize: 9.5, color: "#4B5563", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 4, fontFamily: "var(--font-mono)" }}>
                         <T es="Actual" en="Current" />
                       </div>
                       <div style={{ fontFamily: "var(--font-sans)", fontWeight: 700, fontSize: 20, color: dotColor, fontVariantNumeric: "tabular-nums", letterSpacing: "-0.02em" }}>
@@ -199,7 +199,7 @@ export default function DailyWatch({ post }) {
                       </div>
                     </div>
                     <div style={{ textAlign: "right" }}>
-                      <div style={{ fontSize: 8, color: "#4B5563", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 4, fontFamily: "var(--font-mono)" }}>
+                      <div style={{ fontSize: 9.5, color: "#4B5563", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 4, fontFamily: "var(--font-mono)" }}>
                         {usingApiRange ? <T es="Máx 10d" en="10d High" /> : <T es="Resistencia" en="Resistance" />}
                       </div>
                       <div style={{ fontFamily: "var(--font-mono)", fontSize: 15, color: RED, fontVariantNumeric: "tabular-nums" }}>

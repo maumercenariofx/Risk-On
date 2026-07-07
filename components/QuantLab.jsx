@@ -8,7 +8,8 @@ import {
   GLOBE_VERTEX_SHADER, GLOBE_FRAGMENT_SHADER,
 } from "../lib/quantForms";
 
-const THREE_SRC = "https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js";
+// Self-hosted (antes cdnjs): mismo dominio = más rápido y sin punto de fallo externo.
+const THREE_SRC = "/vendor/three-r128.min.js";
 
 function loadThree() {
   if (typeof window !== "undefined" && window.THREE) return Promise.resolve(window.THREE);
@@ -224,7 +225,7 @@ export default function QuantLab() {
             key={f.id}
             onClick={() => selectFnRef.current?.(i)}
             style={{
-              fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: 1.5, textTransform: "uppercase",
+              fontFamily: "var(--font-mono)", fontSize: 9.5, letterSpacing: 1.5, textTransform: "uppercase",
               padding: "7px 11px", borderRadius: 7, cursor: "pointer",
               background: i === formIdx ? "rgba(245,245,242,0.08)" : "rgba(11,11,12,0.92)",
               border: `1px solid ${i === formIdx ? "#3A3A3E" : "#1E1E20"}`,
@@ -242,7 +243,7 @@ export default function QuantLab() {
         style={{ marginTop: 10, background: "rgba(11,11,12,0.92)", border: "1px solid #1E1E20", borderRadius: 12, padding: "14px 16px" }}
       >
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8, marginBottom: 8 }}>
-          <div style={{ fontSize: 9, letterSpacing: 1.5, textTransform: "uppercase", color: "#4A4A50" }}>
+          <div style={{ fontSize: 9.5, letterSpacing: 1.5, textTransform: "uppercase", color: "#4A4A50" }}>
             <T es={form.label_es} en={form.label_en} />
           </div>
           <div style={{

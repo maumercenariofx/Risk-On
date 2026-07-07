@@ -109,7 +109,7 @@ export default function YieldCurveChart() {
             {data.spread2s10s > 0 ? "+" : ""}{data.spread2s10s}%
           </span>
           <span
-            style={{ fontSize: 9, color: "#4B5563", fontFamily: "var(--font-mono)" }}
+            style={{ fontSize: 9.5, color: "#4B5563", fontFamily: "var(--font-mono)" }}
             data-tip={lang === "en"
               ? "10-year yield minus 2-year yield. Negative (inverted) has historically preceded recessions."
               : "Tasa a 10 años menos tasa a 2 años. En negativo (invertida) históricamente precede recesiones."}
@@ -118,7 +118,7 @@ export default function YieldCurveChart() {
           </span>
           {status && (
             <span style={{
-              fontSize: 8, letterSpacing: 2, fontFamily: "var(--font-mono)",
+              fontSize: 9.5, letterSpacing: 2, fontFamily: "var(--font-mono)",
               color: status.color, border: `1px solid ${status.color}44`,
               borderRadius: 20, padding: "3px 9px", boxShadow: `0 0 10px ${status.color}30`,
             }}>

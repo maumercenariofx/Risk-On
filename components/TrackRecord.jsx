@@ -63,7 +63,7 @@ function BandChip({ score }) {
   const b = riskBand(score);
   return (
     <span style={{
-      fontSize: 9, letterSpacing: 2, fontFamily: "var(--font-mono)",
+      fontSize: 9.5, letterSpacing: 2, fontFamily: "var(--font-mono)",
       color: b.color, border: `1px solid ${b.color}44`,
       borderRadius: 20, padding: "3px 9px", whiteSpace: "nowrap",
     }}>

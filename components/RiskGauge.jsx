@@ -54,7 +54,25 @@ function tensionColor(s) {
   return "#22D486";
 }
 
-export default function RiskGauge({ post, ticker = null }) {
+// Sparkline SVG del score (sin librerías: 22 puntos máx, un path).
+function ScoreSparkline({ history, color }) {
+  if (!history || history.length < 5) return null;
+  const W = 92, H = 26, P = 2;
+  const xs = history.map((_, i) => P + (i / (history.length - 1)) * (W - 2 * P));
+  const ys = history.map((p) => {
+    const t = Math.max(0, Math.min(100, p.score)) / 100;
+    return H - P - t * (H - 2 * P);
+  });
+  const d = xs.map((x, i) => `${i ? "L" : "M"}${x.toFixed(1)},${ys[i].toFixed(1)}`).join(" ");
+  return (
+    <svg width={W} height={H} aria-hidden style={{ display: "block", overflow: "visible" }}>
+      <path d={d} fill="none" stroke={color} strokeWidth="1.5" strokeLinejoin="round" opacity="0.85" />
+      <circle cx={xs[xs.length - 1]} cy={ys[ys.length - 1]} r="2.2" fill={color} />
+    </svg>
+  );
+}
+
+export default function RiskGauge({ post, prevScore = null, scoreHistory = null, ticker = null }) {
   const { lang } = useLang();
   const [data, setData]         = useState(null); // /api/market
   const [rates, setRates]       = useState(null); // /api/rates
@@ -251,7 +269,7 @@ export default function RiskGauge({ post, ticker = null }) {
             gap: 10,
           }}>
             <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 5 }}>
-              <div style={{ fontSize: 9, letterSpacing: 2, textTransform: "uppercase", color: "#4A4A50", pointerEvents: "none" }}>
+              <div style={{ fontSize: 9.5, letterSpacing: 2, textTransform: "uppercase", color: "#4A4A50", pointerEvents: "none" }}>
                 <T es="Países en alerta" en="Countries on alert" />
               </div>
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "flex-end", pointerEvents: "auto" }}>
@@ -268,7 +286,7 @@ export default function RiskGauge({ post, ticker = null }) {
                       }}
                       style={{
                         display: "flex", alignItems: "center", gap: 5,
-                        fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: 1, textTransform: "uppercase",
+                        fontFamily: "var(--font-mono)", fontSize: 9.5, letterSpacing: 1, textTransform: "uppercase",
                         padding: "3px 8px", borderRadius: 5, cursor: "pointer",
                         background: newsCountry === c.id ? `${col}38` : `${col}1A`,
                         border: `1px solid ${col}66`,
@@ -298,7 +316,7 @@ export default function RiskGauge({ post, ticker = null }) {
                 <T es={label.es} en={label.en} />
               </div>
               <div style={{
-                fontSize: 9, letterSpacing: 2.5, fontWeight: 400,
+                fontSize: 9.5, letterSpacing: 2.5, fontWeight: 400,
                 color: "#2A2A30", marginTop: 6, lineHeight: 1,
               }}>
                 {fxClosed() ? (
@@ -317,7 +335,7 @@ export default function RiskGauge({ post, ticker = null }) {
             position: "absolute",
             bottom: 28,
             left: 20,
-            fontSize: 9,
+            fontSize: 9.5,
             letterSpacing: 2,
             textTransform: "uppercase",
             color: "#2E2E32",
@@ -354,7 +372,7 @@ export default function RiskGauge({ post, ticker = null }) {
           </div>
           <div style={{
             display: "flex", justifyContent: "space-between", marginTop: 6,
-            fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: 1, color: "#5A5A62",
+            fontFamily: "var(--font-mono)", fontSize: 9.5, letterSpacing: 1, color: "#5A5A62",
           }}>
             <span><T es="0 · Pánico" en="0 · Panic" /></span>
             <span style={{ color: accentColor, fontWeight: 600 }}>
@@ -362,6 +380,43 @@ export default function RiskGauge({ post, ticker = null }) {
             </span>
             <span><T es="Euforia · 100" en="Euphoria · 100" /></span>
           </div>
+
+          {/* Contexto diario: cambio vs el view de ayer + tendencia 30 días */}
+          {(prevScore != null || scoreHistory) && (
+            <div style={{
+              display: "flex", alignItems: "center", justifyContent: "space-between",
+              gap: 14, marginTop: 12, flexWrap: "wrap",
+            }}>
+              {prevScore != null && (() => {
+                const delta = score - prevScore;
+                const up = delta >= 0;
+                const prevBand = riskBand(prevScore);
+                const crossed = prevBand.key !== label.key;
+                return (
+                  <span style={{
+                    fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: 1,
+                    color: up ? "#3FA77E" : "#C0392B",
+                    border: `1px solid ${up ? "#3FA77E33" : "#C0392B33"}`,
+                    borderRadius: 20, padding: "4px 11px",
+                  }}>
+                    {up ? "▲" : "▼"} {up ? "+" : ""}{delta}{" "}
+                    <span style={{ color: "#5A5A62" }}>
+                      <T es="vs ayer" en="vs yesterday" />
+                      {crossed ? ` · ${prevBand.key} → ${label.key}` : ` (${prevScore})`}
+                    </span>
+                  </span>
+                );
+              })()}
+              {scoreHistory && scoreHistory.length >= 5 && (
+                <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <ScoreSparkline history={scoreHistory} color={accentColor} />
+                  <span style={{ fontFamily: "var(--font-mono)", fontSize: 9.5, letterSpacing: 1.5, color: "#4A4A50" }}>
+                    30D
+                  </span>
+                </span>
+              )}
+            </div>
+          )}
         </div>
       )}
 
@@ -397,28 +452,41 @@ export default function RiskGauge({ post, ticker = null }) {
             animation: "fadeInUp .25s ease both",
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{ fontFamily: "var(--font-sans)", fontWeight: 800, fontSize: 30, lineHeight: 1, color: accentColor, letterSpacing: "-0.02em" }}>
-              {display}
-            </div>
-            <div style={{ lineHeight: 1.5 }}>
-              <div style={{ fontSize: 7.5, letterSpacing: 2.5, color: "#3A3A40", textTransform: "uppercase", fontFamily: "var(--font-mono)" }}>
-                RISK ON
+          {/* Versión completa (desktop) */}
+          <div className="badge-full">
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <div style={{ fontFamily: "var(--font-sans)", fontWeight: 800, fontSize: 30, lineHeight: 1, color: accentColor, letterSpacing: "-0.02em" }}>
+                {display}
               </div>
-              <div style={{ fontSize: 8.5, letterSpacing: 2, color: accentColor, textTransform: "uppercase", fontFamily: "var(--font-mono)" }}>
-                {lang === "en" ? label.en : label.es}
+              <div style={{ lineHeight: 1.5 }}>
+                <div style={{ fontSize: 9.5, letterSpacing: 2, color: "#3A3A40", textTransform: "uppercase", fontFamily: "var(--font-mono)" }}>
+                  RISK ON
+                </div>
+                <div style={{ fontSize: 9.5, letterSpacing: 1.5, color: accentColor, textTransform: "uppercase", fontFamily: "var(--font-mono)" }}>
+                  {lang === "en" ? label.en : label.es}
+                </div>
               </div>
             </div>
+            {!isSub && (
+              <div style={{
+                borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: 7, marginTop: 8,
+                fontSize: 10, letterSpacing: 1.5, textTransform: "uppercase",
+                fontFamily: "var(--font-mono)", color: "#F5F5F2", textAlign: "center",
+              }}>
+                <T es="Recibe El Pre-Market →" en="Get The Pre-Market →" />
+              </div>
+            )}
           </div>
-          {!isSub && (
-            <div style={{
-              borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: 7,
-              fontSize: 10, letterSpacing: 1.5, textTransform: "uppercase",
-              fontFamily: "var(--font-mono)", color: "#F5F5F2", textAlign: "center",
-            }}>
-              <T es="Recibe El Pre-Market →" en="Get The Pre-Market →" />
-            </div>
-          )}
+          {/* Mini-píldora (móvil): una sola línea, no tapa el contenido */}
+          <div className="badge-mini" style={{ display: "none", alignItems: "center", gap: 7 }}>
+            <span style={{ fontFamily: "var(--font-sans)", fontWeight: 800, fontSize: 17, lineHeight: 1, color: accentColor }}>
+              {display}
+            </span>
+            <span style={{ fontSize: 9.5, letterSpacing: 1.2, color: accentColor, textTransform: "uppercase", fontFamily: "var(--font-mono)" }}>
+              {lang === "en" ? label.en : label.es}
+            </span>
+            {!isSub && <span style={{ color: "#F5F5F2", fontSize: 12, lineHeight: 1 }}>→</span>}
+          </div>
         </a>
       )}
 
@@ -434,7 +502,7 @@ export default function RiskGauge({ post, ticker = null }) {
             }}
           >
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-              <div style={{ fontSize: 9, letterSpacing: 1.5, textTransform: "uppercase", color: "#4A4A50" }}>
+              <div style={{ fontSize: 9.5, letterSpacing: 1.5, textTransform: "uppercase", color: "#4A4A50" }}>
                 <T es={`Noticias · ${c?.name_es ?? ""} · últimas 48h`} en={`News · ${c?.name_en ?? ""} · last 48h`} />
               </div>
               <button

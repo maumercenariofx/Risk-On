@@ -35,7 +35,7 @@ function Unit({ value, label }) {
       }}>
         {pad(value)}
       </div>
-      <div style={{ fontSize: 8, letterSpacing: 2, textTransform: "uppercase", color: "#3A3A3E", marginTop: 4 }}>
+      <div style={{ fontSize: 9.5, letterSpacing: 2, textTransform: "uppercase", color: "#3A3A3E", marginTop: 4 }}>
         {label}
       </div>
     </div>
@@ -62,7 +62,7 @@ function Countdown({ isoDate, label_es, label_en }) {
         borderRadius: 12, padding: "16px 18px", flex: "1 1 200px",
       }}
     >
-      <div style={{ fontSize: 9, letterSpacing: 2.5, textTransform: "uppercase", color: "#4A4A50", marginBottom: 14 }}>
+      <div style={{ fontSize: 9.5, letterSpacing: 2.5, textTransform: "uppercase", color: "#4A4A50", marginBottom: 14 }}>
         <T es={label_es} en={label_en} />
       </div>
       {!isoDate ? (

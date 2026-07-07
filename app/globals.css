@@ -387,7 +387,14 @@ button, a[class*="rounded"] { transition-property: color, background-color, bord
   .page-sweep { display: none; }
 }
 
-/* Badge flotante clickeable (score + Suscríbete) */
+/* Badge flotante clickeable (score + Suscríbete).
+   En móvil se compacta a una mini-píldora de una línea (la versión completa
+   tapaba el contenido en pantallas de 390px). */
 .badge-cta { transition: transform 0.2s ease, box-shadow 0.2s ease; }
 .badge-cta:hover { transform: translateY(-2px); }
 .badge-cta:active { transform: scale(0.98); }
+@media (max-width: 640px) {
+  .badge-cta { padding: 8px 14px !important; border-radius: 999px !important; }
+  .badge-full { display: none; }
+  .badge-mini { display: flex !important; }
+}

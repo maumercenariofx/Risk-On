@@ -166,7 +166,7 @@ export default function EconCalendar() {
                   {/* MXN tag */}
                   {hasMxn && (
                     <span style={{
-                      fontSize: 7.5, letterSpacing: 1.5, fontFamily: "var(--font-mono)",
+                      fontSize: 9.5, letterSpacing: 1.5, fontFamily: "var(--font-mono)",
                       color: "#3FA77E", border: "1px solid #3FA77E44",
                       borderRadius: 3, padding: "1px 5px", flexShrink: 0,
                     }}>
@@ -178,11 +178,11 @@ export default function EconCalendar() {
                 {/* Impact + expand arrow */}
                 <div style={{ display: "flex", alignItems: "center", gap: 5, flexShrink: 0 }}>
                   <div style={{ width: 4, height: 4, borderRadius: "50%", background: imp.color }} />
-                  <span style={{ fontFamily: "var(--font-mono)", fontSize: 8, letterSpacing: 1.5, color: imp.color }}>
+                  <span style={{ fontFamily: "var(--font-mono)", fontSize: 9.5, letterSpacing: 1.5, color: imp.color }}>
                     {lang === "en" ? imp.label_en : imp.label_es}
                   </span>
                   {hasMxn && (
-                    <span style={{ fontSize: 8, color: "#4A4A50", marginLeft: 2 }}>
+                    <span style={{ fontSize: 9.5, color: "#4A4A50", marginLeft: 2 }}>
                       {isOpen ? "▲" : "▼"}
                     </span>
                   )}

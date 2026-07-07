@@ -1,6 +1,10 @@
 // app/archive/[slug]/page.jsx
 import { getAllSlugs, getPost, getAdjacentPosts } from "../../../lib/posts";
+import { forwardForSlug } from "../../../lib/forwardReturns";
 import PostView from "../../../components/PostView";
+
+// ISR: la auto-evaluación ("¿qué pasó después?") madura con los días.
+export const revalidate = 3600;
 
 export async function generateStaticParams() {
   return getAllSlugs().map((slug) => ({ slug }));
@@ -24,6 +28,7 @@ export async function generateMetadata({ params }) {
 export default async function PostPage({ params }) {
   const post = await getPost(params.slug);
   const { prev, next } = getAdjacentPosts(params.slug);
+  const fwd = await forwardForSlug(params.slug);
 
   // JSON-LD NewsArticle → elegible para resultados enriquecidos en Google.
   const ld = {
@@ -45,7 +50,7 @@ export default async function PostPage({ params }) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(ld) }}
       />
-      <PostView post={post} prev={prev} next={next} />
+      <PostView post={post} prev={prev} next={next} fwd={fwd} />
     </>
   );
 }
