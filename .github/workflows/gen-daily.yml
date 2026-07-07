@@ -14,10 +14,13 @@ name: gen-daily
 
 on:
   schedule:
-    # 12:52 UTC = 6:52 AM CDMX (México ya no tiene horario de verano).
-    # Minuto impar a propósito: los crons de Actions en :00/:30 arrancan con
-    # más retraso por congestión.
+    # El DISPARO PRIMARIO ya no es este cron: es cronjob.org 6:50 →
+    # /api/trigger-gen → workflow_dispatch (el scheduler interno de Actions
+    # demostró ser flaky: el 2026-07-07 simplemente no corrió). Estos crons
+    # quedan de RESPALDO, en dos horarios por redundancia — todo es
+    # idempotente vía content/<slug>.md y sent/<slug>.json.
     - cron: "52 12 * * 1-5"
+    - cron: "5 13 * * 1-5"
   workflow_dispatch:
     inputs:
       dry_run:
