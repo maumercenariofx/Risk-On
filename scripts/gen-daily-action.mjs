@@ -1,6 +1,6 @@
 // scripts/gen-daily-action.mjs
 // Generador del view diario para GitHub Actions — SIN límite de 60s (la razón
-// de existir: el view bilingüe pide hasta 4200 tokens a Claude ≈ 55-85s, que
+// de existir: el view bilingüe pide hasta 6000 tokens a Claude ≈ 55-90s, que
 // no cabe en una función de Vercel Hobby; aquí puede tardar lo que necesite).
 // Reusa lib/dailyView.js tal cual. Escribe content/<slug>.md y el workflow lo
 // commitea (el push dispara el redeploy de Vercel). Idempotente: si el archivo
