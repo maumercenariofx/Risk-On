@@ -251,6 +251,10 @@ async function handler(request) {
   const force   = reqUrl.searchParams.get("force");   // ?force=1 ignora la guarda
   const resend  = reqUrl.searchParams.get("resend");  // ?resend=1 re-envía el view YA publicado (sin regenerar)
   const preview = reqUrl.searchParams.get("preview"); // ?preview=1 diagnóstico sin enviar
+  // ?draft=1 (SOLO junto con ?only= y ?resend=1): en vez del view publicado lee
+  // content/drafts/<slug>-v2.md — para mandarse una prueba de un view alterno
+  // sin tocar el histórico ni la lista. drafts/ no aparece en el sitio.
+  const draft = reqUrl.searchParams.get("draft") && only ? true : false;
 
   // ── Guard anti-doble-envío: ?resend=1 salta la guarda de content, así que si
   // cronjob.org dispara dos veces mandaría dos veces. El marcador sent/<slug>.json
@@ -282,12 +286,13 @@ async function handler(request) {
     // Lee el view de HOY directo de GitHub. Contents API con token (sin el
     // CDN de raw, que cachea ~5 min y puede servir un 404 viejo); raw queda
     // de fallback si la API falla.
+    const contentPath = draft ? `content/drafts/${slug}-v2.md` : `content/${slug}.md`;
     try {
       let text = null;
       const token = process.env.GITHUB_TOKEN;
       if (token) {
         const apiRes = await fetch(
-          `https://api.github.com/repos/${REPO}/contents/content/${slug}.md?ref=main`,
+          `https://api.github.com/repos/${REPO}/contents/${contentPath}?ref=main`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -301,7 +306,7 @@ async function handler(request) {
       }
       if (text == null) {
         const rawRes = await fetch(
-          `https://raw.githubusercontent.com/${REPO}/main/content/${slug}.md`,
+          `https://raw.githubusercontent.com/${REPO}/main/${contentPath}`,
           { cache: "no-store" }
         );
         if (rawRes.ok) text = await rawRes.text();
@@ -312,6 +317,11 @@ async function handler(request) {
         post = { slug, ...data };
       }
     } catch {}
+    // Un draft ausente NUNCA debe caer a la generación inline: es una prueba,
+    // no el envío del día. 404 claro y ya.
+    if (draft && !post) {
+      return Response.json({ error: `draft no encontrado: ${contentPath}`, slug }, { status: 404 });
+    }
     // Si el view de HOY aún NO está publicado (gen-daily falló o va tarde),
     // genéralo AHORA mismo. NUNCA caer a un post viejo.
     if (!post) {
