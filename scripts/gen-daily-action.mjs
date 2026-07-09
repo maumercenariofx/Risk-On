@@ -43,8 +43,8 @@ const secs = ((Date.now() - t0) / 1000).toFixed(1);
 console.log(`[gen] view listo en ${secs}s — score ${view.score} · "${view.title_es}"`);
 
 if (dryRun) {
-  console.log("[gen] DRY_RUN=1 — no escribo el archivo. Muestra:");
-  console.log(md.slice(0, 600));
+  console.log("[gen] DRY_RUN=1 — no escribo el archivo. View completo:");
+  console.log(md);
   process.exit(0);
 }
 fs.writeFileSync(outFile, md, "utf8");
