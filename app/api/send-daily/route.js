@@ -400,6 +400,27 @@ async function handler(request) {
   const { label: riskState, color } = riskStateFromScore(score);
   const articleUrl = `${SITE}/archive/${post.slug}`;
 
+  // Flecha del asunto: score de hoy vs el del último view publicado antes de
+  // hoy (meta del build — ayer siempre está deployado). Sin dato → sin flecha.
+  let arrow = "";
+  try {
+    const prevPost = getAllPostsMeta()
+      .filter((p) => String(p.date).slice(0, 10) < slug)
+      .sort((a, b) => String(b.date).localeCompare(String(a.date)))[0];
+    const prevScore = Number(prevPost?.score);
+    if (Number.isFinite(prevScore) && prevScore !== score) {
+      arrow = score > prevScore ? " ▲" : " ▼";
+    }
+  } catch {}
+
+  // Recorta en palabra completa para que el gancho no muera a media frase.
+  const shorten = (s, n = 48) => {
+    s = String(s ?? "").trim();
+    if (s.length <= n) return s;
+    const cut = s.slice(0, n);
+    return `${cut.slice(0, Math.max(cut.lastIndexOf(" "), 20))}…`;
+  };
+
   // ── 2. Datos para la tabla (v8 chart, confiable desde servidor) ─────────────
   const charts = await Promise.all(TICKERS.map((t) => yahooChart(t.symbol)));
   const market = TICKERS.map((t, i) => ({ ...t, ...(charts[i] ?? {}) }));
@@ -615,14 +636,12 @@ async function handler(request) {
     "riskon.lat",
   ].join("\n");
 
-  // Asunto normal + guiño ÚNICO la víspera de México–Inglaterra (octavos, dom 5
-  // jul 2026). Solo aplica al envío del viernes 3 jul; los demás días es el de
-  // siempre — se auto-revierte.
-  const subject = slug === "2026-07-03"
-    ? (en
-        ? "🇲🇽 What if this is the year? · Mexico–England on Sunday — The Pre-Market"
-        : "🇲🇽 ¿Y si sí? · México–Inglaterra el domingo — El Pre-Market")
-    : `${L.premarket} · ${riskState} ${score} · ${dateShortL}`;
+  // Asunto: "Pre-Market {score}{▲▼} · {gancho del día}". El gancho (hook_es/en)
+  // lo genera el redactor pensado para asunto (30-45 chars); views sin gancho
+  // (anteriores al redactor v2) caen al titular recortado. La fecha no va: la
+  // bandeja ya la muestra, y el score+flecha dicen "algo cambió, ábreme".
+  const hook = shorten((en ? post.hook_en : post.hook_es)?.trim() || title);
+  const subject = `Pre-Market ${score}${arrow} · ${hook}`;
 
   return { subject, html, text, greeting };
   }; // fin buildEmail
@@ -661,9 +680,12 @@ async function handler(request) {
     });
   }
 
+  // Remitente corto y personal — en móvil el largo anterior se truncaba justo
+  // antes de la marca. NO cambiarlo seguido: el remitente construye
+  // reconocimiento y los filtros desconfían de remitentes que mutan.
   const from = fromNameOverride
     ? `"${fromNameOverride}" <view@riskon.lat>`
-    : '"Análisis FX · Mauricio Mercenario | Riskon" <view@riskon.lat>';
+    : '"Mauricio | Risk-On" <view@riskon.lat>';
   const payloads = recipients.map((sub) => {
     const v = emailFor(sub);
     const email = sub.email;
