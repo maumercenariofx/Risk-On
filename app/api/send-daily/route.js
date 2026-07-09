@@ -6,25 +6,13 @@ import { alertAdmin } from "../../../lib/alertAdmin";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-// Lista temporal (mientras se conecta la lectura del Google Sheet vía doGet).
-const SUBSCRIBERS = [
-  "mauriciomn2002@gmail.com",
-  "suscriptor-purgado@riskon.lat",
-  "suscriptor-purgado@riskon.lat",
-  "suscriptor-purgado@riskon.lat",
-  "suscriptor-purgado@riskon.lat",
-  "suscriptor-purgado@riskon.lat",
-  "suscriptor-purgado@riskon.lat",
-  "suscriptor-purgado@riskon.lat",
-  "suscriptor-purgado@riskon.lat",
-  "suscriptor-purgado@riskon.lat",
-  "suscriptor-purgado@riskon.lat",
-  "suscriptor-purgado@riskon.lat",
-  "suscriptor-purgado@riskon.lat",
-  "suscriptor-purgado@riskon.lat",
-  "suscriptor-purgado@riskon.lat",
-  "suscriptor-purgado@riskon.lat",
-];
+// Piso de seguridad de destinatarios (por si el Sheet falla). Vive en la env
+// var SUBSCRIBERS_FALLBACK (correos separados por coma) — NUNCA hardcodear
+// correos aquí: el repo es PÚBLICO y quedarían expuestos en GitHub.
+const SUBSCRIBERS = (process.env.SUBSCRIBERS_FALLBACK ?? "")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
 const SITE = "https://riskon.lat";
 const CALENDLY = "https://calendly.com/mauriciomercenariofx/30min";
 const UNSUB = "__UNSUB_URL__"; // placeholder reemplazado por destinatario

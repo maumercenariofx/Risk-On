@@ -52,6 +52,9 @@ function welcomeEmail({ name, lang }) {
   const noSpam = en
     ? "No spam. You can unsubscribe anytime from the footer of any email."
     : "Sin spam. Puedes darte de baja cuando quieras desde el pie de cualquier correo.";
+  const tip = en
+    ? `Tip so it never lands in spam: add <strong>view@riskon.lat</strong> to your contacts. And if you're curious about how the index has done, the full track record is public: <a href="${SITE}/indice" style="color:${C.text}">riskon.lat/indice</a>.`
+    : `Tip para que nunca caiga en spam: agrega <strong>view@riskon.lat</strong> a tus contactos. Y si te da curiosidad cómo le ha ido al índice, el historial completo es público: <a href="${SITE}/indice" style="color:${C.text}">riskon.lat/indice</a>.`;
   const ctaSite = en ? "Explore riskon.lat →" : "Explora riskon.lat →";
   const ctaCal  = en ? "Book a 1-on-1 advisory" : "Agenda una asesoría 1 a 1";
   const sign    = en ? "— Mauricio Mercenario" : "— Mauricio Mercenario";
@@ -82,6 +85,9 @@ function welcomeEmail({ name, lang }) {
               <a href="${SITE}" style="display:inline-block;padding:13px 26px;font-family:${sans};font-size:14px;font-weight:600;color:${C.bone};text-decoration:none">${ctaSite}</a>
             </td></tr>
           </table>
+          <div style="font-family:${sans};font-size:13px;line-height:1.7;color:${C.muted};margin-bottom:14px">
+            ${tip}
+          </div>
           <div style="font-family:${sans};font-size:13px;line-height:1.6;color:${C.muted};margin-bottom:22px">
             ${noSpam}
           </div>
@@ -173,7 +179,8 @@ export async function POST(request) {
       const { subject, html, text } = welcomeEmail({ name: saludoNombre({ nombre, apellidos, trato }), lang });
       const resend = new Resend(process.env.RESEND_API_KEY);
       const { error } = await resend.emails.send({
-        from: '"Mauricio Mercenario · Riskon" <view@riskon.lat>',
+        // Mismo remitente que el correo diario — reconocimiento desde el día 1.
+        from: '"Mauricio | Risk-On" <view@riskon.lat>',
         to: email, subject, html, text,
       });
       welcomed = !error;
