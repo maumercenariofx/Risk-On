@@ -255,6 +255,12 @@ async function handler(request) {
   // content/drafts/<slug>-v2.md — para mandarse una prueba de un view alterno
   // sin tocar el histórico ni la lista. drafts/ no aparece en el sitio.
   const draft = reqUrl.searchParams.get("draft") && only ? true : false;
+  // ?subject= / ?fromname= (SOLO con ?only=): overrides para probarse en la
+  // bandeja variantes de asunto/remitente sin tocar el envío real.
+  const subjectOverride  = only ? reqUrl.searchParams.get("subject") : null;
+  const fromNameOverride = only
+    ? cleanName(reqUrl.searchParams.get("fromname"))
+    : "";
 
   // ── Guard anti-doble-envío: ?resend=1 salta la guarda de content, así que si
   // cronjob.org dispara dos veces mandaría dos veces. El marcador sent/<slug>.json
@@ -655,7 +661,9 @@ async function handler(request) {
     });
   }
 
-  const from = '"Análisis FX · Mauricio Mercenario | Riskon" <view@riskon.lat>';
+  const from = fromNameOverride
+    ? `"${fromNameOverride}" <view@riskon.lat>`
+    : '"Análisis FX · Mauricio Mercenario | Riskon" <view@riskon.lat>';
   const payloads = recipients.map((sub) => {
     const v = emailFor(sub);
     const email = sub.email;
@@ -663,7 +671,7 @@ async function handler(request) {
     // Saludo personalizado por destinatario (genérico si no llenó su nombre).
     const greet = personalizeGreeting(v.greeting, sub);
     return {
-      from, to: email, subject: v.subject,
+      from, to: email, subject: subjectOverride ?? v.subject,
       html: v.html.split(UNSUB).join(unsubUrl).split(GREET_TOKEN).join(greet ?? ""),
       text: v.text.split(UNSUB).join(unsubUrl).split(GREET_TOKEN).join(greet ?? ""),
       headers: {
