@@ -10,7 +10,7 @@ import atlas from "world-atlas/countries-50m.json" with { type: "json" };
 import * as topojson from "topojson-client";
 import fs from "fs";
 
-const COLS = 720, ROWS = 360;
+const COLS = 1440, ROWS = 720; // 0.25°: las costas son el techo de detalle del globo
 const geo = topojson.feature(atlas, atlas.objects.countries);
 
 // Anillos exteriores de TODOS los países, con bbox para descartar rápido.

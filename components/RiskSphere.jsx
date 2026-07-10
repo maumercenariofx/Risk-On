@@ -4,6 +4,8 @@ import {
   genGlobe, genSphere, genThomas, genVoronoi, genAtom, tickAtom, eio,
   makeDotTexture, makeGeoTexture, makeCountryDataUniform, makeSelIdsUniform, latLonToDir,
   HERO_FORMS, RISK_COUNTRIES, GLOBE_VERTEX_SHADER, GLOBE_FRAGMENT_SHADER,
+  ATMO_VERTEX_SHADER, ATMO_FRAGMENT_SHADER,
+  BORDER_LINE_VERTEX_SHADER, BORDER_LINE_FRAGMENT_SHADER, makeBorderPositions,
 } from "../lib/quantForms";
 
 // Self-hosted (antes cdnjs): mismo dominio = más rápido y sin punto de fallo externo.
@@ -81,6 +83,7 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
       // El geo-data del globo vive en un chunk lazy (lib/geoMasks) — se espera
       // ANTES de crear renderer/canvas para no dejar nada a medio montar.
       const geoTex = await makeGeoTexture(THREE);
+      const borderPos = await makeBorderPositions(R * 1.003);
       if (destroyed) return;
       const container = mountRef.current;
       if (!container) return;
@@ -97,8 +100,13 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
       const isSmall = Math.min(window.innerWidth, window.innerHeight) < 768;
       const cores   = navigator.hardwareConcurrency || 4;
       const lowEnd  = (navigator.deviceMemory != null && navigator.deviceMemory <= 4) || cores <= 4;
-      const N   = isSmall ? (lowEnd ? 72000 : 110000) : cores <= 4 ? 72000 : 110000;
-      let DPR = Math.min(window.devicePixelRatio || 1, isSmall ? (lowEnd ? 2 : 3) : 2);
+      // Tier alto: DOBLE densidad (las costas se dibujan con partículas — con
+      // 110k el espaciado de 0.61° era más grueso que la máscara de 0.5°) y
+      // SUPERSAMPLING 1.25× sobre el DPR nativo (SSAA barato; la escalera
+      // adaptativa lo baja si el device no lo sostiene).
+      const N   = isSmall ? (lowEnd ? 72000 : 220000) : (lowEnd ? 72000 : 160000);
+      let DPR = Math.min((window.devicePixelRatio || 1) * (lowEnd ? 1 : 1.25),
+                         isSmall ? (lowEnd ? 2 : 3.75) : (lowEnd ? 2 : 2.5));
 
       const scene  = new THREE.Scene();
       const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 100);
@@ -199,11 +207,11 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
           uSelIds:        { value: makeSelIdsUniform() },
           uPixelsPerUnit: { value: 1 },
           uPixelRatio:    { value: DPR },
-          // En móvil tier alto (110k) el spacing angular baja a ~0.61°: con
-          // 0.020 el fill queda ≥ al look anterior (0.022 con 84k) y los
-          // puntos salen más finos y definidos. El tier bajo (72k) conserva
-          // el punto grande para que los continentes no se vean raleados.
-          uSize:          { value: isSmall ? (lowEnd ? 0.022 : 0.020) : 0.019 },
+          // uSize escala con 1/sqrt(N) para conservar el fill relativo: a
+          // 220k (spacing ~0.43°) el punto baja a 0.0145 — trazo fino tipo
+          // grabado sin ralear los continentes. El tier bajo (72k) conserva
+          // el punto grande.
+          uSize:          { value: isSmall ? (lowEnd ? 0.022 : 0.0145) : (lowEnd ? 0.019 : 0.016) },
           uTime:          { value: 0 },
           uLightDir:      { value: new THREE.Vector3(0, 0, 0) },
           uUseViewFacing: { value: 1 },
@@ -224,6 +232,34 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
 
       const group = new THREE.Group();
       group.add(new THREE.Points(geometry, material));
+
+      // Atmósfera: halo fresnel en el limbo (solo visible en modo GLOBE — su
+      // intensidad sigue a uColorT, igual que las fronteras).
+      const atmoMat = new THREE.ShaderMaterial({
+        uniforms: { uIntensity: { value: 0 } },
+        vertexShader: ATMO_VERTEX_SHADER,
+        fragmentShader: ATMO_FRAGMENT_SHADER,
+        transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+        side: THREE.BackSide,
+      });
+      const atmo = new THREE.Mesh(new THREE.SphereGeometry(R * 1.06, 64, 48), atmoMat);
+      group.add(atmo);
+
+      // Fronteras vectoriales: nítidas a cualquier densidad de partículas.
+      const borderGeo = new THREE.BufferGeometry();
+      borderGeo.setAttribute("position", new THREE.BufferAttribute(borderPos, 3));
+      const borderMat = new THREE.ShaderMaterial({
+        uniforms: {
+          uColorT: { value: 0 },
+          uColor:  { value: new THREE.Color(0.78, 0.86, 1.0) },
+        },
+        vertexShader: BORDER_LINE_VERTEX_SHADER,
+        fragmentShader: BORDER_LINE_FRAGMENT_SHADER,
+        transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+      });
+      const borderLines = new THREE.LineSegments(borderGeo, borderMat);
+      group.add(borderLines);
+
       group.scale.set(groupScale, groupScale, groupScale);
       scene.add(group);
 
@@ -406,6 +442,9 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
         // Fade the globe-only tint/country highlight in or out as forms change.
         const colorTarget = currentIdx === GLOBE_IDX && !introActive ? 1 : 0;
         material.uniforms.uColorT.value += (colorTarget - material.uniforms.uColorT.value) * 0.05;
+        // Atmósfera y fronteras vectoriales siguen el mismo fade que el tinte.
+        atmoMat.uniforms.uIntensity.value = material.uniforms.uColorT.value;
+        borderMat.uniforms.uColorT.value  = material.uniforms.uColorT.value;
 
         // Re-project the cursor onto the globe's surface every frame, so the
         // attraction point tracks the cursor even while the group rotates.
@@ -567,6 +606,8 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
         geometry.dispose();
         tex.dispose(); geoTex.dispose();
         material.dispose();
+        atmo.geometry.dispose(); atmoMat.dispose();
+        borderGeo.dispose(); borderMat.dispose();
         renderer.dispose();
         if (renderer.domElement.parentNode === container) container.removeChild(renderer.domElement);
         selectRef.current = null;
