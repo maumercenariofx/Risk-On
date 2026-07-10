@@ -1,15 +1,16 @@
-// Generator for COUNTRY_MASK_B64 in lib/geoMasks.js.
+// Generator for COUNTRY_MASK_B64 (y COUNTRY_COLS/ROWS) in lib/geoMasks.js.
 // Rasterizes the COUNTRY_UNIVERSE (14 países candidatos; el sitio elige los 5
-// más calientes cada hora) into a 360x180 (1deg) grid using real
-// point-in-polygon against world-atlas 50m country boundaries, packing
-// 2 cells (4-bit country id, 0-15) per byte — same row-major,
-// north-pole-first convention as LAND_MASK_B64. REPLACES the existing
-// COUNTRY_MASK_B64 line in lib/geoMasks.js.
+// más calientes cada hora) into a COLS x ROWS grid (hoy 720x360 = 0.5deg;
+// misma resolución que LAND_MASK) using real point-in-polygon against
+// world-atlas 50m country boundaries, packing 2 cells (4-bit country id,
+// 0-15) per byte — same row-major, north-pole-first convention as
+// LAND_MASK_B64. REPLACES the existing COUNTRY_MASK_B64 line in
+// lib/geoMasks.js.
 import atlas from "world-atlas/countries-50m.json" with { type: "json" };
 import * as topojson from "topojson-client";
 import fs from "fs";
 
-const COLS = 360, ROWS = 180;
+const COLS = 720, ROWS = 360;
 const geo = topojson.feature(atlas, atlas.objects.countries);
 
 // maskId order MUST match COUNTRY_UNIVERSE in lib/quantForms.js (1-14).
@@ -91,5 +92,9 @@ const file = "lib/geoMasks.js";
 const src = fs.readFileSync(file, "utf8");
 const re = /export const COUNTRY_MASK_B64 = "[^"]*";/;
 if (!re.test(src)) throw new Error("COUNTRY_MASK_B64 not found in " + file);
-fs.writeFileSync(file, src.replace(re, `export const COUNTRY_MASK_B64 = "${b64}";`));
-console.log("replaced COUNTRY_MASK_B64:", b64.length, "base64 chars,", ORDER.length, "countries");
+const reDims = /export const COUNTRY_COLS = \d+, COUNTRY_ROWS = \d+;/;
+if (!reDims.test(src)) throw new Error("COUNTRY_COLS/ROWS not found in " + file);
+fs.writeFileSync(file, src
+  .replace(re, `export const COUNTRY_MASK_B64 = "${b64}";`)
+  .replace(reDims, `export const COUNTRY_COLS = ${COLS}, COUNTRY_ROWS = ${ROWS};`));
+console.log(`replaced COUNTRY_MASK_B64: ${b64.length} base64 chars (${COLS}x${ROWS}), ${ORDER.length} countries`);

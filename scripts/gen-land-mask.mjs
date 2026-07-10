@@ -1,7 +1,8 @@
-// Regenerador de LAND_MASK_B64 en lib/geoMasks.js.
+// Regenerador de LAND_MASK_B64 (y LAND_COLS/ROWS) en lib/geoMasks.js.
 // La máscara original traía una FILA CORRUPTA en lat -16.5 (una raya de
 // "tierra" cruzando el Pacífico desde Perú hasta lon -105) — se veía como una
-// línea de puntitos en el mar. Rasteriza de nuevo 360x180 (1°) con
+// línea de puntitos en el mar. Rasteriza a COLS x ROWS (hoy 720x360 = 0.5°;
+// las costas a 1° eran el techo real de detalle del globo) con
 // point-in-polygon real contra los países de world-atlas 50m (su unión =
 // tierra firme). Mismo encoding que el decode de quantForms: row-major desde
 // el polo norte, 1 bit por celda, LSB primero dentro del byte.
@@ -9,7 +10,7 @@ import atlas from "world-atlas/countries-50m.json" with { type: "json" };
 import * as topojson from "topojson-client";
 import fs from "fs";
 
-const COLS = 360, ROWS = 180;
+const COLS = 720, ROWS = 360;
 const geo = topojson.feature(atlas, atlas.objects.countries);
 
 // Anillos exteriores de TODOS los países, con bbox para descartar rápido.
@@ -58,9 +59,9 @@ let landCells = 0;
 // -16.5 de la máscara original — Natural Earth tiene vértices en esa lat).
 const EPS = 1e-6;
 for (let row = 0; row < ROWS; row++) {
-  const lat = 90 - (row + 0.5) + EPS;
+  const lat = 90 - (row + 0.5) * (180 / ROWS) + EPS;
   for (let col = 0; col < COLS; col++) {
-    const lon = -180 + (col + 0.5) + EPS;
+    const lon = -180 + (col + 0.5) * (360 / COLS) + EPS;
     let land = false;
     for (const r of rings) {
       const lx = r.wraps && lon < 0 ? lon + 360 : lon;
@@ -81,15 +82,24 @@ const src = fs.readFileSync(file, "utf8");
 const re = /export const LAND_MASK_B64 = "[^"]*";/;
 if (!re.test(src)) throw new Error("LAND_MASK_B64 not found in " + file);
 
-// Diff contra la máscara vieja para reportar qué cambió.
+// Diff contra la máscara vieja para reportar qué cambió (solo comparable si
+// la resolución no cambió; con tamaños distintos el diff no tiene sentido).
 const oldB64 = src.match(/export const LAND_MASK_B64 = "([^"]*)";/)[1];
 const oldBits = Buffer.from(oldB64, "base64");
-let diff = 0;
-for (let i = 0; i < COLS * ROWS; i++) {
-  const a = (bits[i >> 3] >> (i & 7)) & 1;
-  const b = (oldBits[i >> 3] >> (i & 7)) & 1;
-  if (a !== b) diff++;
+let diffMsg = "resolución distinta — diff omitido";
+if (oldBits.length === bits.length) {
+  let diff = 0;
+  for (let i = 0; i < COLS * ROWS; i++) {
+    const a = (bits[i >> 3] >> (i & 7)) & 1;
+    const b = (oldBits[i >> 3] >> (i & 7)) & 1;
+    if (a !== b) diff++;
+  }
+  diffMsg = `celdas distintas vs máscara vieja: ${diff}`;
 }
 
-fs.writeFileSync(file, src.replace(re, `export const LAND_MASK_B64 = "${b64}";`));
-console.log(`land cells: ${landCells} · celdas distintas vs máscara vieja: ${diff}`);
+const reDims = /export const LAND_COLS = \d+, LAND_ROWS = \d+;/;
+if (!reDims.test(src)) throw new Error("LAND_COLS/ROWS not found in " + file);
+fs.writeFileSync(file, src
+  .replace(re, `export const LAND_MASK_B64 = "${b64}";`)
+  .replace(reDims, `export const LAND_COLS = ${COLS}, LAND_ROWS = ${ROWS};`));
+console.log(`land cells: ${landCells} (${COLS}x${ROWS}) · ${diffMsg}`);
