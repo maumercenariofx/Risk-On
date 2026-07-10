@@ -106,6 +106,9 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
       renderer.setPixelRatio(DPR);
       renderer.setSize(container.clientWidth, container.clientHeight);
       const canvas = renderer.domElement;
+      // Debug observable (Playwright / Web Inspector remoto): DPR y N vivos.
+      canvas.dataset.dpr = String(DPR);
+      canvas.dataset.n = String(N);
       // pan-y: el swipe vertical SIGUE scrolleando la página aunque empiece
       // sobre el globo (crítico con el hero a pantalla completa); el efecto
       // táctil sigue vivo vía pointerdown/move y se cancela si el browser
@@ -258,7 +261,13 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
       };
 
       // ── Hover effect state ──
-      let elapsed = 0, animId = 0, lastFrame = 0;
+      // lastFrame = timestamp real del último render (para rawDt/dt);
+      // nextFrameAt = reloj ACUMULADOR del throttle. El viejo
+      // `ts - lastFrame < 1000/60` caía en el borde de cuantización en
+      // pantallas 90/120Hz (ticks de ~8.3ms → cadencia 16.7/25/33ms) y esos
+      // 33ms envenenaban la medición adaptativa como "frames lentos".
+      let elapsed = 0, animId = 0, lastFrame = 0, nextFrameAt = 0;
+      let lastScrollAt = -1e9; // el scroll compite por el main thread — no medir ahí
       let mouseActive = false;
       let lastMoveAt  = 0;
       // settled = partículas en casa y sin interacción → se SALTA el loop de
@@ -267,10 +276,12 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
       let settled = false, settleFrames = 0;
       // visible = false (hero fuera del viewport) → se detiene el rAF entero.
       let visible = true;
-      // Calidad adaptativa: arranca nítido y si el dispositivo no sostiene
-      // ~38fps en los primeros segundos, baja el pixel ratio UNA vez (a 1.5).
-      // Así los iPhone se ven a resolución casi nativa y un Android débil no
-      // se arrastra.
+      // Calidad adaptativa ESCALONADA: arranca nítido y si el dispositivo no
+      // sostiene ~30fps en reposo (sim dormida, sin scroll), baja el pixel
+      // ratio de a 0.5 con re-medición entre pasos, hasta el piso 1.5. Se da
+      // por terminada cuando una ventana pasa limpia (calidad sostenida) o
+      // al tocar el piso. Umbral 34ms = 2+ frames de 60Hz perdidos — inmune a
+      // la cuantización de 120Hz y al cap de rAF del Low Power Mode de iOS.
       let qFrames = 0, qSlow = 0, qDone = DPR <= 1.5;
       const mouseNDC    = new THREE.Vector2();
       const mouseLocal  = new THREE.Vector3();
@@ -295,6 +306,8 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
       // El efecto cráter/hoyo negro es SOLO desktop (decisión 2026-07-06): en
       // móvil competía con el scroll, costaba física y no aportaba — sin
       // listeners, mouseActive nunca se enciende y la simulación no corre.
+      const onScroll = () => { lastScrollAt = performance.now(); };
+      window.addEventListener("scroll", onScroll, { passive: true });
       if (!isSmall) {
         container.addEventListener("pointermove", onPointerMove);
         container.addEventListener("pointerleave", onPointerLeave);
@@ -333,24 +346,35 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
       function animate(ts = 0) {
         if (!visible) { animId = 0; return; } // pausa total fuera de pantalla
         animId = requestAnimationFrame(animate);
-        if (ts - lastFrame < 1000 / 60) return;
-        const rawDt = ts - lastFrame;
+        // Throttle acumulador: 60fps promedio limpios en 60/90/120/144Hz.
+        // El `ts - 32` re-ancla el reloj tras pausas (tab oculto, IO) para no
+        // "reproducir" frames atrasados en ráfaga.
+        if (ts < nextFrameAt) return;
+        nextFrameAt = Math.max(nextFrameAt + 1000 / 60, ts - 32);
+        const rawDt = lastFrame ? ts - lastFrame : 1000 / 60;
         const dt = Math.min(rawDt / 1000, 0.05);
         lastFrame = ts; elapsed += dt;
 
-        // Calidad adaptativa: medir SOLO en reposo (sin morph/interacción).
-        // Contar la intro degradaba hasta a un iPhone tope de gama — la intro
-        // es pesada A PROPÓSITO y no representa el costo permanente.
-        if (!qDone && rawDt < 500 && morphT >= 1 && !mouseActive) {
-          if (rawDt > 26) qSlow++;
+        // Calidad adaptativa: medir SOLO en reposo real — sim CPU dormida
+        // (mismo criterio que needsSim, con el morphT del frame anterior: un
+        // frame de desfase es irrelevante) y sin scroll reciente. Contar la
+        // intro/settle degradaba hasta a un iPhone tope de gama — esos costos
+        // son transitorios A PROPÓSITO y no representan el costo permanente.
+        const simBusy = mouseActive || morphT < 1 || currentIdx === ATOM_IDX || !settled;
+        if (!qDone && rawDt < 500 && !simBusy && ts - lastScrollAt > 300) {
+          if (rawDt > 34) qSlow++;
           if (++qFrames >= 90) {
-            qDone = true;
-            if (qSlow > 30) { // >1/3 de frames lentos → baja resolución
-              DPR = 1.5;
+            if (qSlow > 30) { // >1/3 de frames lentos → un peldaño abajo
+              DPR = Math.max(1.5, DPR - 0.5);
               renderer.setPixelRatio(DPR);
               renderer.setSize(container.clientWidth, container.clientHeight);
               material.uniforms.uPixelRatio.value = DPR;
+              canvas.dataset.dpr = String(DPR);
+              if (DPR <= 1.5) qDone = true; // piso alcanzado
+            } else {
+              qDone = true; // ventana limpia → esta calidad se sostiene
             }
+            qFrames = 0; qSlow = 0;
           }
         }
 
@@ -367,7 +391,7 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
             focusTarget = null;
           }
         } else {
-          group.rotation.y += 0.0036;
+          group.rotation.y += 0.216 * dt; // por dt (0.0036×60): fluida aunque el pacing varíe
           // Idle wobble alrededor de 0 + inclinación del giroscopio (móvil).
           group.rotation.x += (Math.sin(elapsed * 0.2) * 0.07 + gyroTilt - group.rotation.x) * 0.03;
         }
@@ -506,7 +530,7 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
       // globo dejaba de verse pero seguía costando frames a toda la página.
       const vio = new IntersectionObserver(([entry]) => {
         if (entry.isIntersecting) {
-          if (!visible) { visible = true; lastFrame = 0; if (!animId) animate(); }
+          if (!visible) { visible = true; lastFrame = 0; nextFrameAt = 0; if (!animId) animate(); }
         } else {
           visible = false;
         }
@@ -534,6 +558,7 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
         container.removeEventListener("pointercancel", onPointerLeave);
         container.removeEventListener("touchend", armGyro);
         window.removeEventListener("deviceorientation", onGyro);
+        window.removeEventListener("scroll", onScroll);
         geometry.dispose();
         tex.dispose(); geoTex.dispose();
         material.dispose();
