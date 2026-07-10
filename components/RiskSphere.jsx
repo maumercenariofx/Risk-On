@@ -72,11 +72,12 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
       selectRef.current.setCountries(list);
       return true;
     },
-    // Tiñe el halo atmosférico (color de la banda del índice). Mismo
-    // contrato que setCountries: false mientras el 3D no monta.
-    setHalo: (hex) => {
+    // Tiñe el halo atmosférico (color de la banda del índice) y ajusta su
+    // respiración con el score. Mismo contrato que setCountries: false
+    // mientras el 3D no monta.
+    setHalo: (hex, score) => {
       if (!selectRef.current?.setHalo) return false;
-      selectRef.current.setHalo(hex);
+      selectRef.current.setHalo(hex, score);
       return true;
     },
   }), []);
@@ -245,6 +246,10 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
       const atmoMat = new THREE.ShaderMaterial({
         uniforms: {
           uIntensity: { value: 0 },
+          uTime:      { value: 0 },
+          // Velocidad de la respiración (rad/s); setHalo la ajusta con el
+          // score: risk-off respira más inquieto, risk-on más sereno.
+          uPulse:     { value: 0.9 },
           // Azul neutro de arranque; en cuanto hay score, RiskGauge lo tiñe
           // del color de la banda del día vía setHalo().
           uColor: { value: new THREE.Color(0.45, 0.66, 1.0) },
@@ -293,8 +298,11 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
         },
         // Halo del color de la banda del día, suavizado hacia blanco (pastel)
         // para que tiña sin gritar — el globo comunica el estado del mercado.
-        setHalo: (hex) => {
+        // score (0-100) modula la respiración: risk-off (bajo) más inquieta
+        // (~4s de periodo), risk-on (alto) más serena (~9s).
+        setHalo: (hex, score = 50) => {
           atmoMat.uniforms.uColor.value.set(hex).lerp(new THREE.Color(1, 1, 1), 0.3);
+          atmoMat.uniforms.uPulse.value = 0.7 + (1 - Math.max(0, Math.min(100, score)) / 100) * 0.9;
         },
         // Actualiza en vivo el color/pulso de cada país (score 0-100 por id).
         setCountryScores: (map) => {
@@ -461,6 +469,7 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
         material.uniforms.uColorT.value += (colorTarget - material.uniforms.uColorT.value) * 0.05;
         // Atmósfera y fronteras vectoriales siguen el mismo fade que el tinte.
         atmoMat.uniforms.uIntensity.value = material.uniforms.uColorT.value;
+        atmoMat.uniforms.uTime.value      = elapsed;
         borderMat.uniforms.uColorT.value  = material.uniforms.uColorT.value;
 
         // Re-project the cursor onto the globe's surface every frame, so the

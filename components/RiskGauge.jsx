@@ -213,7 +213,7 @@ export default function RiskGauge({ post, prevScore = null, scoreHistory = null,
     if (!result) return;
     let tries = 0, id;
     const apply = () => {
-      const ok = sphereRef.current?.setHalo?.(accentColor) === true;
+      const ok = sphereRef.current?.setHalo?.(accentColor, score) === true;
       if (!ok && tries++ < 40) id = setTimeout(apply, 300);
     };
     apply();
