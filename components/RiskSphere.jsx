@@ -72,6 +72,13 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
       selectRef.current.setCountries(list);
       return true;
     },
+    // Tiñe el halo atmosférico (color de la banda del índice). Mismo
+    // contrato que setCountries: false mientras el 3D no monta.
+    setHalo: (hex) => {
+      if (!selectRef.current?.setHalo) return false;
+      selectRef.current.setHalo(hex);
+      return true;
+    },
   }), []);
 
   useEffect(() => {
@@ -236,7 +243,12 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
       // Atmósfera: halo fresnel en el limbo (solo visible en modo GLOBE — su
       // intensidad sigue a uColorT, igual que las fronteras).
       const atmoMat = new THREE.ShaderMaterial({
-        uniforms: { uIntensity: { value: 0 } },
+        uniforms: {
+          uIntensity: { value: 0 },
+          // Azul neutro de arranque; en cuanto hay score, RiskGauge lo tiñe
+          // del color de la banda del día vía setHalo().
+          uColor: { value: new THREE.Color(0.45, 0.66, 1.0) },
+        },
         vertexShader: ATMO_VERTEX_SHADER,
         fragmentShader: ATMO_FRAGMENT_SHADER,
         transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
@@ -278,6 +290,11 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
           currentIdx = idx;
           morphT     = 0;
           morphDur   = MORPH_S;
+        },
+        // Halo del color de la banda del día, suavizado hacia blanco (pastel)
+        // para que tiña sin gritar — el globo comunica el estado del mercado.
+        setHalo: (hex) => {
+          atmoMat.uniforms.uColor.value.set(hex).lerp(new THREE.Color(1, 1, 1), 0.3);
         },
         // Actualiza en vivo el color/pulso de cada país (score 0-100 por id).
         setCountryScores: (map) => {

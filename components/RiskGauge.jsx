@@ -207,6 +207,19 @@ export default function RiskGauge({ post, prevScore = null, scoreHistory = null,
   const accentColor = accent(score);
   const selSig = SIGNALS.find((s) => s.key === sel) ?? SIGNALS[0];
 
+  // Halo atmosférico del color de la banda del día — el globo entero
+  // comunica el estado del mercado. Mismo patrón de retry que setCountries.
+  useEffect(() => {
+    if (!result) return;
+    let tries = 0, id;
+    const apply = () => {
+      const ok = sphereRef.current?.setHalo?.(accentColor) === true;
+      if (!ok && tries++ < 40) id = setTimeout(apply, 300);
+    };
+    apply();
+    return () => clearTimeout(id);
+  }, [result, accentColor]);
+
   return (
     <section className="reveal" style={{ animationDelay: "0.05s" }}>
 
