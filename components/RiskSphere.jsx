@@ -87,15 +87,18 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
 
       // Presupuesto por dispositivo: la simulación corre en CPU, así que el
       // conteo de partículas se adapta (el módulo declara el techo; aquí se
-      // SOMBREA N con el valor efectivo para todo el efecto). El DPR va a
-      // resolución NATIVA (cap 2… o 3 en pantallas chicas: un iPhone 3x
-      // renderizado a 1.5 se re-escala BORROSO — eso se veía "sucio"; el
-      // canvas chico hace baratos esos píxeles, y el settle-skip ya mantiene
-      // el CPU en cero en reposo).
+      // SOMBREA N con el valor efectivo para todo el efecto). En móvil se
+      // arranca ALTO por default (DPR nativo hasta 3, 110k partículas): un
+      // iPhone 3x renderizado a menos se re-escala BORROSO. El tier bajo solo
+      // aplica con señales claras de gama baja — OJO: deviceMemory NO existe
+      // en iOS Safari (Chrome-only), así que los iPhone caen al tier alto,
+      // que es lo correcto. La red de seguridad real para Android débil es la
+      // escalera adaptativa de DPR, no este gate.
       const isSmall = Math.min(window.innerWidth, window.innerHeight) < 768;
       const cores   = navigator.hardwareConcurrency || 4;
-      const N   = isSmall ? 84000 : cores <= 4 ? 72000 : 110000;
-      let DPR = Math.min(window.devicePixelRatio || 1, isSmall ? 2.5 : 2);
+      const lowEnd  = (navigator.deviceMemory != null && navigator.deviceMemory <= 4) || cores <= 4;
+      const N   = isSmall ? (lowEnd ? 72000 : 110000) : cores <= 4 ? 72000 : 110000;
+      let DPR = Math.min(window.devicePixelRatio || 1, isSmall ? (lowEnd ? 2 : 3) : 2);
 
       const scene  = new THREE.Scene();
       const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 100);
@@ -196,9 +199,11 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
           uSelIds:        { value: makeSelIdsUniform() },
           uPixelsPerUnit: { value: 1 },
           uPixelRatio:    { value: DPR },
-          // Puntos ~15% más grandes en pantallas chicas: con menos partículas
-          // los continentes se rellenan y el mapa se lee sólido, no raleado.
-          uSize:          { value: isSmall ? 0.022 : 0.019 },
+          // En móvil tier alto (110k) el spacing angular baja a ~0.61°: con
+          // 0.020 el fill queda ≥ al look anterior (0.022 con 84k) y los
+          // puntos salen más finos y definidos. El tier bajo (72k) conserva
+          // el punto grande para que los continentes no se vean raleados.
+          uSize:          { value: isSmall ? (lowEnd ? 0.022 : 0.020) : 0.019 },
           uTime:          { value: 0 },
           uLightDir:      { value: new THREE.Vector3(0, 0, 0) },
           uUseViewFacing: { value: 1 },
