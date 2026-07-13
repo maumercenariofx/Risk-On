@@ -72,7 +72,7 @@ export async function GET(request) {
     const ts     = result.timestamp ?? [];
     const closes = result.indicators?.quote?.[0]?.close ?? [];
 
-    const prices = [], labels = [];
+    const prices = [], labels = [], isoDates = [];
     for (let i = 0; i < ts.length; i++) {
       const c = closes[i];
       if (c == null || isNaN(c)) continue;
@@ -80,9 +80,10 @@ export async function GET(request) {
       const label = d.toLocaleDateString("es-MX", { day: "numeric", month: "short" });
       prices.push(Math.round(c * 10000) / 10000);
       labels.push(label);
+      isoDates.push(d.toISOString().slice(0, 10)); // para alinear por fecha con los views
     }
 
-    return Response.json({ prices, labels }, {
+    return Response.json({ prices, labels, dates: isoDates }, {
       headers: { "Cache-Control": "s-maxage=60, stale-while-revalidate=300" },
     });
   } catch {

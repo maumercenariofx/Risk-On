@@ -72,37 +72,72 @@ function BandChip({ score }) {
   );
 }
 
-// ── Panel 1: histórico del score ─────────────────────────────────────────────
-function ScoreHistoryChart({ points }) {
-  const canvasRef = useRef(null);
-  const chartRef  = useRef(null);
+// ── Score + USD/MXN en un mismo lienzo temporal (petición del usuario 2026-07-13)
+// Dos paneles APILADOS con el MISMO eje x (un punto por view publicado) y
+// crosshair/tooltip SINCRONIZADOS: mueves el cursor y lees el score y el
+// USD/MXN del mismo día a la vez. Apilados a propósito, jamás doble eje —
+// dos escalas en un mismo plano es el engaño clásico de los charts.
+function SyncedScoreFx({ points, range }) {
+  const scoreRef  = useRef(null);
+  const fxRef     = useRef(null);
+  const chartsRef = useRef({});
+  const [fx, setFx]     = useState(null); // cierres USD/MXN alineados a points
+  const [asOf, setAsOf] = useState(null); // momento real de la carga (veracidad)
   const { lang } = useLang();
+
+  useEffect(() => {
+    fetch(`/api/history?range=${range}&symbol=USDMXN`)
+      .then((r) => r.json())
+      .then((d) => {
+        if (!d?.prices?.length || !d?.dates?.length) return;
+        // Alineación por fecha (carry-forward): para cada view, el último
+        // cierre con fecha ≤ slug — cubre feriados y huecos del feed.
+        let j = 0, lastPx = null;
+        const aligned = points.map((p) => {
+          while (j < d.dates.length && d.dates[j] <= p.slug) { lastPx = d.prices[j]; j++; }
+          return lastPx;
+        });
+        setFx(aligned);
+        setAsOf(new Date().toISOString());
+      })
+      .catch(() => {});
+  }, [points, range]);
 
   useEffect(() => {
     if (!points?.length) return;
     let cancelled = false;
     (async () => {
       const { default: Chart } = await import("chart.js/auto");
-      if (cancelled || !canvasRef.current) return;
-      if (chartRef.current) chartRef.current.destroy();
+      if (cancelled || !scoreRef.current) return;
+      chartsRef.current.unlink?.();
+      chartsRef.current.score?.destroy();
+      chartsRef.current.fx?.destroy();
 
-      const color = riskBand(points[points.length - 1].score).color;
-      chartRef.current = new Chart(canvasRef.current, {
+      const labels     = points.map((p) => fmtDate(p.slug, lang));
+      const scoreColor = riskBand(points[points.length - 1].score).color;
+      const goView = (_e, els) => {
+        const i = els?.[0]?.index;
+        if (i != null) window.location.href = `/archive/${points[i].slug}`;
+      };
+      const hoverCursor = (e, els) => { e.native.target.style.cursor = els?.length ? "pointer" : "default"; };
+      const hasFx = Array.isArray(fx) && fx.some((v) => v != null);
+
+      chartsRef.current.score = new Chart(scoreRef.current, {
         type: "line",
-        plugins: [crosshairPlugin, bandLinesPlugin, makeGlowPlugin(color, 0, 12), makeTerminalDotPlugin(color, 0)],
+        plugins: [crosshairPlugin, bandLinesPlugin, makeGlowPlugin(scoreColor, 0, 12), makeTerminalDotPlugin(scoreColor, 0)],
         data: {
-          labels: points.map((p) => fmtDate(p.slug, lang)),
+          labels,
           datasets: [{
             data:                      points.map((p) => p.score),
-            borderColor:               color,
+            borderColor:               scoreColor,
             borderWidth:               2,
-            backgroundColor:           makeGradientFn(color),
+            backgroundColor:           makeGradientFn(scoreColor),
             fill:                      true,
             tension:                   0.3,
             pointRadius:               0,
             pointHitRadius:            12,
             pointHoverRadius:          4,
-            pointHoverBackgroundColor: color,
+            pointHoverBackgroundColor: scoreColor,
             pointHoverBorderColor:     "#000",
             pointHoverBorderWidth:     2,
           }],
@@ -112,11 +147,8 @@ function ScoreHistoryChart({ points }) {
           maintainAspectRatio: false,
           animation:           lineAnim(points.length),
           interaction:         { intersect: false, mode: "index" },
-          onClick: (_e, els) => {
-            const i = els?.[0]?.index;
-            if (i != null) window.location.href = `/archive/${points[i].slug}`;
-          },
-          onHover: (e, els) => { e.native.target.style.cursor = els?.length ? "pointer" : "default"; },
+          onClick:             goView,
+          onHover:             hoverCursor,
           plugins: {
             legend:  { display: false },
             tooltip: {
@@ -138,97 +170,120 @@ function ScoreHistoryChart({ points }) {
             },
           },
           scales: {
-            x: xScaleDefaults(Math.min(points.length, 8)),
+            // El eje de fechas vive SOLO en el panel de abajo cuando existe;
+            // duplicarlo en ambos paneles gasta alto y no aporta.
+            x: hasFx ? { ...xScaleDefaults(8), ticks: { display: false } } : xScaleDefaults(Math.min(points.length, 8)),
             y: { ...yScaleDefaults((v) => v), min: 0, max: 100, position: "right" },
           },
         },
       });
-    })();
-    return () => { cancelled = true; chartRef.current?.destroy(); };
-  }, [points, lang]);
 
-  return (
-    <div style={{ position: "relative", height: 220 }}>
-      <canvas ref={canvasRef} />
-    </div>
-  );
-}
-
-// ── Panel 2: USD/MXN del mismo período (panel separado, jamás doble eje) ─────
-function UsdMxnChart({ range }) {
-  const canvasRef = useRef(null);
-  const chartRef  = useRef(null);
-  const [data, setData] = useState(null);
-  const [asOf, setAsOf] = useState(null); // momento real de la carga (veracidad)
-
-  useEffect(() => {
-    fetch(`/api/history?range=${range}&symbol=USDMXN`)
-      .then((r) => r.json())
-      .then((d) => { setData(d); setAsOf(new Date().toISOString()); })
-      .catch(() => {});
-  }, [range]);
-
-  useEffect(() => {
-    if (!data?.prices?.length) return;
-    let cancelled = false;
-    (async () => {
-      const { default: Chart } = await import("chart.js/auto");
-      if (cancelled || !canvasRef.current) return;
-      if (chartRef.current) chartRef.current.destroy();
-
-      const chg   = data.prices[data.prices.length - 1] - data.prices[0];
-      const color = semanticColor(chg < 0); // baja USD/MXN = peso fuerte = verde
-      chartRef.current = new Chart(canvasRef.current, {
-        type: "line",
-        plugins: [crosshairPlugin, makeGlowPlugin(color, 0, 10), makeTerminalDotPlugin(color, 0)],
-        data: {
-          labels: data.labels,
-          datasets: [{
-            data:                      data.prices,
-            borderColor:               color,
-            borderWidth:               2,
-            backgroundColor:           makeGradientFn(color),
-            fill:                      true,
-            tension:                   0.3,
-            pointRadius:               0,
-            pointHoverRadius:          4,
-            pointHoverBackgroundColor: color,
-            pointHoverBorderColor:     "#000",
-            pointHoverBorderWidth:     2,
-          }],
-        },
-        options: {
-          responsive:          true,
-          maintainAspectRatio: false,
-          animation:           lineAnim(data.prices.length),
-          interaction:         { intersect: false, mode: "index" },
-          plugins: {
-            legend:  { display: false },
-            tooltip: {
-              ...tooltipDefaults,
-              callbacks: {
-                title: (items) => items[0].label,
-                label: (c)     => ` ${c.parsed.y.toFixed(4)}`,
+      if (hasFx && fxRef.current) {
+        const first = fx.find((v) => v != null);
+        const chg   = fx[fx.length - 1] - first;
+        const fxColor = semanticColor(chg < 0); // baja USD/MXN = peso fuerte = verde
+        chartsRef.current.fx = new Chart(fxRef.current, {
+          type: "line",
+          plugins: [crosshairPlugin, makeGlowPlugin(fxColor, 0, 10), makeTerminalDotPlugin(fxColor, 0)],
+          data: {
+            labels,
+            datasets: [{
+              data:                      fx,
+              borderColor:               fxColor,
+              borderWidth:               2,
+              backgroundColor:           makeGradientFn(fxColor),
+              fill:                      true,
+              tension:                   0.3,
+              pointRadius:               0,
+              pointHitRadius:            12,
+              pointHoverRadius:          4,
+              pointHoverBackgroundColor: fxColor,
+              pointHoverBorderColor:     "#000",
+              pointHoverBorderWidth:     2,
+            }],
+          },
+          options: {
+            responsive:          true,
+            maintainAspectRatio: false,
+            animation:           lineAnim(points.length),
+            interaction:         { intersect: false, mode: "index" },
+            onClick:             goView,
+            onHover:             hoverCursor,
+            plugins: {
+              legend:  { display: false },
+              tooltip: {
+                ...tooltipDefaults,
+                callbacks: {
+                  title: (items) => items[0].label,
+                  label: (c) => ` ${c.parsed.y?.toFixed(4)}`,
+                },
               },
             },
+            scales: {
+              x: xScaleDefaults(8),
+              y: { ...yScaleDefaults((v) => v.toFixed(2)), position: "right" },
+            },
           },
-          scales: {
-            x: xScaleDefaults(8),
-            y: { ...yScaleDefaults((v) => v.toFixed(2)), position: "right" },
-          },
-        },
-      });
-    })();
-    return () => { cancelled = true; chartRef.current?.destroy(); };
-  }, [data]);
+        });
 
-  if (!data?.prices?.length) return <Skeleton height={160} />;
+        // Crosshair sincronizado: el hover en un panel activa el tooltip del
+        // otro en el MISMO índice (mismo día). Bidireccional.
+        const link = (src, dst) => {
+          const move = (e) => {
+            const els = src.getElementsAtEventForMode(e, "index", { intersect: false }, false);
+            const i = els?.[0]?.index;
+            if (i == null || !dst.chartArea) return;
+            dst.setActiveElements([{ datasetIndex: 0, index: i }]);
+            dst.tooltip.setActiveElements([{ datasetIndex: 0, index: i }], {
+              x: dst.scales.x.getPixelForValue(i),
+              y: (dst.chartArea.top + dst.chartArea.bottom) / 2,
+            });
+            dst.update("none");
+          };
+          const leave = () => {
+            dst.setActiveElements([]);
+            dst.tooltip.setActiveElements([], { x: 0, y: 0 });
+            dst.update("none");
+          };
+          src.canvas.addEventListener("mousemove", move);
+          src.canvas.addEventListener("mouseleave", leave);
+          return () => {
+            src.canvas.removeEventListener("mousemove", move);
+            src.canvas.removeEventListener("mouseleave", leave);
+          };
+        };
+        const un1 = link(chartsRef.current.score, chartsRef.current.fx);
+        const un2 = link(chartsRef.current.fx, chartsRef.current.score);
+        chartsRef.current.unlink = () => { un1(); un2(); };
+      }
+    })();
+    return () => {
+      cancelled = true;
+      chartsRef.current.unlink?.();
+      chartsRef.current.score?.destroy();
+      chartsRef.current.fx?.destroy();
+      chartsRef.current = {};
+    };
+  }, [points, fx, lang]);
+
   return (
     <>
-      <div style={{ position: "relative", height: 160 }}>
-        <canvas ref={canvasRef} />
+      <div style={{ position: "relative", height: 190 }}>
+        <canvas ref={scoreRef} />
       </div>
-      <SourceTag source="Yahoo Finance" asOf={asOf} style={{ marginTop: 8 }} />
+      <div style={{ ...sectionLabel, margin: "14px 0 8px" }}>
+        <T es="USD/MXN · mismos días" en="USD/MXN · same days" />
+      </div>
+      {fx ? (
+        <>
+          <div style={{ position: "relative", height: 130 }}>
+            <canvas ref={fxRef} />
+          </div>
+          <SourceTag source="Yahoo Finance" asOf={asOf} style={{ marginTop: 8 }} />
+        </>
+      ) : (
+        <Skeleton height={130} />
+      )}
     </>
   );
 }
@@ -288,25 +343,11 @@ export default function TrackRecord({ points }) {
         <div style={{ ...sectionLabel, marginBottom: 10 }}>
           <T es="Índice Risk On · un punto por view publicado" en="Risk On Index · one point per published view" />
         </div>
-        <ScoreHistoryChart points={points} />
+        <SyncedScoreFx points={points} range={range} />
         <p style={{ fontSize: 12, color: "#9CA3AF", lineHeight: 1.65, margin: "10px 0 0 0" }}>
           <T
-            es="Cada punto es el score publicado esa mañana a las 7:00 (hora CDMX), antes de la apertura. Haz clic en un punto para leer el view de ese día. El histórico crece un punto por día hábil."
-            en="Each point is the score published that morning at 7:00 AM (Mexico City), before the open. Click any point to read that day's view. The history grows one point per trading day."
-          />
-        </p>
-      </div>
-
-      {/* USD/MXN del mismo período */}
-      <div className="card-glass" style={{ ...cardStyle(), padding: "18px 20px" }}>
-        <div style={{ ...sectionLabel, marginBottom: 10 }}>
-          {lang === "en" ? `USD/MXN · last ${range} days` : `USD/MXN · últimos ${range} días`}
-        </div>
-        <UsdMxnChart range={range} />
-        <p style={{ fontSize: 12, color: "#9CA3AF", lineHeight: 1.65, margin: "10px 0 0 0" }}>
-          <T
-            es="El peso en el mismo período, para contrastar el score contra el mercado. Van en paneles separados a propósito: comparar dos escalas en un mismo eje engaña al ojo."
-            en="The peso over the same period, to contrast the score against the market. Shown as separate panels on purpose: overlaying two scales on one axis misleads the eye."
+            es="Índice y USD/MXN sobre los mismos días, alineados: mueve el cursor y lee ambos valores de la misma fecha (el crosshair está sincronizado). Haz clic en cualquier punto para leer el view de ese día. Paneles apilados a propósito — dos escalas en un mismo plano engañan al ojo. Ojo con la lectura: score alto suele coincidir con USD/MXN a la baja (peso fuerte)."
+            en="Index and USD/MXN over the same days, aligned: move the cursor and read both values for the same date (the crosshair is synced). Click any point to read that day's view. Stacked panels on purpose — two scales on one plane mislead the eye. Reading tip: a high score usually coincides with USD/MXN falling (strong peso)."
           />
         </p>
       </div>
