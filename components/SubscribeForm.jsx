@@ -1,6 +1,7 @@
 "use client";
 // components/SubscribeForm.jsx
 import { useState, useEffect } from "react";
+import { track } from "@vercel/analytics";
 import { useLang, T } from "./Lang";
 
 const FIELD_CLS =
@@ -43,6 +44,9 @@ export default function SubscribeForm() {
       setStatus("done");
       // El badge flotante deja de ofrecer "Suscríbete" a quien ya está dentro.
       try { localStorage.setItem("riskon-sub", "1"); } catch {}
+      // Evento de conversión (Vercel Analytics) con la página de origen, para
+      // medir qué convierte mejor (landing /suscribete vs form del home).
+      try { track("subscribe", { page: window.location.pathname }); } catch {}
     } catch {
       setStatus("error");
     }

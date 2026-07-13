@@ -22,19 +22,20 @@ export default function Nav() {
   // (hero a pantalla completa); se vuelve sólido al scrollear o abrir el menú.
   const overlay = pathname === "/" && !scrolled && !open;
 
-  // Scroll al formulario de suscripción. En móvil el contenido async (cards,
-  // datos) carga DESPUÉS y empuja el form hacia abajo, así que el hash nativo
-  // aterriza arriba del form → reintentamos el scroll tras el reflow.
+  // En páginas CON form en pantalla ("/" y "/suscribete") el CTA hace scroll al
+  // form. En móvil el contenido async (cards, datos) carga DESPUÉS y empuja el
+  // form hacia abajo, así que el hash nativo aterriza arriba → reintentos tras
+  // el reflow. Desde cualquier otra página navega a la landing /suscribete.
   const handleSubscribe = (e) => {
     setOpen(false);
-    if (pathname === "/") {
+    if (pathname === "/" || pathname === "/suscribete") {
       e.preventDefault();
       const go = () => document.getElementById("subscribe")?.scrollIntoView({ behavior: "smooth", block: "start" });
       go();
       setTimeout(go, 300);
       setTimeout(go, 800);
     }
-    // En otras páginas dejamos que el <Link> navegue a /#subscribe.
+    // En otras páginas dejamos que el <Link> navegue a /suscribete.
   };
 
   const links = [
@@ -78,7 +79,7 @@ export default function Nav() {
             );
           })}
           <Link
-            href="/#subscribe"
+            href="/suscribete"
             onClick={handleSubscribe}
             className="rounded-md border border-bone/50 bg-white/10 px-3 py-1.5 text-sm font-medium text-bone transition-colors hover:bg-white/15"
           >
@@ -137,7 +138,7 @@ export default function Nav() {
             </Link>
           ))}
           <Link
-            href="/#subscribe"
+            href="/suscribete"
             onClick={handleSubscribe}
             className="mt-3 rounded-md border border-bone/50 bg-white/10 py-2.5 text-center text-sm font-medium text-bone"
           >

@@ -6,11 +6,11 @@ import { getAllCaseSlugs } from "../lib/cases";
 const SITE = "https://riskon.lat";
 
 export default function sitemap() {
-  const fixed = ["", "/archive", "/markets", "/analisis", "/learn", "/about", "/indice"].map(
+  const fixed = ["", "/archive", "/markets", "/analisis", "/learn", "/about", "/indice", "/suscribete"].map(
     (p) => ({
       url: `${SITE}${p}`,
       changeFrequency: p === "" || p === "/archive" ? "daily" : "weekly",
-      priority: p === "" ? 1 : 0.7,
+      priority: p === "" ? 1 : p === "/suscribete" ? 0.8 : 0.7,
     })
   );
 
