@@ -1,6 +1,6 @@
 import { Resend } from "resend";
 import { getAllPostsMeta } from "../../../lib/posts";
-import { fetchLiveData, generateDailyView, buildMarkdown, publishToGitHub, publishFileToGitHub, REPO } from "../../../lib/dailyView";
+import { fetchLiveData, generateDailyView, buildMarkdown, publishToGitHub, publishFileToGitHub, checkSentMarker, REPO } from "../../../lib/dailyView";
 import { alertAdmin } from "../../../lib/alertAdmin";
 
 export const dynamic = "force-dynamic";
@@ -155,30 +155,6 @@ async function getSubscribers() {
   return [...map.values()];
 }
 
-// ¿Ya salió el correo de hoy? Marcador sent/<slug>.json commiteado tras cada
-// envío exitoso a la lista completa. Se consulta vía contents API (no el raw
-// CDN) porque el raw cachea ~5 min y taparía un doble disparo de cronjob.org.
-async function sentMarkerExists(slug) {
-  const token = process.env.GITHUB_TOKEN;
-  if (!token) return false;
-  try {
-    const res = await fetch(
-      `https://api.github.com/repos/${REPO}/contents/sent/${slug}.json?ref=main`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Accept: "application/vnd.github+json",
-          "User-Agent": "riskon-daily-cron",
-        },
-        cache: "no-store",
-      }
-    );
-    return res.ok;
-  } catch {
-    return false;
-  }
-}
-
 async function yahooChart(symbol) {
   try {
     const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?range=5d&interval=1d`;
@@ -254,9 +230,27 @@ async function handler(request) {
   // cronjob.org dispara dos veces mandaría dos veces. El marcador sent/<slug>.json
   // (commiteado tras cada envío exitoso a la lista completa) lo impide.
   // ?force=1 lo salta a propósito; ?only y ?preview no envían a la lista completa.
+  // FAIL-CLOSED (incidente 2026-07-13): solo un 404 explícito autoriza enviar.
+  // Si GitHub no responde tras 3 intentos, NO enviamos — un duplicado a la lista
+  // completa es irreversible; un skip solo difiere al siguiente respaldo (7:10).
   if (resend && !force && !only && !preview) {
-    if (await sentMarkerExists(slug)) {
-      return Response.json({ ok: true, skipped: "already sent today", slug });
+    const marker = await checkSentMarker(slug);
+    if (marker.status === "sent") {
+      return Response.json({ ok: true, skipped: "already sent today", slug, marker });
+    }
+    if (marker.status === "unknown") {
+      await alertAdmin(`guarda de doble envío no verificable (${slug})`, {
+        slug,
+        marker,
+        accion:
+          "GitHub no respondió al consultar sent/<slug>.json; NO se envió por seguridad. " +
+          "Si el correo de hoy no salió, reintenta con ?resend=1 cuando GitHub responda, " +
+          "o ?force=1 bajo tu criterio (los respaldos 7:00/7:10 reintentan solos).",
+      });
+      return Response.json(
+        { ok: false, skipped: "marker unverifiable", slug, marker },
+        { status: 503 }
+      );
     }
   }
 

@@ -6,7 +6,7 @@
 // ni del cron de Vercel Hobby (lag de 40-100 min).
 // Responde en <1s — cabe holgado en el límite de Vercel.
 // Requiere GITHUB_TOKEN con permiso "Actions: write" en el repo.
-import { REPO } from "../../../lib/dailyView";
+import { REPO, checkSentMarker } from "../../../lib/dailyView";
 import { alertAdmin } from "../../../lib/alertAdmin";
 
 export const dynamic = "force-dynamic";
@@ -20,23 +20,18 @@ async function handler(request) {
   const slug = new Date().toLocaleDateString("sv-SE", { timeZone: "America/Mexico_City" });
   const force = new URL(request.url).searchParams.get("force"); // prueba: salta la guarda
 
-  // Si el correo de hoy YA salió, ni molestamos a Actions.
-  if (!force) try {
-    const marker = await fetch(
-      `https://api.github.com/repos/${REPO}/contents/sent/${slug}.json?ref=main`,
-      {
-        headers: {
-          Authorization: `Bearer ${process.env.GITHUB_TOKEN}`,
-          Accept: "application/vnd.github+json",
-          "User-Agent": "riskon-daily-cron",
-        },
-        cache: "no-store",
-      }
-    );
-    if (marker.ok) {
-      return Response.json({ ok: true, skipped: "already sent today", slug });
+  // Si el correo de hoy YA salió, ni molestamos a Actions. Con "unknown"
+  // (GitHub caído) despachamos de todos modos: el workflow es idempotente y la
+  // guarda dura (fail-closed) vive en send-daily; no despachar por un error
+  // transitorio sí costaría la puntualidad del día.
+  let markerCheck = "skipped-by-force";
+  if (!force) {
+    const marker = await checkSentMarker(slug);
+    markerCheck = marker.status;
+    if (marker.status === "sent") {
+      return Response.json({ ok: true, skipped: "already sent today", slug, marker });
     }
-  } catch {}
+  }
 
   const res = await fetch(
     `https://api.github.com/repos/${REPO}/actions/workflows/gen-daily.yml/dispatches`,
@@ -54,7 +49,7 @@ async function handler(request) {
   // 204 = dispatch aceptado. 403/404 casi siempre = al token le falta el
   // permiso Actions:write → avisar con instrucción concreta.
   if (res.status === 204) {
-    return Response.json({ ok: true, dispatched: true, slug });
+    return Response.json({ ok: true, dispatched: true, slug, markerCheck });
   }
   const detail = `HTTP ${res.status}: ${(await res.text()).slice(0, 200)}`;
   await alertAdmin(`trigger-gen NO pudo despachar el workflow (${slug})`, {
