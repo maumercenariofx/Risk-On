@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { useLang, T } from "./Lang";
 import { GREEN, RED, cardStyle } from "../lib/chartHelpers";
+import { stripBold } from "../lib/mdInline";
 
 // ── bullet topic chips ────────────────────────────────────────────────────────
 
@@ -140,7 +141,7 @@ export default function DailyWatch({ post }) {
                   )}
                   <span
                     style={{ fontSize: 13, color: "#C0C0BC", lineHeight: 1.65 }}
-                    dangerouslySetInnerHTML={{ __html: highlightNumbers(b) }}
+                    dangerouslySetInnerHTML={{ __html: highlightNumbers(stripBold(b)) }}
                   />
                 </div>
               );

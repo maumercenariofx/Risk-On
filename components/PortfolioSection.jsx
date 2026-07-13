@@ -383,6 +383,7 @@ export default function PortfolioSection() {
                     </span>
                     <button
                       onClick={() => handleRemove(sym)}
+                      aria-label={`Quitar ${name}`}
                       style={{ color: "#374151", fontSize: 16, lineHeight: 1, background: "none", border: "none", cursor: "pointer", padding: "0 3px", transition: "color .15s" }}
                       onMouseEnter={(e) => e.currentTarget.style.color = RED}
                       onMouseLeave={(e) => e.currentTarget.style.color = "#374151"}
@@ -392,6 +393,7 @@ export default function PortfolioSection() {
                 <input
                   type="range" min={0} max={100} step={1}
                   value={weights[sym] ?? 0}
+                  aria-label={`Peso de ${name} en el portafolio (%)`}
                   onChange={(e) => handleSlider(sym, e.target.value)}
                   disabled={isLoading}
                   className="w-full"

@@ -11,6 +11,11 @@ export function LangProvider({ children }) {
     const saved = typeof window !== "undefined" && window.localStorage?.getItem("riskon-lang");
     if (saved === "en" || saved === "es") setLang(saved);
   }, []);
+  // El <html lang> del SSR es "es" fijo; se sincroniza con el idioma real del
+  // lector (screen readers y SEO — auditoría 2026-07-13).
+  useEffect(() => {
+    try { document.documentElement.lang = lang; } catch {}
+  }, [lang]);
   const set = (l) => {
     setLang(l);
     try { window.localStorage.setItem("riskon-lang", l); } catch {}

@@ -1,6 +1,7 @@
 import { Resend } from "resend";
 import { getAllPostsMeta } from "../../../lib/posts";
 import { fetchLiveData, generateDailyView, buildMarkdown, publishToGitHub, publishFileToGitHub, checkSentMarker, REPO } from "../../../lib/dailyView";
+import { stripBold, boldToHtml } from "../../../lib/mdInline";
 import { alertAdmin } from "../../../lib/alertAdmin";
 
 export const dynamic = "force-dynamic";
@@ -412,8 +413,12 @@ async function handler(request) {
   const buildEmail = (lang) => {
   const en = lang === "en";
   const pick = (esV, enV) => (en && String(enV ?? "").trim() ? enV : esV);
-  const title    = pick(post.title_es, post.title_en);
-  const summary  = pick(post.summary_es, post.summary_en);
+  // El redactor mete negritas markdown (**x**) en summary/watch; aquí se
+  // convierten a <strong> real (HTML) o se limpian (título y texto plano) —
+  // el 2026-07-13 el correo salió con los asteriscos crudos.
+  const title      = stripBold(pick(post.title_es, post.title_en));
+  const summaryRaw = pick(post.summary_es, post.summary_en);
+  const summary    = boldToHtml(summaryRaw); // versión HTML del correo
   const greeting = pick(post.greeting_es, post.greeting_en);
   const signoff  = pick(post.signoff_es, post.signoff_en);
   const watch    = en && Array.isArray(post.watch_en) && post.watch_en.length
@@ -469,7 +474,7 @@ async function handler(request) {
   const watchRows = watch.map((item) => `
     <tr>
       <td style="padding:0;vertical-align:top;width:18px"><div style="width:6px;height:6px;border-radius:50%;background:${color};margin-top:8px"></div></td>
-      <td style="padding:0 0 14px 0;font-family:${sans};font-size:14px;color:#3a3a3a;line-height:1.65">${item}</td>
+      <td style="padding:0 0 14px 0;font-family:${sans};font-size:14px;color:#3a3a3a;line-height:1.65">${boldToHtml(item)}</td>
     </tr>`).join("");
 
   const navLink = (href, label) =>
@@ -599,14 +604,14 @@ async function handler(request) {
     ...(greeting ? [GREET_TOKEN, ""] : []),
     title,
     "",
-    summary,
+    stripBold(summaryRaw),
     "",
     `${L.cta.replace(" →", "")}: ${articleUrl}`,
     "",
     L.marketData,
     ...market.map((d) => `  ${en ? (d.name_en ?? d.name) : d.name}: ${fmtPrice(d.price, d.kind)} (${fmtPct(d.chgPct)})`),
     "",
-    ...(watch.length ? [L.watch, ...watch.map((w) => `  - ${w}`), ""] : []),
+    ...(watch.length ? [L.watch, ...watch.map((w) => `  - ${stripBold(w)}`), ""] : []),
     `USD/MXN — ${L.support} ${support ?? "—"} / ${L.resistance} ${resistance ?? "—"}`,
     "",
     `${L.markets}: ${SITE}/markets`,

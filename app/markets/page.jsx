@@ -2,7 +2,7 @@
 import MarketsClient from "../../components/MarketsClient";
 import PortfolioSection from "../../components/PortfolioSection";
 
-export const metadata = { title: "Mercados · Risk On" };
+export const metadata = { title: "Mercados · Risk On", alternates: { canonical: "/markets" } };
 
 export default function MarketsPage() {
   return (

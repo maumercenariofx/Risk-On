@@ -64,20 +64,12 @@ function Card({ project, index, isActive, onActivate, isHoverDevice }) {
     onActivate(isActive ? null : index);
   }, [isHoverDevice, isActive, index, onActivate]);
 
-  const handleKeyDown = useCallback((e) => {
-    if (e.key === "Enter" || e.key === " ") {
-      e.preventDefault();
-      onActivate(isActive ? null : index);
-    }
-  }, [isActive, index, onActivate]);
-
   return (
+    // Sin role="button": adentro vive el Link del caso y un control interactivo
+    // anidado en otro viola WCAG (axe: nested-interactive, auditoría 2026-07-13).
+    // Teclado: el Link interno expande la tarjeta al recibir foco (onFocus).
     <div
-      tabIndex={0}
-      role="button"
-      aria-expanded={isActive}
       onClick={handleClick}
-      onKeyDown={handleKeyDown}
       onMouseEnter={() => isHoverDevice && onActivate(index)}
       onMouseLeave={() => isHoverDevice && onActivate(null)}
       style={{
@@ -131,6 +123,7 @@ function Card({ project, index, isActive, onActivate, isHoverDevice }) {
             <Link
               href={project.href}
               onClick={(e) => e.stopPropagation()}
+              onFocus={() => onActivate(index)}
               style={{
                 fontFamily: "var(--font-mono, monospace)",
                 fontSize: 9.5, letterSpacing: 2.5, textTransform: "uppercase",

@@ -63,7 +63,9 @@ export default function Ticker() {
   }, []);
 
   const arrow = (dir) => (dir === 1 ? "▲" : dir === 0 ? "▼" : "·");
-  const color = (dir) => (dir === 1 ? "#0F8A5F" : dir === 0 ? "#A32D2D" : "#8A8A8E");
+  // Tonos con contraste AA sobre negro (los de marca #0F8A5F/#A32D2D dan
+  // 4.5/2.8:1 y esto es texto de 10px — auditoría a11y 2026-07-13).
+  const color = (dir) => (dir === 1 ? "#14A276" : dir === 0 ? "#CE5555" : "#8A8A8E");
 
   const row = (key) =>
     items.map((t, i) => {

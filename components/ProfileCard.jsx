@@ -15,9 +15,9 @@ export default function ProfileCard() {
               MM
             </div>
             <div>
-              <div className="text-xl font-medium tracking-tight text-bone">
+              <h1 className="text-xl font-medium tracking-tight text-bone">
                 Mauricio Mercenario Nieto
-              </div>
+              </h1>
               <div className="text-sm font-medium tracking-wide text-muted">
                 <T
                   es="Especialista FX · Transaccional, Mercados Globales"

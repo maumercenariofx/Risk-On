@@ -1,6 +1,7 @@
 // app/archive/[slug]/page.jsx
 import { getAllSlugs, getPost, getAdjacentPosts } from "../../../lib/posts";
 import { forwardForSlug } from "../../../lib/forwardReturns";
+import { stripBold } from "../../../lib/mdInline";
 import PostView from "../../../components/PostView";
 
 // ISR: la auto-evaluación ("¿qué pasó después?") madura con los días.
@@ -12,12 +13,15 @@ export async function generateStaticParams() {
 
 export async function generateMetadata({ params }) {
   const post = await getPost(params.slug);
-  const title = `${post.title_es} · Risk On`;
-  const description = post.summary_es;
+  const title = stripBold(`${post.title_es} · Risk On`);
+  // stripBold: el summary trae negritas markdown (**x**) que en una meta
+  // description saldrían como asteriscos crudos.
+  const description = stripBold(post.summary_es);
   const url = `https://riskon.lat/archive/${params.slug}`;
   return {
     title,
     description,
+    alternates: { canonical: `/archive/${params.slug}` },
     // Sin images explícitas: Next inyecta la OG dinámica de opengraph-image.jsx
     // (score + banda del día); X/Twitter cae al og:image.
     openGraph: { title, description, url, type: "article" },
@@ -34,8 +38,8 @@ export default async function PostPage({ params }) {
   const ld = {
     "@context": "https://schema.org",
     "@type": "NewsArticle",
-    headline: post.title_es,
-    description: post.summary_es,
+    headline: stripBold(post.title_es),
+    description: stripBold(post.summary_es),
     datePublished: `${params.slug}T13:00:00Z`,
     inLanguage: "es-MX",
     mainEntityOfPage: `https://riskon.lat/archive/${params.slug}`,

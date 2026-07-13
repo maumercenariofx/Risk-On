@@ -12,7 +12,10 @@ export async function generateMetadata({ params }) {
   return {
     title,
     description: c.title_en,
-    openGraph: { title, type: "article" },
+    alternates: { canonical: `/casos/${params.slug}` },
+    // images explícitas: al redefinir openGraph aquí NO se hereda la del
+    // layout raíz (el merge de metadata es por campo completo).
+    openGraph: { title, type: "article", images: ["/riskon-logo.png"] },
   };
 }
 

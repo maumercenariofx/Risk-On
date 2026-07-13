@@ -17,6 +17,7 @@ export const metadata = {
   title: "Suscríbete · El Pre-Market",
   description:
     "El análisis pre-market de Mauricio Mercenario en tu correo cada mañana antes de la apertura: Índice Risk On, niveles de USD/MXN y una postura clara. Gratis, sin spam.",
+  alternates: { canonical: "/suscribete" },
 };
 
 const PERKS = [

@@ -253,9 +253,13 @@ export default function RiskGauge({ post, prevScore = null, scoreHistory = null,
           letterSpacing: "-0.03em",
           pointerEvents: "none",
         }}>
-          <div className="hero-line"><span style={{ color: "#F5F5F2" }}>WHAT'S</span></div>
-          <div className="hero-line"><span style={{ color: "#F5F5F2" }}>TODAY'S</span></div>
-          <div className="hero-line"><span style={{ color: "#2E2E34" }}>RISK?</span></div>
+          {/* h1 semántico (la landing no tenía ninguno — SEO 2026-07-13);
+              hereda todo el estilo del wrapper, cero cambio visual. */}
+          <h1 style={{ margin: 0, fontSize: "inherit", fontWeight: "inherit", lineHeight: "inherit", letterSpacing: "inherit" }}>
+            <span className="hero-line" style={{ display: "block" }}><span style={{ color: "#F5F5F2" }}>WHAT'S</span></span>
+            <span className="hero-line" style={{ display: "block" }}><span style={{ color: "#F5F5F2" }}>TODAY'S</span></span>
+            <span className="hero-line" style={{ display: "block" }}><span style={{ color: "#2E2E34" }}>RISK?</span></span>
+          </h1>
           <div className="hero-late" style={{
             fontFamily: "var(--font-mono)",
             fontSize: "clamp(8px, 0.85vw, 11px)",

@@ -17,6 +17,7 @@ export const metadata = {
   title: "Índice Risk On · Track record",
   description:
     "Histórico completo del Índice Risk On: el score publicado cada mañana a las 7:00, día por día, contra el mercado. Sin ediciones retroactivas.",
+  alternates: { canonical: "/indice" },
 };
 
 export default async function IndicePage() {

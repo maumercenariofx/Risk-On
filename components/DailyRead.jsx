@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useLang, T } from "./Lang";
 import SubscribeForm from "./SubscribeForm";
 import ViewOverlay from "./ViewOverlay";
+import InlineBold from "./InlineBold";
 
 export default function DailyRead({ post }) {
   const { lang } = useLang();
@@ -36,7 +37,7 @@ export default function DailyRead({ post }) {
         <T es="El briefing matutino de mercados, antes de que abra Wall Street."
            en="The morning markets briefing, before Wall Street opens." />
       </p>
-      <p className="text-[15px] leading-relaxed text-bone/80">{summary}</p>
+      <p className="text-[15px] leading-relaxed text-bone/80"><InlineBold text={summary} /></p>
 
       {/* Abre el view completo en un overlay lector — sin navegar, así al
           cerrar sigues exactamente donde ibas (petición explícita del usuario:

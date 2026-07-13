@@ -11,6 +11,8 @@ import AdvancedData from "../components/AdvancedData";
 import MobileCollapse from "../components/MobileCollapse";
 import { getAllPostsMeta, getPost } from "../lib/posts";
 
+export const metadata = { alternates: { canonical: "/" } };
+
 export default async function Home() {
   const posts = getAllPostsMeta();
   // Post completo (con html) para el overlay lector de la landing.
