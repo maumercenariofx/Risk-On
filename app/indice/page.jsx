@@ -3,9 +3,11 @@
 // contra el mercado. Los datos salen del front-matter de content/*.md, así que
 // la página se refresca sola con el redeploy diario del cron.
 import { getAllPostsMeta } from "../../lib/posts";
-import { computeForwardReturns } from "../../lib/forwardReturns";
+import { computeForwardReturns, posturaRecord } from "../../lib/forwardReturns";
 import TrackRecord from "../../components/TrackRecord";
 import WhatHappenedNext from "../../components/WhatHappenedNext";
+import PosturaRecord from "../../components/PosturaRecord";
+import BandEvidence from "../../components/BandEvidence";
 import RiskBands from "../../components/RiskBands";
 import { T } from "../../components/Lang";
 
@@ -23,12 +25,15 @@ export const metadata = {
 export default async function IndicePage() {
   const points = getAllPostsMeta()
     .filter((p) => p.score != null && !isNaN(Number(p.score)))
-    .map(({ slug, score, title_es, title_en }) => ({
-      slug, score: Number(score), title_es, title_en,
+    .map(({ slug, score, title_es, title_en, postura_bias, postura_condicion }) => ({
+      slug, score: Number(score), title_es, title_en, postura_bias, postura_condicion,
     }))
     .sort((a, b) => (a.slug < b.slug ? -1 : 1));
 
-  const fwd = await computeForwardReturns(points);
+  const [fwd, posturas] = await Promise.all([
+    computeForwardReturns(points),
+    posturaRecord(points),
+  ]);
 
   return (
     <div className="space-y-6 pt-4">
@@ -48,11 +53,21 @@ export default async function IndicePage() {
         <TrackRecord points={points} />
       </div>
 
+      {posturas && (
+        <div className="reveal">
+          <PosturaRecord data={posturas} />
+        </div>
+      )}
+
       {fwd && (
         <div className="reveal">
           <WhatHappenedNext data={fwd} />
         </div>
       )}
+
+      <div className="reveal">
+        <BandEvidence />
+      </div>
 
       <div className="reveal">
         <RiskBands />
