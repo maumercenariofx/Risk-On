@@ -1,0 +1,71 @@
+# Recap semanal: viernes 16:00 CDMX (22:00 UTC). Genera con Claude en Actions
+# (sin límite de 60s), commitea content/recaps/<viernes>.md y dispara el envío
+# vía /api/send-recap (guarda fail-closed con sent/recap-<viernes>.json, así
+# que reintentar es seguro). Si falla, GitHub avisa por correo al dueño.
+name: recap-weekly
+
+on:
+  schedule:
+    - cron: "0 22 * * 5"   # viernes 16:00 CDMX
+    - cron: "30 22 * * 5"  # respaldo 16:30 (idempotente por archivo + marcador)
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "1 = generar sin escribir, sin commitear y SIN enviar (prueba)"
+        default: "0"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: recap-weekly
+  cancel-in-progress: false
+
+jobs:
+  recap:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci --omit=dev --ignore-scripts
+
+      - name: Generar recap semanal (Claude, sin límite de tiempo)
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          DRY_RUN: ${{ github.event.inputs.dry_run || '0' }}
+        run: node scripts/gen-recap-action.mjs
+
+      - name: Commit y push del recap
+        if: ${{ (github.event.inputs.dry_run || '0') != '1' }}
+        run: |
+          git config user.name "riskon-bot"
+          git config user.email "view@riskon.lat"
+          git add content/recaps/
+          if git diff --cached --quiet; then
+            echo "Nada nuevo que commitear (recap ya existía o no era viernes)."
+          else
+            git commit -m "auto: recap semanal $(TZ=America/Mexico_City date +%F)"
+            git pull --rebase origin main
+            git push origin main
+          fi
+
+      - name: Enviar el recap
+        if: ${{ (github.event.inputs.dry_run || '0') != '1' }}
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          code=$(curl -s -o /tmp/recap.json -w "%{http_code}" -X POST \
+            "https://riskon.lat/api/send-recap" \
+            -H "Authorization: Bearer ${CRON_SECRET}")
+          cat /tmp/recap.json
+          echo
+          if [ "$code" != "200" ]; then
+            echo "::error::send-recap respondió HTTP $code"
+            exit 1
+          fi

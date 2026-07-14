@@ -3,17 +3,12 @@ import { getAllPostsMeta } from "../../../lib/posts";
 import { fetchLiveData, generateDailyView, buildMarkdown, publishToGitHub, publishFileToGitHub, checkSentMarker, REPO } from "../../../lib/dailyView";
 import { stripBold, boldToHtml } from "../../../lib/mdInline";
 import { alertAdmin } from "../../../lib/alertAdmin";
+import { clean, cleanName, personalizeGreeting, probeSheet, getSubscribers } from "../../../lib/subscribers";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-// Piso de seguridad de destinatarios (por si el Sheet falla). Vive en la env
-// var SUBSCRIBERS_FALLBACK (correos separados por coma) — NUNCA hardcodear
-// correos aquí: el repo es PÚBLICO y quedarían expuestos en GitHub.
-const SUBSCRIBERS = (process.env.SUBSCRIBERS_FALLBACK ?? "")
-  .split(",")
-  .map((s) => s.trim())
-  .filter(Boolean);
+// Suscriptores y personalización: lib/subscribers.js (compartido con el recap).
 const SITE = "https://riskon.lat";
 const CALENDLY = "https://calendly.com/mauriciomercenariofx/30min";
 const UNSUB = "__UNSUB_URL__"; // placeholder reemplazado por destinatario
@@ -51,110 +46,9 @@ function riskStateFromScore(score) {
   return RISK_STATES.find((s) => score >= s.min && score <= s.max) ?? RISK_STATES[2];
 }
 
-const clean = (e) => String(e).trim().toLowerCase();
-
-// Limpia un campo de nombre/trato que viene del formulario (anti-XSS en el HTML
-// del correo + recorte de longitud). Devuelve "" si no hay nada útil.
-const cleanName = (s) =>
-  String(s ?? "").replace(/[<>&"'`]/g, "").trim().slice(0, 60);
-
 // Token reemplazable: el saludo se renderiza una vez en la plantilla y se
 // personaliza por destinatario en el loop de envío (igual que UNSUB).
 const GREET_TOKEN = "@@GREETING@@";
-
-// Cómo nombrar al suscriptor en el saludo. Con trato (Sr./Sra.) usa el apellido
-// (o el nombre si no dio apellidos) → "Sr. González"; si solo dio nombre, usa el
-// nombre de pila → "Mauricio". Sin datos, "" → saludo genérico.
-function saludoNombre(sub) {
-  const trato     = cleanName(sub?.trato);
-  const nombre    = cleanName(sub?.nombre);
-  const apellidos = cleanName(sub?.apellidos);
-  if (trato && apellidos) return `${trato} ${apellidos}`;
-  if (trato && nombre)    return `${trato} ${nombre}`;
-  return nombre;
-}
-
-// Inserta el nombre dentro del saludo base: "¡Buenos días!" → "¡Buenos días, Mauricio!".
-// .replace con string reemplaza solo la PRIMERA "!", así respeta sufijos (feriados, etc.).
-function personalizeGreeting(greeting, sub) {
-  const name = saludoNombre(sub);
-  if (!name || !greeting) return greeting;
-  return greeting.includes("!") ? greeting.replace("!", `, ${name}!`) : `${greeting} ${name}`;
-}
-
-// Lista final de destinatarios = (los 12 de respaldo ∪ activos del Sheet) − bajas del Sheet.
-// El Sheet (SHEETS_LIST_URL, doGet con token) es la fuente para altas/bajas nuevas;
-// la lista fija SUBSCRIBERS es un piso de seguridad para que nadie se pierda si el
-// Sheet falla o aún no tiene a los 12 sembrados. El doGet puede devolver:
-//   - un arreglo de correos activos (compat), o
-//   - { active: [...], unsub: [...] } para poder dar de baja también a los del piso.
-// Diagnóstico: golpea SHEETS_LIST_URL y reporta exactamente qué responde,
-// para distinguir entre doGet ausente, token equivocado, o parseo OK.
-async function probeSheet() {
-  const url = process.env.SHEETS_LIST_URL;
-  if (!url) return { configured: false };
-  try {
-    const res = await fetch(url, { cache: "no-store", redirect: "follow" });
-    const text = await res.text();
-    let parsed = null, activeCount = null, unsubCount = null, parseError = null;
-    try {
-      parsed = JSON.parse(text);
-      const active = Array.isArray(parsed) ? parsed : (parsed?.active ?? []);
-      const unsub  = Array.isArray(parsed) ? []     : (parsed?.unsub  ?? []);
-      activeCount = Array.isArray(active) ? active.length : null;
-      unsubCount  = Array.isArray(unsub)  ? unsub.length  : null;
-    } catch (e) {
-      parseError = String(e?.message ?? e);
-    }
-    return {
-      configured: true,
-      httpStatus: res.status,
-      ok: res.ok,
-      contentType: res.headers.get("content-type"),
-      bodySnippet: text.slice(0, 400),
-      activeCount,
-      unsubCount,
-      parseError,
-    };
-  } catch (e) {
-    return { configured: true, fetchError: String(e?.message ?? e) };
-  }
-}
-
-// Devuelve [{ email, nombre, apellidos, trato }]. El Sheet puede mandar `active`
-// como arreglo de correos (compat) o de objetos { email, nombre, apellidos, trato }
-// (cuando el suscriptor llenó los campos opcionales del formulario). Los nombres
-// solo viven en el Sheet; la lista fija de respaldo va sin nombre (saludo genérico).
-async function getSubscribers() {
-  const map = new Map(); // email → { email, nombre, apellidos, trato }
-  SUBSCRIBERS.map(clean).forEach((e) => map.set(e, { email: e }));
-  const url = process.env.SHEETS_LIST_URL;
-  if (url) {
-    try {
-      const res = await fetch(url, { cache: "no-store" });
-      if (res.ok) {
-        const data = await res.json();
-        const active = Array.isArray(data) ? data : (data?.active ?? []);
-        const unsub  = Array.isArray(data) ? []   : (data?.unsub  ?? []);
-        active.forEach((item) => {
-          const email = clean(typeof item === "string" ? item : item?.email);
-          if (!email) return;
-          map.set(email, {
-            email,
-            nombre:    typeof item === "object" ? cleanName(item?.nombre)    : "",
-            apellidos: typeof item === "object" ? cleanName(item?.apellidos) : "",
-            trato:     typeof item === "object" ? cleanName(item?.trato)     : "",
-            // Idioma del correo diario. Solo "en" cambia algo; cualquier otra
-            // cosa (columna vacía, filas viejas) cae a español.
-            lang:      typeof item === "object" && item?.lang === "en" ? "en" : "es",
-          });
-        });
-        unsub.map((e) => clean(typeof e === "string" ? e : e?.email)).filter(Boolean).forEach((e) => map.delete(e));
-      }
-    } catch {}
-  }
-  return [...map.values()];
-}
 
 async function yahooChart(symbol) {
   try {
