@@ -54,13 +54,13 @@ export default function Footer() {
               <T es="Síguenos" en="Follow" />
             </span>
             <a
-              href="https://x.com/riskonlat"
+              href="https://x.com/risk_on_views"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-2 text-xs text-muted/60 hover:text-bone transition-colors"
             >
               <XIcon />
-              @riskonlat
+              @risk_on_views
             </a>
           </div>
 

@@ -94,11 +94,11 @@ jobs:
             exit 1
           fi
 
-      # Post diario en X (@riskonlat), compuesto del front-matter del view
+      # Post diario en X (@risk_on_views), compuesto del front-matter del view
       # (sin IA, $0). continue-on-error: si X falla, el correo ya salió y el
       # run queda verde — el script loggea el motivo. Si los secrets de X no
       # existen aún, el script sale en 0 con aviso.
-      - name: Publicar en X (@riskonlat)
+      - name: Publicar en X (@risk_on_views)
         if: ${{ (github.event.inputs.dry_run || '0') != '1' }}
         continue-on-error: true
         env:

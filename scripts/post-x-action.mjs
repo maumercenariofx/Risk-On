@@ -1,5 +1,5 @@
 // scripts/post-x-action.mjs
-// Publica el post diario en X (@riskonlat) tras el envío del correo, como paso
+// Publica el post diario en X (@risk_on_views) tras el envío del correo, como paso
 // del workflow gen-daily. El texto se compone DETERMINÍSTICAMENTE desde el
 // front-matter del view (cero llamadas a Claude, cero costo). Anti-duplicado
 // con marcador sent/x-<slug>.json (mismo patrón fail-closed del correo, con
@@ -148,7 +148,7 @@ if (!res.ok) {
   process.exit(1);
 }
 const id = body?.data?.id;
-console.log(`[x] publicado: https://x.com/riskonlat/status/${id}`);
+console.log(`[x] publicado: https://x.com/risk_on_views/status/${id}`);
 
 const mk = await publishFileToGitHub(
   `sent/x-${slug}.json`,
