@@ -28,10 +28,14 @@ if (!dryRun && fs.existsSync(outFile)) {
   console.log(`[gen] content/${slug}.md ya existe — idempotente, salgo.`);
   process.exit(0);
 }
-if (!process.env.ANTHROPIC_API_KEY) {
-  console.error("[gen] FALTA ANTHROPIC_API_KEY (secret del repo).");
+// Auth: CLAUDE_CODE_OAUTH_TOKEN (suscripción Max vía claude -p, $0 extra) y/o
+// ANTHROPIC_API_KEY (SDK, respaldo). Con ambos, el CLI es primario y la key
+// solo entra si el CLI falla. Sin ninguno, no hay cómo generar.
+if (!process.env.ANTHROPIC_API_KEY && !process.env.CLAUDE_CODE_OAUTH_TOKEN) {
+  console.error("[gen] FALTA auth: ni CLAUDE_CODE_OAUTH_TOKEN ni ANTHROPIC_API_KEY (secrets del repo).");
   process.exit(1);
 }
+console.log(`[gen] auth: ${process.env.CLAUDE_CODE_OAUTH_TOKEN ? "suscripción Max (claude -p)" : "API key (SDK)"}${process.env.CLAUDE_CODE_OAUTH_TOKEN && process.env.ANTHROPIC_API_KEY ? " + API key de respaldo" : ""}`);
 
 const t0 = Date.now();
 console.log(`[gen] ${slug} — obteniendo datos en vivo…`);
