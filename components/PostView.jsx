@@ -7,15 +7,40 @@ import ScoreGauge from "./ScoreGauge";
 import RiskBands from "./RiskBands";
 import SubscribeForm from "./SubscribeForm";
 import ReadingProgress from "./ReadingProgress";
-import { riskBand } from "../lib/riskScore";
+import { riskBand, riskState } from "../lib/riskScore";
 import { ARTICLE_CLS } from "../lib/articleStyle";
+
+// Texto del post para X — mismo formato que el autopost (scripts/post-x-action):
+// score+banda, titular, postura falsable y link. El botón usa el web intent
+// oficial (gratis, sin API): abre X con esto pre-escrito y el usuario da Post.
+function composeTweet(post, lang) {
+  const title = (lang === "en" ? post.title_en : post.title_es) || post.title_es;
+  const url = `https://riskon.lat/archive/${post.slug}`;
+  const banda = riskState(post.score);
+  const biasMap = { "pro-peso": "pro-peso", "pro-dolar": "pro-dólar", neutral: "neutral" };
+  const bias = biasMap[post.postura_bias] ?? post.postura_bias;
+  const cond = String(post.postura_condicion ?? "").replace(/\s+/g, " ").trim();
+  const condShort = cond.length > 70 ? cond.slice(0, 67) + "…" : cond;
+  const posturaLine = bias ? `🎯 ${lang === "en" ? "View" : "Postura"} ${bias}${condShort ? ` · ${condShort}` : ""}` : null;
+  const footer = lang === "en" ? `Full view 👇\n${url}` : `El view completo 👇\n${url}`;
+  const weight = (t) => [...t.replace(/https?:\/\/\S+/g, "x".repeat(23))]
+    .reduce((n, ch) => n + (ch.codePointAt(0) > 0x2000 ? 2 : 1), 0);
+  const variants = [
+    [`📊 Pre-Market ${post.score}/100 · ${banda}`, "", title, "", posturaLine, "", footer],
+    [`📊 Pre-Market ${post.score}/100 · ${banda}`, "", title, "", footer],
+    [`📊 Pre-Market ${post.score}/100 · ${banda}`, "", footer],
+  ];
+  for (const v of variants) {
+    const text = v.filter((l) => l != null).join("\n").replace(/\n{3,}/g, "\n\n").trim();
+    if (weight(text) <= 280) return text;
+  }
+  return `📊 Pre-Market ${post.score}/100 · ${banda}\n${url}`;
+}
 
 function ShareBar({ post, lang }) {
   const [copied, setCopied] = useState(false);
-  const title  = lang === "en" ? post.title_en : post.title_es;
   const url    = `https://riskon.lat/archive/${post.slug}`;
-  const tweet  = `Risk On ${post.score}/100 — ${title} ${url}`;
-  const tweetUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(tweet)}`;
+  const tweetUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(composeTweet(post, lang))}`;
 
   const copy = () => {
     navigator.clipboard.writeText(url).then(() => {
