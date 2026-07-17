@@ -1,8 +1,10 @@
 // app/api/subscribe/route.js
-// Recibe { email, nombre?, apellidos?, trato?, lang? }, lo reenvía a un Google
-// Apps Script Web App que lo agrega a la Google Sheet (ver
+// Recibe { email, nombre?, apellidos?, trato?, lang?, whatsapp?, fuente? }, lo
+// reenvía a un Google Apps Script Web App que lo agrega a la Google Sheet (ver
 // scripts/apps-script-subscribe.gs) y manda un correo de bienvenida.
-// Requiere SHEETS_WEBHOOK_URL (alta) y RESEND_API_KEY (bienvenida).
+// whatsapp = teléfono opcional para las futuras alertas intradía (tier Pro);
+// fuente = canal de adquisición (x|linkedin|google|colega|otro) para medir
+// qué canal convierte. Requiere SHEETS_WEBHOOK_URL y RESEND_API_KEY.
 
 import { Resend } from "resend";
 
@@ -15,6 +17,15 @@ const CALENDLY = "https://calendly.com/mauriciomercenariofx/30min";
 // caracteres de control para no romper el HTML del correo.
 const cleanField = (s) =>
   typeof s === "string" ? s.replace(/[<>&"'`]/g, "").trim().slice(0, 60) : "";
+
+// Teléfono: solo dígitos, +, espacios, guiones y paréntesis (máx 24 chars).
+const cleanPhone = (s) =>
+  typeof s === "string" ? s.replace(/[^0-9+()\-\s]/g, "").trim().slice(0, 24) : "";
+
+// Canal de adquisición: allowlist cerrada — cualquier otra cosa se descarta.
+const FUENTES = new Set(["x", "linkedin", "google", "colega", "otro"]);
+const cleanFuente = (s) =>
+  typeof s === "string" && FUENTES.has(s.toLowerCase()) ? s.toLowerCase() : "";
 
 // Con trato (Sr./Sra.) usa el apellido (o el nombre); si solo hay nombre, el
 // nombre de pila; si no, "". Misma regla que el correo diario.
@@ -155,6 +166,8 @@ export async function POST(request) {
   const apellidos = cleanField(body?.apellidos);
   const trato     = cleanField(body?.trato);
   const lang      = body?.lang === "en" ? "en" : "es";
+  const whatsapp  = cleanPhone(body?.whatsapp);
+  const fuente    = cleanFuente(body?.fuente);
 
   const webhook = process.env.SHEETS_WEBHOOK_URL;
   if (!webhook) {
@@ -165,7 +178,7 @@ export async function POST(request) {
     const res = await fetch(webhook, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, nombre, apellidos, trato, lang, date: new Date().toISOString() }),
+      body: JSON.stringify({ email, nombre, apellidos, trato, lang, whatsapp, fuente, date: new Date().toISOString() }),
     });
     if (!res.ok) throw new Error(String(res.status));
   } catch {

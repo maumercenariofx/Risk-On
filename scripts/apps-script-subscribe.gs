@@ -2,9 +2,12 @@
 //
 // Hoja: columnas
 //   A: Email | B: Fecha | C: Estado | D: Nombre | E: Apellidos | F: Trato | G: Lang
+//   H: WhatsApp | I: Fuente
 //   (Estado = "active" | "unsub"; D/E/F son opcionales y solo se usan para
 //    saludar por nombre en el correo diario. G = "es" | "en": idioma en el que
-//    el suscriptor recibe el correo diario; vacío = español.)
+//    el suscriptor recibe el correo diario; vacío = español. H = teléfono para
+//    las futuras alertas intradía; I = canal de adquisición: x | linkedin |
+//    google | colega | otro — para medir qué canal convierte.)
 //
 // Setup / re-deploy (IMPORTANTE: edita la implementación EXISTENTE para
 // conservar la misma URL /exec — crear una NUEVA cambia el id y rompe Vercel):
@@ -32,6 +35,8 @@ function doPost(e) {
   var trato     = String(data.trato     || "").trim();
   var lang      = String(data.lang      || "").trim().toLowerCase();
   if (lang !== "en" && lang !== "es") lang = "";
+  var whatsapp  = String(data.whatsapp  || "").trim();
+  var fuente    = String(data.fuente    || "").trim().toLowerCase();
 
   if (!email) {
     return ContentService.createTextOutput(JSON.stringify({ error: "missing email" }))
@@ -46,16 +51,18 @@ function doPost(e) {
 
   if (action === "unsubscribe") {
     if (rowIdx > 0) sheet.getRange(rowIdx, 3).setValue("unsub");
-    else sheet.appendRow([email, date, "unsub", "", "", "", ""]);
+    else sheet.appendRow([email, date, "unsub", "", "", "", "", "", ""]);
   } else if (rowIdx > 0) {
-    // Reactivar y completar nombre/trato/idioma sin sobrescribir con vacío lo ya guardado.
+    // Reactivar y completar campos sin sobrescribir con vacío lo ya guardado.
     sheet.getRange(rowIdx, 3).setValue("active");
     if (nombre)    sheet.getRange(rowIdx, 4).setValue(nombre);
     if (apellidos) sheet.getRange(rowIdx, 5).setValue(apellidos);
     if (trato)     sheet.getRange(rowIdx, 6).setValue(trato);
     if (lang)      sheet.getRange(rowIdx, 7).setValue(lang);
+    if (whatsapp)  sheet.getRange(rowIdx, 8).setValue(whatsapp);
+    if (fuente)    sheet.getRange(rowIdx, 9).setValue(fuente);
   } else {
-    sheet.appendRow([email, date, "active", nombre, apellidos, trato, lang]);
+    sheet.appendRow([email, date, "active", nombre, apellidos, trato, lang, whatsapp, fuente]);
   }
 
   return ContentService.createTextOutput(JSON.stringify({ ok: true }))
@@ -85,6 +92,7 @@ function doGet(e) {
         apellidos: String(values[i][4] || "").trim(),
         trato:     String(values[i][5] || "").trim(),
         lang:      String(values[i][6] || "").trim().toLowerCase(),
+        whatsapp:  String(values[i][7] || "").trim(),
       });
     }
   }

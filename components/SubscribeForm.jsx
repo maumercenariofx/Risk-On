@@ -15,6 +15,8 @@ export default function SubscribeForm() {
   const [nombre,    setNombre]    = useState("");
   const [apellidos, setApellidos] = useState("");
   const [trato,     setTrato]     = useState(""); // "" | "Sr." | "Sra."
+  const [whatsapp,  setWhatsapp]  = useState(""); // opcional — futuras alertas intradía
+  const [fuente,    setFuente]    = useState(""); // canal de adquisición (opcional)
   const [count,     setCount]     = useState(null); // social proof (lectores activos)
 
   useEffect(() => {
@@ -38,15 +40,15 @@ export default function SubscribeForm() {
       const res = await fetch("/api/subscribe", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, nombre, apellidos, trato, lang }),
+        body: JSON.stringify({ email, nombre, apellidos, trato, lang, whatsapp, fuente }),
       });
       if (!res.ok) throw new Error();
       setStatus("done");
       // El badge flotante deja de ofrecer "Suscríbete" a quien ya está dentro.
       try { localStorage.setItem("riskon-sub", "1"); } catch {}
-      // Evento de conversión (Vercel Analytics) con la página de origen, para
-      // medir qué convierte mejor (landing /suscribete vs form del home).
-      try { track("subscribe", { page: window.location.pathname }); } catch {}
+      // Evento de conversión (Vercel Analytics) con página de origen y canal de
+      // adquisición, para medir qué convierte mejor (página y canal).
+      try { track("subscribe", { page: window.location.pathname, fuente: fuente || "n/d" }); } catch {}
     } catch {
       setStatus("error");
     }
@@ -56,6 +58,16 @@ export default function SubscribeForm() {
     { v: "",     es: "Sin trato", en: "None" },
     { v: "Sr.",  es: "Sr.",       en: "Mr." },
     { v: "Sra.", es: "Sra.",      en: "Ms." },
+  ];
+
+  // Canal de adquisición — mismo allowlist que /api/subscribe (cleanFuente).
+  const fuenteOptions = [
+    { v: "",         es: "¿Cómo nos conociste? (opcional)", en: "How did you find us? (optional)" },
+    { v: "x",        es: "X (Twitter)",                     en: "X (Twitter)" },
+    { v: "linkedin", es: "LinkedIn",                        en: "LinkedIn" },
+    { v: "google",   es: "Google",                          en: "Google" },
+    { v: "colega",   es: "Me lo recomendó un colega",       en: "A colleague recommended it" },
+    { v: "otro",     es: "Otro",                            en: "Other" },
   ];
 
   return (
@@ -105,15 +117,30 @@ export default function SubscribeForm() {
             </button>
           </div>
 
-          {/* Personalización opcional: si la llenan, el correo los saluda por su nombre. */}
+          {/* Canal de adquisición: un tap, opcional, siempre visible. */}
+          <select
+            value={fuente}
+            onChange={(e) => setFuente(e.target.value)}
+            className="w-full rounded-md border border-edge bg-transparent px-3 py-2 text-xs outline-none focus:border-bone/50"
+            style={{ color: fuente ? "#F5F5F2" : "#8A8A8E" }}
+            aria-label={lang === "en" ? "How did you find us?" : "¿Cómo nos conociste?"}
+          >
+            {fuenteOptions.map((o) => (
+              <option key={o.v} value={o.v} style={{ color: "#111" }}>
+                {lang === "en" ? o.en : o.es}
+              </option>
+            ))}
+          </select>
+
+          {/* Personalización opcional: saludo por nombre + WhatsApp para alertas. */}
           {!showMore ? (
             <button
               type="button"
               onClick={() => setShowMore(true)}
               className="text-xs text-muted underline-offset-2 hover:text-bone hover:underline"
             >
-              <T es="¿Quieres que te salude por tu nombre? (opcional)"
-                 en="Want me to greet you by name? (optional)" />
+              <T es="¿Saludo por tu nombre? ¿Alertas por WhatsApp? (opcional)"
+                 en="Greeting by name? WhatsApp alerts? (optional)" />
             </button>
           ) : (
             <div className="space-y-2 pt-1">
@@ -147,6 +174,18 @@ export default function SubscribeForm() {
                 value={apellidos}
                 onChange={(e) => setApellidos(e.target.value)}
                 placeholder={lang === "en" ? "Last name(s)" : "Apellidos"}
+                className="w-full rounded-md border border-edge bg-transparent px-3 py-2 text-sm text-bone outline-none placeholder:text-muted focus:border-bone/50"
+              />
+              <p className="pt-1 text-xs text-muted">
+                <T es="WhatsApp (opcional): estamos preparando alertas intradía de niveles clave — deja tu número y estarás en la lista de acceso anticipado."
+                   en="WhatsApp (optional): we're building intraday key-level alerts — leave your number to join the early-access list." />
+              </p>
+              <input
+                type="tel"
+                value={whatsapp}
+                onChange={(e) => setWhatsapp(e.target.value)}
+                placeholder={lang === "en" ? "+52 55 1234 5678" : "+52 55 1234 5678"}
+                autoComplete="tel"
                 className="w-full rounded-md border border-edge bg-transparent px-3 py-2 text-sm text-bone outline-none placeholder:text-muted focus:border-bone/50"
               />
             </div>
