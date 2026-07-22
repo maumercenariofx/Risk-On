@@ -9,7 +9,7 @@ import RatesSection from "../components/RatesSection";
 import EconCalendar from "../components/EconCalendar";
 import AdvancedData from "../components/AdvancedData";
 import MobileCollapse from "../components/MobileCollapse";
-import TapeBackground from "../components/TapeBackground";
+import TapeWidget from "../components/TapeWidget";
 import { getAllPostsMeta, getPost } from "../lib/posts";
 
 export const metadata = { alternates: { canonical: "/" } };
@@ -29,8 +29,8 @@ export default async function Home() {
 
   return (
     <div className="space-y-10">
-      {/* El tape de fondo: USD/MXN 6m trazándose con el scroll tras el contenido */}
-      <TapeBackground score={posts[0]?.score} />
+      {/* Mini-tape de progreso: USD/MXN 6m trazándose con el avance de página */}
+      <TapeWidget score={posts[0]?.score} />
 
       {/* El ticker vive DENTRO del gauge, justo bajo el hero a pantalla completa */}
       <RiskGauge post={latest} prevScore={prevScore} scoreHistory={scoreHistory} ticker={<Ticker />} />
