@@ -1,13 +1,13 @@
 // app/api/history/route.js
 // FX history via Yahoo Finance v8 chart API
-// Acepta: ?range=1d|30|90|365  &symbol=USDMXN|EURMXN|CHFMXN|EURUSD|GBPUSD|USDJPY
+// Acepta: ?range=1d|30|90|180|365  &symbol=USDMXN|EURMXN|CHFMXN|EURUSD|GBPUSD|USDJPY
 
 export const revalidate = 60;
 
 const YAHOO_UA =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
 
-const RANGE_MAP  = { "30": "1mo", "90": "3mo", "365": "1y" };
+const RANGE_MAP  = { "30": "1mo", "90": "3mo", "180": "6mo", "365": "1y" };
 const SYMBOL_MAP = {
   USDMXN: "MXN=X",
   EURMXN: "EURMXN=X",
