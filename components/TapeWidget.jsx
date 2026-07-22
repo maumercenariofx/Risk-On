@@ -10,7 +10,9 @@ import { riskBand } from "../lib/riskScore";
   que falta, trazo en color de banda = lo recorrido). La punta va "viajando"
   por la historia: el precio y la fecha del row superior la siguen. Hover/touch
   sobre la gráfica hace scrub para leer cualquier punto; click → /markets.
-  Dormida mientras el hero está a la vista; reduced-motion = línea completa.
+  Dormida mientras el hero está a la vista. Reduced-motion: el trazo SIGUE al
+  scroll (mismo contrato que ReadingProgress — es lectura de posición, no
+  animación autónoma); solo se quitan las transiciones de entrada.
 */
 
 const rgba = (hex, a) => {
@@ -40,6 +42,7 @@ export default function TapeWidget({ score }) {
     if (!ctx) return;
 
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduced) wrap.style.transition = "none";
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     canvas.width = CW * dpr;
     canvas.height = CH * dpr;
@@ -85,7 +88,7 @@ export default function TapeWidget({ score }) {
       ctx.stroke();
 
       // trazo recorrido, punta interpolada
-      const p = reduced ? 1 : pageProgress();
+      const p = pageProgress();
       const kf = p * (n - 1);
       const k = Math.floor(kf);
       const frac = kf - k;
