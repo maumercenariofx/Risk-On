@@ -9,6 +9,7 @@ import DailyRead from "./DailyRead";
 import Collapse from "./Collapse";
 import SessionClock from "./SessionClock";
 import RegimeStrip from "./RegimeStrip";
+import IntradaySpark from "./IntradaySpark";
 
 // Frescura del dato, frase completa según idioma (antes mezclaba "Data ahora ago").
 function dataFreshness(isoStr, lang) {
@@ -348,16 +349,17 @@ export default function RiskGauge({ post, prevScore = null, scoreHistory = null,
           </div>
         )}
 
-        {/* Bottom-left: reloj de sesiones FX + timestamp */}
+        {/* Bottom-left: sparkline intradía vivo + reloj de sesiones + timestamp */}
         <div className="hero-late" style={{
           position: "absolute",
           bottom: 28,
           left: 20,
           display: "flex",
           flexDirection: "column",
-          gap: 8,
+          gap: 10,
           pointerEvents: "none",
         }}>
+          <IntradaySpark />
           <SessionClock />
           {data?.asOf && (
             <div style={{

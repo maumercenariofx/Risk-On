@@ -423,3 +423,11 @@ button, a[class*="rounded"] { transition-property: color, background-color, bord
    DEBE ir después del bloque [data-tip] (misma especificidad, gana el último). */
 .regime-cell::after { content: none; }
 .regime-cell:hover::after { content: attr(data-tip); }
+
+/* Punta "en vivo" del sparkline intradía del hero */
+@keyframes sparkPulse {
+  0%, 100% { opacity: 1; r: 2.4; }
+  50% { opacity: 0.45; r: 3.2; }
+}
+.spark-live-dot { animation: sparkPulse 2.2s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .spark-live-dot { animation: none; } }

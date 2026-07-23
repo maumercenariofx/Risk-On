@@ -97,7 +97,7 @@ export default function Nav() {
           <button
             onClick={() => window.dispatchEvent(new Event("riskon:palette"))}
             aria-label={lang === "en" ? "Open command palette" : "Abrir buscador"}
-            className="mr-1 hidden items-center gap-1 rounded-md border border-edge px-2.5 py-[5px] font-mono text-[10px] tracking-widest text-muted transition-colors hover:border-[#3A3A3E] hover:text-bone md:flex"
+            className="mr-1 hidden items-center gap-1 rounded-md border border-edge px-2.5 py-[5px] font-mono text-[10px] tracking-widest text-muted transition-colors hover:border-[#3A3A3E] hover:text-bone lg:flex"
           >
             {isMac ? "⌘" : "CTRL"} K
           </button>
