@@ -15,6 +15,13 @@ export default function ViewOverlay({ post, open, onClose }) {
   const { lang } = useLang();
   const pushedRef = useRef(false);
 
+  // onClose vive en un ref: si entrara a las deps del efecto, cualquier
+  // re-render del padre con una arrow inline (nueva identidad) re-ejecutaría
+  // el efecto y su cleanup haría history.back() → el lector se auto-cerraba
+  // ~20ms tras abrir (carrera intermitente, dependía del timing de los polls).
+  const onCloseRef = useRef(onClose);
+  useEffect(() => { onCloseRef.current = onClose; });
+
   useEffect(() => {
     if (!open) return;
     // Bloquear el scroll del fondo mientras el lector está abierto, y GUARDAR
@@ -24,10 +31,16 @@ export default function ViewOverlay({ post, open, onClose }) {
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
 
+    // El navegador restaura su propio scroll en el popstate DE FORMA ASÍNCRONA
+    // (a veces después de nuestro doble rAF) y pisaba el savedY → manual
+    // mientras el lector vive; se devuelve al terminar la restauración.
+    const prevRestoration = history.scrollRestoration;
+    history.scrollRestoration = "manual";
+
     // Botón atrás = cerrar overlay (no abandonar la página).
     history.pushState({ viewOverlay: true }, "", "#view");
     pushedRef.current = true;
-    const onPop = () => { pushedRef.current = false; onClose(); };
+    const onPop = () => { pushedRef.current = false; onCloseRef.current(); };
     window.addEventListener("popstate", onPop);
 
     const onKey = (e) => { if (e.key === "Escape") close(); };
@@ -36,7 +49,7 @@ export default function ViewOverlay({ post, open, onClose }) {
     function close() {
       // Si nuestro estado sigue en el historial, sácalo (dispara onPop→onClose).
       if (pushedRef.current) history.back();
-      else onClose();
+      else onCloseRef.current();
     }
 
     return () => {
@@ -50,10 +63,13 @@ export default function ViewOverlay({ post, open, onClose }) {
       }
       // Volver EXACTO a donde estaba el lector (doble rAF: espera el reflow).
       requestAnimationFrame(() =>
-        requestAnimationFrame(() => window.scrollTo({ top: savedY, behavior: "instant" }))
+        requestAnimationFrame(() => {
+          window.scrollTo({ top: savedY, behavior: "instant" });
+          history.scrollRestoration = prevRestoration;
+        })
       );
     };
-  }, [open, onClose]);
+  }, [open]);
 
   if (!open || !post) return null;
 
