@@ -6,6 +6,7 @@
 // El botón atrás funciona vía pushState/popstate: abrir el overlay mete un
 // estado #view al historial; atrás lo saca y eso dispara el cierre.
 import { useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { useLang, T } from "./Lang";
 import { riskBand } from "../lib/riskScore";
 import { ARTICLE_CLS } from "../lib/articleStyle";
@@ -60,7 +61,9 @@ export default function ViewOverlay({ post, open, onClose }) {
   const html = (lang === "en" ? post.html_en : post.html_es) ?? post.html;
   const band = typeof post.score === "number" ? riskBand(post.score) : null;
 
-  return (
+  // Portal a <body>: el sheet es position:fixed y su card ancestro puede traer
+  // transform (tilt 3D en hover) — un ancestro transformado captura los fixed.
+  return createPortal(
     <div
       role="dialog"
       aria-modal="true"
@@ -123,6 +126,7 @@ export default function ViewOverlay({ post, open, onClose }) {
           </button>
         </div>
       </article>
-    </div>
+    </div>,
+    document.body
   );
 }

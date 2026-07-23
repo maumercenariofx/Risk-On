@@ -7,6 +7,8 @@ import RiskSphere from "./RiskSphere";
 import MarketsClient from "./MarketsClient";
 import DailyRead from "./DailyRead";
 import Collapse from "./Collapse";
+import SessionClock from "./SessionClock";
+import RegimeStrip from "./RegimeStrip";
 
 // Frescura del dato, frase completa según idioma (antes mezclaba "Data ahora ago").
 function dataFreshness(isoStr, lang) {
@@ -346,21 +348,28 @@ export default function RiskGauge({ post, prevScore = null, scoreHistory = null,
           </div>
         )}
 
-        {/* Bottom-left: timestamp */}
-        {data?.asOf && (
-          <div className="hero-late" style={{
-            position: "absolute",
-            bottom: 28,
-            left: 20,
-            fontSize: 9.5,
-            letterSpacing: 2,
-            textTransform: "uppercase",
-            color: "#2E2E32",
-            pointerEvents: "none",
-          }}>
-            {dataFreshness(data.asOf, lang)}
-          </div>
-        )}
+        {/* Bottom-left: reloj de sesiones FX + timestamp */}
+        <div className="hero-late" style={{
+          position: "absolute",
+          bottom: 28,
+          left: 20,
+          display: "flex",
+          flexDirection: "column",
+          gap: 8,
+          pointerEvents: "none",
+        }}>
+          <SessionClock />
+          {data?.asOf && (
+            <div style={{
+              fontSize: 9.5,
+              letterSpacing: 2,
+              textTransform: "uppercase",
+              color: "#2E2E32",
+            }}>
+              {dataFreshness(data.asOf, lang)}
+            </div>
+          )}
+        </div>
         </div>
 
         {/* Hint de scroll: el hero llena la pantalla, esto invita a bajar */}
@@ -434,6 +443,9 @@ export default function RiskGauge({ post, prevScore = null, scoreHistory = null,
               )}
             </div>
           )}
+
+          {/* Heat-strip: la historia del régimen celda por celda */}
+          <RegimeStrip history={scoreHistory} />
         </div>
       )}
 

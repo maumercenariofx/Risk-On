@@ -10,6 +10,11 @@ export default function Nav() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [isMac, setIsMac] = useState(false);
+
+  useEffect(() => {
+    setIsMac(/Mac|iPhone|iPad/.test(navigator.platform));
+  }, []);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 40);
@@ -88,6 +93,22 @@ export default function Nav() {
         </div>
 
         <div className="flex items-center gap-1.5">
+          {/* Command palette: atajo visible en desktop, lupa en móvil */}
+          <button
+            onClick={() => window.dispatchEvent(new Event("riskon:palette"))}
+            aria-label={lang === "en" ? "Open command palette" : "Abrir buscador"}
+            className="mr-1 hidden items-center gap-1 rounded-md border border-edge px-2.5 py-[5px] font-mono text-[10px] tracking-widest text-muted transition-colors hover:border-[#3A3A3E] hover:text-bone md:flex"
+          >
+            {isMac ? "⌘" : "CTRL"} K
+          </button>
+          <button
+            onClick={() => window.dispatchEvent(new Event("riskon:palette"))}
+            aria-label={lang === "en" ? "Search" : "Buscar"}
+            className="mr-0.5 flex h-8 w-8 items-center justify-center rounded-md border border-edge text-muted transition-colors hover:text-bone md:hidden"
+            style={{ fontSize: 15, lineHeight: 1 }}
+          >
+            ⌕
+          </button>
           {["es", "en"].map((l) => (
             <button
               key={l}

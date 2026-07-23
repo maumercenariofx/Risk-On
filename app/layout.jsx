@@ -9,6 +9,7 @@ import { LangProvider } from "../components/Lang";
 import Nav from "../components/Nav";
 import Footer from "../components/Footer";
 import RevealObserver from "../components/RevealObserver";
+import CommandPalette from "../components/CommandPalette";
 
 // Fuentes self-hosted vía next/font (antes: <link> a Google Fonts, render-blocking).
 // Fraunces variable con eje óptico; Geist/Geist Mono del paquete oficial.
@@ -90,6 +91,7 @@ export default function RootLayout({ children }) {
           <Nav />
           <main className="mx-auto max-w-5xl px-5 pb-20 pt-6">{children}</main>
           <Footer />
+          <CommandPalette />
         </LangProvider>
         <Analytics />
       </body>

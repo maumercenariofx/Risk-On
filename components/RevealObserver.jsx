@@ -56,6 +56,12 @@ export default function RevealObserver() {
       const r = card.getBoundingClientRect();
       card.style.setProperty("--mx", `${e.clientX - r.left}px`);
       card.style.setProperty("--my", `${e.clientY - r.top}px`);
+      // Tilt 3D: rotación proporcional a la posición del cursor en la card
+      // (el transform solo aplica en :hover, ver globals.css).
+      const px = (e.clientX - r.left) / r.width - 0.5;
+      const py = (e.clientY - r.top) / r.height - 0.5;
+      card.style.setProperty("--rx", `${(-py * 3).toFixed(2)}deg`);
+      card.style.setProperty("--ry", `${(px * 4).toFixed(2)}deg`);
     };
     document.addEventListener("pointermove", onMove, { passive: true });
 

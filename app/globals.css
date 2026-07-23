@@ -68,6 +68,24 @@ body::before {
 .card-glass:hover::after, .card-spot:hover::after { opacity: 1; }
 @media (hover: none) { .card-glass::after, .card-spot::after { display: none; } }
 
+/* Tilt 3D sutil: la card se inclina siguiendo al cursor (--rx/--ry los pone el
+   listener global de RevealObserver, que solo corre con html.io = sin
+   reduced-motion). Solo cursor fino; el transform vive ÚNICAMENTE en :hover
+   para no dejar containing-blocks residuales (los fixed descendientes se
+   protegen aparte: ViewOverlay ya se portalea a body). */
+@media (hover: hover) and (pointer: fine) {
+  html.io .card-glass, html.io .card-spot {
+    transition: box-shadow 0.35s ease, border-color 0.35s ease, transform 0.25s ease;
+  }
+  html.io .card-glass:hover, html.io .card-spot:hover {
+    transform: perspective(900px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
+  }
+}
+
+/* Heat-strip del régimen (30d bajo el termómetro): celdas por view */
+.regime-cell { opacity: 0.68; transition: opacity 0.2s ease, transform 0.2s ease; }
+.regime-cell:hover { opacity: 1; transform: scaleY(1.35); }
+
 /* Skeleton shimmer para charts en carga */
 .skeleton {
   position: relative;
@@ -398,3 +416,10 @@ button, a[class*="rounded"] { transition-property: color, background-color, bord
   .badge-full { display: none; }
   .badge-mini { display: flex !important; }
 }
+
+/* Heat-strip: los tooltips ocultos de [data-tip] ocupan layout (visibility:
+   hidden deja la caja) y en las celdas del borde derecho desbordaban el
+   viewport móvil. Sin hover no existe la caja; el fade se sacrifica aquí.
+   DEBE ir después del bloque [data-tip] (misma especificidad, gana el último). */
+.regime-cell::after { content: none; }
+.regime-cell:hover::after { content: attr(data-tip); }
