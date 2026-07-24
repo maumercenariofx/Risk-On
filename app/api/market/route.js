@@ -28,14 +28,16 @@ async function yahooChart(symbol, { range = "1mo", interval = "1d", live = false
     const rawQuote = result.indicators?.quote?.[0] ?? {};
 
     // Construir arrays alineados (solo candles donde close es válido)
-    const closes = [], highs = [], lows = [];
+    const closes = [], highs = [], lows = [], ts = [];
     const rawC = rawQuote.close ?? [], rawH = rawQuote.high ?? [], rawL = rawQuote.low ?? [];
+    const rawT = result.timestamp ?? [];
     for (let i = 0; i < rawC.length; i++) {
       const c = rawC[i];
       if (c == null || isNaN(c)) continue;
       closes.push(c);
       highs.push(rawH[i] ?? c);
       lows.push(rawL[i] ?? c);
+      ts.push(rawT[i] ?? null);
     }
 
     const price = meta.regularMarketPrice ?? closes[closes.length - 1] ?? null;
@@ -50,10 +52,61 @@ async function yahooChart(symbol, { range = "1mo", interval = "1d", live = false
       if (prev) chgPct = ((last - prev) / prev) * 100;
     }
 
-    return { price, chgPct, closes, highs, lows };
+    return { price, chgPct, closes, highs, lows, ts };
   } catch {
     return null;
   }
+}
+
+// ── Cierre previo USD/MXN confiable ──────────────────────────────────────────
+// El 24-jul-2026 la vela DIARIA del jueves en Yahoo quedó congelada cerca de su
+// apertura (17.4009 vs cierre real ~17.51 según el intradía) y el view publicó
+// "sube 9 centavos" falso. Las velas horarias sí traían el dato bueno, así que
+// el cierre previo ahora se deriva del intradía (frontera de sesión = medianoche
+// de Londres, el MISMO roll que usan las velas diarias FX de Yahoo) y se cruza
+// contra el diario; si difieren más de TOL_PREV gana el intradía y la vela
+// diaria sospechosa se sana para todo lo que se calcula de ella.
+const TOL_PREV = 0.03; // 3 centavos
+
+const londonWeekdayFmt = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", weekday: "short" });
+const londonClockFmt = new Intl.DateTimeFormat("en-GB", {
+  timeZone: "Europe/London", hour: "numeric", minute: "numeric", second: "numeric", hour12: false,
+});
+
+// Timestamp (segundos) de la medianoche de Londres más reciente.
+function lastLondonMidnightSec(nowMs = Date.now()) {
+  const p = {};
+  for (const { type, value } of londonClockFmt.formatToParts(new Date(nowMs))) p[type] = value;
+  const secs = (Number(p.hour) % 24) * 3600 + Number(p.minute) * 60 + Number(p.second);
+  return Math.floor(nowMs / 1000) - secs;
+}
+
+// Último close horario ANTES del roll más reciente, saltando velas de fin de
+// semana en horario Londres (madrugada de lunes → cierre real del viernes).
+function prevCloseFromHourly(hourly, boundarySec) {
+  const { closes, ts } = hourly ?? {};
+  if (!closes?.length || !ts?.length) return null;
+  for (let i = closes.length - 1; i >= 0; i--) {
+    if (ts[i] == null || ts[i] >= boundarySec) continue;
+    const wd = londonWeekdayFmt.format(new Date(ts[i] * 1000));
+    if (wd === "Sat" || wd === "Sun") continue;
+    return closes[i];
+  }
+  return null;
+}
+
+// Máximo/mínimo de la sesión [startSec, endSec) según las velas horarias —
+// para sanar high/low de una vela diaria congelada.
+function sessionHighLow(hourly, startSec, endSec) {
+  const { highs, lows, ts } = hourly ?? {};
+  if (!highs?.length || !ts?.length) return null;
+  let hi = -Infinity, lo = Infinity;
+  for (let i = 0; i < ts.length; i++) {
+    if (ts[i] == null || ts[i] < startSec || ts[i] >= endSec) continue;
+    if (highs[i] != null) hi = Math.max(hi, highs[i]);
+    if (lows[i] != null) lo = Math.min(lo, lows[i]);
+  }
+  return isFinite(hi) && isFinite(lo) ? { hi, lo } : null;
 }
 
 // Soporte y resistencia: rolling high/low de los últimos `period` candles.
@@ -118,15 +171,54 @@ export async function GET(request) {
 
   // range=6mo: necesitamos ~126 cierres diarios para la ventana rodante de 60
   // días que usa la normalización dinámica del índice (lib/riskScore.js).
-  const [charts, usdmxn, eurusd, liveSpot] = await Promise.all([
+  const [charts, usdmxn, eurusd, liveSpot, usdmxnHourly] = await Promise.all([
     Promise.all(keys.map((k) => yahooChart(SYMBOLS[k], { range: "6mo", live }))),
     fxRate("USD", "MXN", { live }),
     fxRate("EUR", "USD", { live }),
     live ? usdmxnIntradaySpot() : Promise.resolve(null),
+    yahooChart("MXN=X", { range: "5d", interval: "1h", live }),
   ]);
 
   const c = {};
   keys.forEach((key, i) => { c[key] = charts[i] ?? {}; });
+
+  // ── Cierre previo USD/MXN: diario cruzado contra intradía (ver nota arriba) ──
+  const boundarySec = lastLondonMidnightSec();
+  const dChart = c.usdmxnChart;
+  // Última vela diaria COMPLETA = la última con ts anterior al roll de hoy
+  // (la vela de hoy y el tick vivo que Yahoo apenda quedan fuera).
+  let dPrevIdx = -1;
+  if (dChart?.closes?.length && dChart?.ts?.length) {
+    for (let i = dChart.closes.length - 1; i >= 0; i--) {
+      if (dChart.ts[i] != null && dChart.ts[i] < boundarySec) { dPrevIdx = i; break; }
+    }
+  }
+  const dPrev = dPrevIdx >= 0 ? dChart.closes[dPrevIdx] : null;
+  const hPrev = prevCloseFromHourly(usdmxnHourly, boundarySec);
+  let usdmxnPrevClose = null, usdmxnPrevVerified = false;
+  if (dPrev != null && hPrev != null) {
+    if (Math.abs(dPrev - hPrev) <= TOL_PREV) {
+      usdmxnPrevClose = dPrev;
+      usdmxnPrevVerified = true;
+    } else {
+      // La vela diaria no cuadra con lo que realmente operó la sesión: está
+      // congelada/corrupta. Gana el intradía y sanamos la vela para que el
+      // cierre de tarjetas, la serie del MAD, la vol y el S/R no hereden basura.
+      usdmxnPrevClose = hPrev;
+      usdmxnPrevVerified = true;
+      console.log(`[market] cierre previo USD/MXN: diario ${dPrev.toFixed(4)} vs intradía ${hPrev.toFixed(4)} — vela diaria sospechosa, usando intradía`);
+      dChart.closes[dPrevIdx] = hPrev;
+      const sessionEnd = Math.min(dChart.ts[dPrevIdx + 1] ?? boundarySec, boundarySec);
+      const hl = sessionHighLow(usdmxnHourly, dChart.ts[dPrevIdx], sessionEnd);
+      if (hl) { dChart.highs[dPrevIdx] = hl.hi; dChart.lows[dPrevIdx] = hl.lo; }
+    }
+  } else if (dPrev != null || hPrev != null) {
+    // Una sola fuente disponible: se usa, pero queda marcada como no verificada
+    // (el view NO debe afirmar movimiento en centavos sobre dato sin contraste).
+    usdmxnPrevClose = dPrev ?? hPrev;
+    usdmxnPrevVerified = false;
+    console.log(`[market] cierre previo USD/MXN sin contraste (diario=${dPrev?.toFixed?.(4) ?? "s/d"}, intradía=${hPrev?.toFixed?.(4) ?? "s/d"}) — no verificado`);
+  }
 
   const mxnLevels = rollingLevels(c.usdmxnChart?.highs, c.usdmxnChart?.lows);
 
@@ -182,7 +274,21 @@ export async function GET(request) {
     // FX — último cierre diario (misma fuente que /api/history, así no hay
     // discrepancia entre las tarjetas/ticker y el chart de Mercados)
     usdmxn:    lastClose(c.usdmxnChart) ?? c.usdmxnChart?.price ?? usdmxn ?? 18.42,
-    usdmxnChg: c.usdmxnChart?.chgPct ?? null,
+    // % de cambio contra el cierre previo VERIFICADO (spot vivo si hay, si no
+    // el último precio); fallback al derivado de velas diarias si no hubo
+    // cierre previo utilizable.
+    usdmxnChg: (() => {
+      const spotNow = liveSpot ?? c.usdmxnChart?.price ?? lastClose(c.usdmxnChart);
+      if (usdmxnPrevClose != null && spotNow != null) {
+        return ((spotNow - usdmxnPrevClose) / usdmxnPrevClose) * 100;
+      }
+      return c.usdmxnChart?.chgPct ?? null;
+    })(),
+    // Cierre previo explícito + bandera de verificación (contraste diario vs
+    // intradía). computeNotables (lib/dailyView.js) los usa para el claim en
+    // centavos: sin verificación, mejor cifra omitida que cifra falsa.
+    usdmxnPrevClose: usdmxnPrevClose != null ? Math.round(usdmxnPrevClose * 10000) / 10000 : null,
+    usdmxnPrevVerified,
     // Spot en vivo — lo usa el view premarket para citar el nivel exacto del
     // USD/MXN. En modo live es el último candle de 1 minuto (lo más fiel al
     // instante); si no, regularMarketPrice → último cierre diario → Frankfurter.
