@@ -90,6 +90,11 @@ export default function RiskGauge({ post, prevScore = null, scoreHistory = null,
   const [isSub, setIsSub]             = useState(false); // ya suscrito → sin CTA en el badge
   const [thermoIn, setThermoIn]       = useState(false); // desliza el termómetro 0→score
   const [cScores, setCScores]         = useState(null); // riesgo por país en vivo
+  // Time-lapse 30d: null = vivo; {i} = índice en scoreHistory (rebobinado).
+  const [lapse, setLapse]             = useState(null);
+  const [lapsePlaying, setLapsePlaying] = useState(false);
+  const [cHistory, setCHistory]       = useState(null); // snapshots diarios país
+  const lapseTimer = useRef(null);
   const sphereRef     = useRef(null);
   const heroRef       = useRef(null);
   const sphereWrapRef = useRef(null); // capa scroll-linked del globo
@@ -149,6 +154,8 @@ export default function RiskGauge({ post, prevScore = null, scoreHistory = null,
     fetch("/api/rates").then((r) => r.json()).then(setRates).catch(() => setRates(null));
     fetch("/api/curve").then((r) => r.json()).then(setCurve).catch(() => setCurve(null));
     fetch("/api/country-risk").then((r) => r.json()).then((d) => setCScores(d.scores || null)).catch(() => {});
+    // Historia diaria de riesgo por país (time-lapse; se acumula desde 27-jul-2026)
+    fetch("/data/country-risk-history.json").then((r) => (r.ok ? r.json() : null)).then(setCHistory).catch(() => {});
     try { setIsSub(localStorage.getItem("riskon-sub") === "1"); } catch {}
     const t = setTimeout(() => setThermoIn(true), 150);
     return () => clearTimeout(t);
@@ -223,6 +230,67 @@ export default function RiskGauge({ post, prevScore = null, scoreHistory = null,
     return () => clearTimeout(id);
   }, [result, accentColor]);
 
+  // ── Time-lapse: rebobinar el último mes en el globo ─────────────────────────
+  // Arrastrar el scrubber (o ▶) reproduce día a día: halo/banda desde
+  // scoreHistory y países desde los snapshots diarios (si existen para esa
+  // fecha). Al soltar en "vivo" (null) se restauran halo y países actuales.
+  const applyLapseDay = (i) => {
+    const day = scoreHistory?.[i];
+    if (!day) return;
+    sphereRef.current?.setHalo?.(accent(day.score), day.score);
+    const snap = cHistory?.find((h) => h.date === day.slug)?.scores;
+    if (snap) {
+      const top5 = COUNTRY_UNIVERSE
+        .map((c) => ({ ...c, live: snap[c.id] ?? c.score }))
+        .sort((a, b) => b.live - a.live)
+        .slice(0, 5)
+        .map((c) => ({ maskId: c.maskId, score: c.live, phase: c.phase }));
+      sphereRef.current?.setCountries?.(top5);
+    }
+  };
+  useEffect(() => {
+    if (lapse != null) { applyLapseDay(lapse.i); return; }
+    // Regreso al vivo: re-aplicar halo y selección actuales.
+    if (result) sphereRef.current?.setHalo?.(accentColor, score);
+    if (cScores) {
+      const top5 = COUNTRY_UNIVERSE
+        .map((c) => ({ ...c, live: cScores?.[c.id] ?? c.score }))
+        .sort((a, b) => b.live - a.live)
+        .slice(0, 5)
+        .map((c) => ({ maskId: c.maskId, score: c.live, phase: c.phase }));
+      sphereRef.current?.setCountries?.(top5);
+    }
+  }, [lapse]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!lapsePlaying) { clearInterval(lapseTimer.current); return; }
+    lapseTimer.current = setInterval(() => {
+      setLapse((cur) => {
+        const next = (cur?.i ?? -1) + 1;
+        if (!scoreHistory || next >= scoreHistory.length) {
+          setLapsePlaying(false);
+          return null; // fin → vivo
+        }
+        return { i: next };
+      });
+    }, 220);
+    return () => clearInterval(lapseTimer.current);
+  }, [lapsePlaying]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Flujos de capital del globo: dirección por régimen (risk-on → hacia EM),
+  // color de banda, y el arco NY↔CDMX late con el movimiento del USD/MXN.
+  useEffect(() => {
+    if (!result) return;
+    let tries = 0, id;
+    const apply = () => {
+      const ok = sphereRef.current?.setFlows?.({
+        score, hex: accentColor, mxnChg: data?.usdmxnChg ?? 0,
+      }) === true;
+      if (!ok && tries++ < 40) id = setTimeout(apply, 300);
+    };
+    apply();
+    return () => clearTimeout(id);
+  }, [result, accentColor, score, data]);
+
   return (
     <section className="reveal" style={{ animationDelay: "0.05s" }}>
 
@@ -289,6 +357,40 @@ export default function RiskGauge({ post, prevScore = null, scoreHistory = null,
             gap: 10,
           }}>
             <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 5 }}>
+              {/* Time-lapse 30d (desktop): rebobina el mes en el globo */}
+              {scoreHistory && scoreHistory.length >= 5 && (
+                <div className="hidden md:flex" style={{ alignItems: "center", gap: 8, pointerEvents: "auto", marginBottom: 2 }}>
+                  {lapse != null && (
+                    <>
+                      <span style={{ fontFamily: "var(--font-mono)", fontSize: 9.5, letterSpacing: 1, color: accent(scoreHistory[lapse.i]?.score ?? 50) }}>
+                        {scoreHistory[lapse.i]?.slug?.slice(5)} · {scoreHistory[lapse.i]?.score}
+                      </span>
+                      <input
+                        type="range" min={0} max={scoreHistory.length - 1} value={lapse.i}
+                        aria-label={lang === "es" ? "Rebobinar el mes" : "Rewind the month"}
+                        onChange={(e) => { setLapsePlaying(false); setLapse({ i: Number(e.target.value) }); }}
+                        style={{ width: 170, accentColor }}
+                      />
+                    </>
+                  )}
+                  <button
+                    onClick={() => {
+                      if (lapsePlaying || lapse != null) { setLapsePlaying(false); setLapse(null); }
+                      else { setLapse({ i: 0 }); setLapsePlaying(true); }
+                    }}
+                    aria-label={lang === "es" ? "Time-lapse del índice, 30 días" : "Index time-lapse, 30 days"}
+                    style={{
+                      fontFamily: "var(--font-mono)", fontSize: 9.5, letterSpacing: 1, textTransform: "uppercase",
+                      padding: "3px 8px", borderRadius: 5, cursor: "pointer",
+                      background: lapse != null ? `${accentColor}30` : "rgba(255,255,255,0.05)",
+                      border: `1px solid ${lapse != null ? accentColor : "rgba(255,255,255,0.18)"}`,
+                      color: lapse != null ? accentColor : "#8A8F98",
+                    }}
+                  >
+                    {lapse != null ? "■ LIVE" : "◷ 30D ▶"}
+                  </button>
+                </div>
+              )}
               <div style={{ fontSize: 9.5, letterSpacing: 2, textTransform: "uppercase", color: "#4A4A50", pointerEvents: "none" }}>
                 <T es="Países en alerta" en="Countries on alert" />
               </div>
@@ -301,7 +403,20 @@ export default function RiskGauge({ post, prevScore = null, scoreHistory = null,
                     <button
                       key={c.id}
                       onClick={() => {
-                        sphereRef.current?.focusCountry(c.lat, c.lon);
+                        // Fly-to cinematográfico: segundo click en el mismo chip regresa.
+                        const closing = newsCountry === c.id;
+                        if (closing) {
+                          sphereRef.current?.flyBack?.();
+                        } else {
+                          sphereRef.current?.flyTo?.({
+                            lat: c.lat, lon: c.lon, maskId: c.maskId, color: col,
+                            title: lang === "es" ? "País en foco" : "Country in focus",
+                            lines: [
+                              `<strong>${lang === "es" ? c.name_es : c.name_en}</strong>`,
+                              `${lang === "es" ? "tensión" : "tension"} <span style="color:${col};font-weight:700">${c.live}</span>/100`,
+                            ],
+                          }) || sphereRef.current?.focusCountry(c.lat, c.lon);
+                        }
                         setNewsCountry((cur) => (cur === c.id ? null : c.id));
                       }}
                       style={{

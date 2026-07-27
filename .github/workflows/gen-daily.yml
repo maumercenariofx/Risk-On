@@ -63,12 +63,16 @@ jobs:
           DRY_RUN: ${{ github.event.inputs.dry_run || '0' }}
         run: node scripts/gen-daily-action.mjs
 
+      - name: Snapshot de riesgo por país (time-lapse del globo, best-effort)
+        if: ${{ (github.event.inputs.dry_run || '0') != '1' }}
+        run: node scripts/snapshot-country-risk.mjs
+
       - name: Commit y push (dispara redeploy de Vercel)
         if: ${{ (github.event.inputs.dry_run || '0') != '1' }}
         run: |
           git config user.name "riskon-bot"
           git config user.email "view@riskon.lat"
-          git add content/
+          git add content/ public/data/
           if git diff --cached --quiet; then
             echo "Nada nuevo que commitear (view ya existía o fin de semana)."
           else

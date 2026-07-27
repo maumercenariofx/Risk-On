@@ -6,10 +6,28 @@ import {
   HERO_FORMS, RISK_COUNTRIES, GLOBE_VERTEX_SHADER, GLOBE_FRAGMENT_SHADER,
   ATMO_VERTEX_SHADER, ATMO_FRAGMENT_SHADER,
   BORDER_LINE_VERTEX_SHADER, BORDER_LINE_FRAGMENT_SHADER, makeBorderPositions,
+  FIN_CENTERS, FLOW_VERTEX_SHADER, FLOW_FRAGMENT_SHADER, makeFlowGeometry,
+  sunDirNow, cityGlowNow,
 } from "../lib/quantForms";
 
 // Self-hosted (antes cdnjs): mismo dominio = más rápido y sin punto de fallo externo.
 const THREE_SRC = "/vendor/three-r128.min.js";
+
+// Post-processing (bloom) — módulos r128 self-hosted; se cargan SOLO en el
+// tier alto de desktop. Orden importa: Pass define la base de todos.
+const PP_FILES = [
+  "Pass.js", "MaskPass.js", "CopyShader.js", "LuminosityHighPassShader.js",
+  "ShaderPass.js", "RenderPass.js", "EffectComposer.js", "UnrealBloomPass.js",
+];
+function loadPostProcessing() {
+  if (window.THREE?.UnrealBloomPass) return Promise.resolve();
+  return PP_FILES.reduce((p, f) => p.then(() => new Promise((res, rej) => {
+    const s = document.createElement("script");
+    s.src = `/vendor/pp/${f}`; s.async = false;
+    s.onload = res; s.onerror = rej;
+    document.head.appendChild(s);
+  })), Promise.resolve());
+}
 
 function loadThree() {
   if (typeof window !== "undefined" && window.THREE) return Promise.resolve(window.THREE);
@@ -80,6 +98,20 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
       selectRef.current.setHalo(hex, score);
       return true;
     },
+    // Flujos de capital (dirección/color por régimen + pulso USD/MXN).
+    setFlows: (opts) => {
+      if (!selectRef.current?.setFlows) return false;
+      selectRef.current.setFlows(opts);
+      return true;
+    },
+    // Fly-to cinematográfico a un país (y regreso).
+    flyTo: (opts) => {
+      if (!selectRef.current?.flyTo) return false;
+      selectRef.current.flyTo(opts);
+      return true;
+    },
+    flyBack: () => selectRef.current?.flyBack?.(),
+    isFocused: () => selectRef.current?.isFocused?.() ?? false,
   }), []);
 
   useEffect(() => {
@@ -226,6 +258,16 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
           uBrightBase:    { value: 0.22 },
           uBrightScale:   { value: 0.72 },
           uShimmerSpeed:  { value: 1.8 },
+          // Día/noche real + luces de plaza (se refrescan cada 60s en el loop)
+          uSunDir:        { value: (() => { const d = sunDirNow(); return new THREE.Vector3(d.x, d.y, d.z); })() },
+          uNightAmt:      { value: 0 },
+          uCityDir:       { value: FIN_CENTERS.map((c) => { const d = latLonToDir(c.lat, c.lon); return new THREE.Vector3(d.x, d.y, d.z); }) },
+          uCityGlow:      { value: cityGlowNow() },
+          // Clima de riesgo (0 sereno → 1 tormenta) — setHalo lo deriva del score
+          uStorm:         { value: 0 },
+          // Fly-to país (uFocusId = maskId enfocado, 0 = ninguno)
+          uFocusId:       { value: 0 },
+          uFocusLift:     { value: 0 },
         },
         vertexShader: GLOBE_VERTEX_SHADER,
         fragmentShader: GLOBE_FRAGMENT_SHADER,
@@ -250,6 +292,7 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
           // Velocidad de la respiración (rad/s); setHalo la ajusta con el
           // score: risk-off respira más inquieto, risk-on más sereno.
           uPulse:     { value: 0.9 },
+          uStorm:     { value: 0 },
           // Azul neutro de arranque; en cuanto hay score, RiskGauge lo tiñe
           // del color de la banda del día vía setHalo().
           uColor: { value: new THREE.Color(0.45, 0.66, 1.0) },
@@ -277,11 +320,70 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
       const borderLines = new THREE.LineSegments(borderGeo, borderMat);
       group.add(borderLines);
 
+      // ── Flujos de capital: arcos entre plazas con cometas de luz. La
+      // dirección y el color los fija setFlows() según el régimen del día. ──
+      const flowGeo = makeFlowGeometry(THREE, R * 1.012);
+      const flowMat = new THREE.ShaderMaterial({
+        uniforms: {
+          uTime:      { value: 0 },
+          uColorT:    { value: 0 },
+          uFlowDir:   { value: -1 },
+          uFlowColor: { value: new THREE.Color("#D9A227") },
+          uMxnPulse:  { value: 0.15 },
+        },
+        vertexShader: FLOW_VERTEX_SHADER,
+        fragmentShader: FLOW_FRAGMENT_SHADER,
+        transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+      });
+      const flows = new THREE.LineSegments(flowGeo, flowMat);
+      group.add(flows);
+
       group.scale.set(groupScale, groupScale, groupScale);
       scene.add(group);
 
+      // ── Panel del fly-to: anclado en 3D al país enfocado (se reproyecta
+      // cada frame). pointer-events none: informa, no estorba. ──
+      container.style.position = "relative";
+      const panel = document.createElement("div");
+      panel.style.cssText =
+        "position:absolute;left:0;top:0;z-index:5;pointer-events:none;opacity:0;" +
+        "transition:opacity .25s;font-family:var(--font-mono,monospace);" +
+        "background:rgba(8,10,14,0.78);border:1px solid rgba(255,255,255,0.16);" +
+        "border-left-width:3px;border-radius:6px;padding:8px 12px;min-width:130px;" +
+        "backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)";
+      container.appendChild(panel);
+
+      // ── Bloom cinematográfico (solo desktop tier alto): la página detrás
+      // es #000, así que renderizar OPACO es visualmente idéntico — y el
+      // UnrealBloom de r128 no compone bien sobre canvas transparente. ──
+      let composer = null, bloomPass = null;
+      if (!isSmall && !lowEnd) {
+        try {
+          await loadPostProcessing();
+          if (!destroyed && window.THREE.UnrealBloomPass) {
+            renderer.setClearColor(0x000000, 1);
+            composer = new THREE.EffectComposer(renderer);
+            composer.addPass(new THREE.RenderPass(scene, camera));
+            bloomPass = new THREE.UnrealBloomPass(
+              new THREE.Vector2(container.clientWidth, container.clientHeight),
+              0.5,   // strength: presencia sin lavar el mapa
+              0.55,  // radius
+              0.80   // threshold: solo florece lo realmente brillante
+            );
+            composer.addPass(bloomPass);
+            composer.setPixelRatio?.(DPR);
+            composer.setSize(container.clientWidth, container.clientHeight);
+            canvas.dataset.bloom = "1";
+          }
+        } catch { composer = null; }
+      }
+
       // Country-focus animation target (radians, group.rotation.y).
       let focusTarget = null;
+      // Fly-to: estado del país enfocado + tweens de cámara/relieve.
+      let focusData = null, focusLift = 0, focusLiftTarget = 0, camZTarget = 6.5, focusTilt = 0;
+      let stormTarget = 0;
+      const tmpV = new THREE.Vector3();
 
       selectRef.current = {
         focusCountry: (lat, lon) => {
@@ -303,7 +405,36 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
         setHalo: (hex, score = 50) => {
           atmoMat.uniforms.uColor.value.set(hex).lerp(new THREE.Color(1, 1, 1), 0.3);
           atmoMat.uniforms.uPulse.value = 0.7 + (1 - Math.max(0, Math.min(100, score)) / 100) * 0.9;
+          // Clima de riesgo: la tormenta crece conforme cae el score (curva
+          // suave; el loop hace el lerp para que el cambio nunca sea brusco).
+          stormTarget = Math.pow(1 - Math.max(0, Math.min(100, score)) / 100, 1.6);
         },
+        // Flujos de capital: dirección (risk-on → hacia EM), color de banda y
+        // pulso del arco NY↔CDMX según el movimiento del USD/MXN del día.
+        setFlows: ({ score = 50, mxnChg = 0, hex = "#D9A227" } = {}) => {
+          flowMat.uniforms.uFlowDir.value = score >= 51 ? 1 : -1;
+          flowMat.uniforms.uFlowColor.value.set(hex).lerp(new THREE.Color(1, 1, 1), 0.15);
+          flowMat.uniforms.uMxnPulse.value = Math.min(0.6, Math.abs(mxnChg ?? 0) * 0.45);
+        },
+        // Fly-to cinematográfico: rota el globo al país, acerca la cámara,
+        // eleva sus partículas y ancla el panel informativo en 3D.
+        flyTo: ({ lat, lon, maskId, title = "", lines = [], color = "#fff" }) => {
+          const d = latLonToDir(lat, lon);
+          focusTarget = -Math.atan2(d.x, d.z);
+          // Tilt de latitud: el país queda DE FRENTE, no en el borde inferior
+          // (rotar x por latRad lleva su y a 0 — ver convención R_x).
+          focusTilt = Math.max(-0.62, Math.min(0.62, (lat * Math.PI) / 180));
+          focusData = { dirObj: new THREE.Vector3(d.x, d.y, d.z) };
+          material.uniforms.uFocusId.value = maskId ?? 0;
+          focusLiftTarget = 1;
+          camZTarget = 5.55; // acercamiento con aire — a 4.9 el globo desbordaba todo el hero
+          panel.style.borderLeftColor = color;
+          panel.innerHTML =
+            `<div style="font-size:9px;letter-spacing:2px;color:#8A8F98;text-transform:uppercase;margin-bottom:2px">${title}</div>` +
+            lines.map((l) => `<div style="font-size:12px;color:#ECEFF4;line-height:1.5">${l}</div>`).join("");
+        },
+        flyBack: () => { focusLiftTarget = 0; camZTarget = 6.5; },
+        isFocused: () => focusData !== null,
         // Actualiza en vivo el color/pulso de cada país (score 0-100 por id).
         setCountryScores: (map) => {
           const arr = material.uniforms.uCountryData.value;
@@ -332,7 +463,7 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
       // `ts - lastFrame < 1000/60` caía en el borde de cuantización en
       // pantallas 90/120Hz (ticks de ~8.3ms → cadencia 16.7/25/33ms) y esos
       // 33ms envenenaban la medición adaptativa como "frames lentos".
-      let elapsed = 0, animId = 0, lastFrame = 0, nextFrameAt = 0;
+      let elapsed = 0, animId = 0, lastFrame = 0, nextFrameAt = 0, lastEnvAt = -999;
       let lastScrollAt = -1e9; // el scroll compite por el main thread — no medir ahí
       let mouseActive = false;
       let lastMoveAt  = 0;
@@ -436,6 +567,14 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
               renderer.setSize(container.clientWidth, container.clientHeight);
               material.uniforms.uPixelRatio.value = DPR;
               canvas.dataset.dpr = String(DPR);
+              composer?.setPixelRatio?.(DPR);
+              composer?.setSize(container.clientWidth, container.clientHeight);
+              if (DPR <= 2 && composer) {
+                // El bloom es lo primero que se sacrifica si el equipo sufre.
+                composer = null; bloomPass = null;
+                renderer.setClearColor(0x000000, 0);
+                delete canvas.dataset.bloom;
+              }
               if (DPR <= 1.5) qDone = true; // piso alcanzado
             } else {
               qDone = true; // ventana limpia → esta calidad se sostiene
@@ -445,17 +584,23 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
         }
 
         if (focusTarget !== null) {
-          // Shortest-path turn toward the selected country, recentering tilt.
+          // Shortest-path turn toward the selected country, recentering tilt
+          // (o inclinando hacia la latitud del país si hay fly-to activo).
+          const tiltGoal = focusData ? focusTilt : 0;
           let dyaw = (focusTarget - group.rotation.y) % (2 * Math.PI);
           if (dyaw > Math.PI) dyaw -= 2 * Math.PI;
           if (dyaw < -Math.PI) dyaw += 2 * Math.PI;
           group.rotation.y += dyaw * FOCUS_LERP;
-          group.rotation.x += (0 - group.rotation.x) * FOCUS_LERP;
-          if (Math.abs(dyaw) < 0.003 && Math.abs(group.rotation.x) < 0.003) {
+          group.rotation.x += (tiltGoal - group.rotation.x) * FOCUS_LERP;
+          if (Math.abs(dyaw) < 0.003 && Math.abs(group.rotation.x - tiltGoal) < 0.003) {
             group.rotation.y = focusTarget;
-            group.rotation.x = 0;
+            group.rotation.x = tiltGoal;
             focusTarget = null;
           }
+        } else if (focusData) {
+          // Con un país en foco el globo se DETIENE y lo sostiene al frente
+          // (la rotación decorativa lo sacaría de cámara en segundos).
+          group.rotation.x += (focusTilt - group.rotation.x) * FOCUS_LERP;
         } else {
           group.rotation.y += 0.216 * dt; // por dt (0.0036×60): fluida aunque el pacing varíe
           // Idle wobble alrededor de 0 + inclinación del giroscopio (móvil).
@@ -471,6 +616,40 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
         atmoMat.uniforms.uIntensity.value = material.uniforms.uColorT.value;
         atmoMat.uniforms.uTime.value      = elapsed;
         borderMat.uniforms.uColorT.value  = material.uniforms.uColorT.value;
+
+        // ── Ambiente: día/noche + sesiones (refresco 60s), tormenta, flujos ──
+        material.uniforms.uNightAmt.value = material.uniforms.uColorT.value;
+        if (elapsed - lastEnvAt > 60) {
+          lastEnvAt = elapsed;
+          const sd = sunDirNow();
+          material.uniforms.uSunDir.value.set(sd.x, sd.y, sd.z);
+          material.uniforms.uCityGlow.value = cityGlowNow(); // arreglo nuevo → re-upload
+        }
+        const storm = material.uniforms.uStorm.value + (stormTarget - material.uniforms.uStorm.value) * 0.02;
+        material.uniforms.uStorm.value = storm;
+        atmoMat.uniforms.uStorm.value  = storm;
+        flowMat.uniforms.uTime.value   = elapsed;
+        flowMat.uniforms.uColorT.value = material.uniforms.uColorT.value;
+
+        // ── Fly-to: tween de cámara + relieve + panel anclado en 3D ──
+        focusLift += (focusLiftTarget - focusLift) * 0.07;
+        material.uniforms.uFocusLift.value = focusLift;
+        camera.position.z += (camZTarget - camera.position.z) * 0.06;
+        if (focusData) {
+          if (focusLiftTarget === 0 && focusLift < 0.04) {
+            material.uniforms.uFocusId.value = 0;
+            focusData = null;
+            panel.style.opacity = "0";
+          } else {
+            group.updateMatrixWorld();
+            tmpV.copy(focusData.dirObj).multiplyScalar(R * (1 + focusLift * 0.1))
+              .applyMatrix4(group.matrixWorld).project(camera);
+            const sx = (tmpV.x * 0.5 + 0.5) * container.clientWidth;
+            const sy = (-tmpV.y * 0.5 + 0.5) * container.clientHeight;
+            panel.style.transform = `translate(-50%, -100%) translate(${sx.toFixed(1)}px, ${(sy - 16).toFixed(1)}px)`;
+            panel.style.opacity = String(Math.min(1, Math.max(0, (focusLift - 0.3) * 1.9)));
+          }
+        }
 
         // Re-project the cursor onto the globe's surface every frame, so the
         // attraction point tracks the cursor even while the group rotates.
@@ -591,10 +770,17 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
         } else settleFrames = 0;
         } // fin needsSim
 
-        renderer.render(scene, camera);
+        if (composer) composer.render();
+        else renderer.render(scene, camera);
       }
 
       animate();
+
+      // Esc o click sobre el globo con un país enfocado → regreso del fly-to.
+      const onKeyDown = (e) => { if (e.key === "Escape" && focusData) selectRef.current?.flyBack?.(); };
+      const onCanvasClick = () => { if (focusData) selectRef.current?.flyBack?.(); };
+      window.addEventListener("keydown", onKeyDown);
+      canvas.addEventListener("click", onCanvasClick);
 
       // Fuera del viewport se detiene el rAF completo (render + física): el
       // globo dejaba de verse pero seguía costando frames a toda la página.
@@ -611,6 +797,7 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
         camera.aspect = container.clientWidth / container.clientHeight;
         camera.updateProjectionMatrix();
         renderer.setSize(container.clientWidth, container.clientHeight);
+        composer?.setSize(container.clientWidth, container.clientHeight);
         const newScale = Math.min(BASE_SCALE, (visibleHW * camera.aspect * 0.85) / (2 * R));
         group.scale.set(newScale, newScale, newScale);
         updatePixelsPerUnit();
@@ -629,12 +816,17 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
         container.removeEventListener("touchend", armGyro);
         window.removeEventListener("deviceorientation", onGyro);
         window.removeEventListener("scroll", onScroll);
+        window.removeEventListener("keydown", onKeyDown);
+        canvas.removeEventListener("click", onCanvasClick);
         geometry.dispose();
         tex.dispose(); geoTex.dispose();
         material.dispose();
         atmo.geometry.dispose(); atmoMat.dispose();
         borderGeo.dispose(); borderMat.dispose();
+        flowGeo.dispose(); flowMat.dispose();
+        bloomPass?.dispose?.();
         renderer.dispose();
+        if (panel.parentNode === container) container.removeChild(panel);
         if (renderer.domElement.parentNode === container) container.removeChild(renderer.domElement);
         selectRef.current = null;
       };
