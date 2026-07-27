@@ -2,6 +2,7 @@ import { Resend } from "resend";
 import { getAllPostsMeta } from "../../../lib/posts";
 import { fetchLiveData, generateDailyView, buildMarkdown, publishToGitHub, publishFileToGitHub, checkSentMarker, REPO } from "../../../lib/dailyView";
 import { stripBold, boldToHtml } from "../../../lib/mdInline";
+import { posturaRecord } from "../../../lib/forwardReturns";
 import { alertAdmin } from "../../../lib/alertAdmin";
 import { clean, cleanName, personalizeGreeting, probeSheet, getSubscribers } from "../../../lib/subscribers";
 
@@ -71,11 +72,48 @@ async function yahooChart(symbol) {
 }
 
 const fmtPct = (v) => (v == null ? "—" : `${v >= 0 ? "+" : ""}${v.toFixed(2)}%`);
+// Con flecha direccional para la tabla (▲/▼ + el % firmado).
+const fmtPctArrow = (v) => (v == null ? "—" : `${v >= 0 ? "▲" : "▼"} ${fmtPct(v)}`);
 function fmtPrice(v, kind) {
   if (v == null) return "—";
   if (kind === "yield") return `${v.toFixed(2)}%`;
   if (kind === "decimal") return v.toFixed(2);
   return v.toLocaleString("en-US", { maximumFractionDigits: v >= 1000 ? 0 : 2 });
+}
+
+// Sesgo de la postura → etiqueta + color (tonos de banda, nada alarmista:
+// pro-dólar NO es "malo", es una lectura — azul acero como RISK-OFF).
+const BIAS_META = {
+  "pro-peso":  { es: "PRO-PESO",  en: "PRO-PESO",   color: "#0A7D3C" },
+  "neutral":   { es: "NEUTRAL",   en: "NEUTRAL",    color: "#B8860B" },
+  "pro-dolar": { es: "PRO-DÓLAR", en: "PRO-DOLLAR", color: "#3A5A8F" },
+};
+
+// Tweet pre-armado para el link "Compártelo en X" — mismo formato que el botón
+// X del sitio (components/PostView.jsx composeTweet): score+banda, titular,
+// postura, link. Presupuesto 280 (URL pesa 23, no-ASCII pesa 2).
+function composeTweetUrl(post, lang, riskState) {
+  const en = lang === "en";
+  const title = stripBold((en ? post.title_en : post.title_es) || post.title_es || "");
+  const url = `${SITE}/archive/${post.slug}`;
+  const biasEs = { "pro-peso": "pro-peso", "pro-dolar": "pro-dólar", neutral: "neutral" };
+  const bias = biasEs[post.postura_bias] ?? post.postura_bias;
+  const cond = String(post.postura_condicion ?? "").replace(/\s+/g, " ").trim();
+  const condShort = cond.length > 70 ? cond.slice(0, 67) + "…" : cond;
+  const posturaLine = bias ? `🎯 ${en ? "View" : "Postura"} ${bias}${condShort ? ` · ${condShort}` : ""}` : null;
+  const footer = en ? `Full view 👇\n${url}` : `El view completo 👇\n${url}`;
+  const weight = (t) => [...t.replace(/https?:\/\/\S+/g, "x".repeat(23))]
+    .reduce((n, ch) => n + (ch.codePointAt(0) > 0x2000 ? 2 : 1), 0);
+  const variants = [
+    [`📊 Pre-Market ${post.score}/100 · ${riskState}`, "", title, "", posturaLine, "", footer],
+    [`📊 Pre-Market ${post.score}/100 · ${riskState}`, "", title, "", footer],
+    [`📊 Pre-Market ${post.score}/100 · ${riskState}`, "", footer],
+  ];
+  for (const v of variants) {
+    const text = v.filter((l) => l != null).join("\n").replace(/\n{3,}/g, "\n\n").trim();
+    if (weight(text) <= 280) return `https://x.com/intent/tweet?text=${encodeURIComponent(text)}`;
+  }
+  return `https://x.com/intent/tweet?text=${encodeURIComponent(`📊 Pre-Market · ${url}`)}`;
 }
 
 async function handler(request) {
@@ -279,15 +317,66 @@ async function handler(request) {
 
   // Flecha del asunto: score de hoy vs el del último view publicado antes de
   // hoy (meta del build — ayer siempre está deployado). Sin dato → sin flecha.
+  // prevScore además alimenta el caption de la tira de régimen ("ayer 52 → hoy 57").
   let arrow = "";
+  let prevScore = null;
   try {
     const prevPost = getAllPostsMeta()
       .filter((p) => String(p.date).slice(0, 10) < slug)
       .sort((a, b) => String(b.date).localeCompare(String(a.date)))[0];
-    const prevScore = Number(prevPost?.score);
-    if (Number.isFinite(prevScore) && prevScore !== score) {
-      arrow = score > prevScore ? " ▲" : " ▼";
+    const ps = Number(prevPost?.score);
+    if (Number.isFinite(ps)) {
+      prevScore = ps;
+      if (ps !== score) arrow = score > ps ? " ▲" : " ▼";
     }
+  } catch {}
+
+  // ── Datos extra del correo (mejoras 2026-07-27) — todos best-effort: si algo
+  // falla, su bloque simplemente no se renderiza y el correo sale igual. ──────
+  const metaPosts = (() => { try { return getAllPostsMeta(); } catch { return []; } })();
+
+  // Tira de régimen: últimos ~22 views (≈1 mes hábil) coloreados por banda,
+  // con el de hoy al final (puede no estar aún en el build del deploy).
+  let stripPoints = [];
+  try {
+    stripPoints = metaPosts
+      .filter((p) => Number.isFinite(Number(p.score)))
+      .slice(0, 22)
+      .map((p) => ({ slug: String(p.date ?? p.slug).slice(0, 10), score: Number(p.score) }))
+      .reverse();
+    if (!stripPoints.length || stripPoints[stripPoints.length - 1].slug !== slug) {
+      stripPoints.push({ slug, score });
+    }
+    stripPoints = stripPoints.slice(-22);
+  } catch {}
+
+  // Récord de posturas (mismo motor que el marcador público de /indice; solo
+  // cuentan las resueltas, ≥5 días hábiles, así que el build siempre alcanza).
+  let record = null;
+  try {
+    record = await posturaRecord(metaPosts.map((p) => ({
+      slug: p.slug ?? String(p.date).slice(0, 10),
+      postura_bias: p.postura_bias, postura_condicion: p.postura_condicion,
+      title_es: p.title_es, title_en: p.title_en,
+    })));
+  } catch {}
+
+  // Agenda de HOY (alto impacto, hora CDMX); si está vacía, el próximo evento.
+  let agendaToday = [], agendaNext = null;
+  try {
+    const cal = await fetch(`${SITE}/api/calendar?days=8`, { cache: "no-store" }).then((r) => r.json());
+    const evs = Array.isArray(cal) ? cal : [];
+    agendaToday = evs.filter((e) => e.date === slug && e.impact === "high").slice(0, 4);
+    if (!agendaToday.length) agendaNext = evs.find((e) => e.date > slug && e.impact === "high") ?? null;
+  } catch {}
+
+  // Fila USD/MXN de la tabla: spot + % contra cierre previo VERIFICADO
+  // (/api/market cruza diario vs intradía desde el incidente del 24-jul).
+  let mxnRow = null;
+  try {
+    const mkt = await fetch(`${SITE}/api/market`, { cache: "no-store" }).then((r) => r.json());
+    const price = mkt?.usdmxnSpot ?? mkt?.usdmxn;
+    if (price != null) mxnRow = { price, chgPct: mkt.usdmxnChg ?? null };
   } catch {}
 
   // Recorta en palabra completa para que el gancho no muera a media frase.
@@ -338,6 +427,13 @@ async function handler(request) {
     advisory: "Book advisory", advisoryCta: "📅 Book a 1-on-1 advisory",
     advisoryPlain: "Book an advisory",
     unsub: "Unsubscribe", footerTag: "DAILY PREMARKET",
+    strip30: "Last 30 days", yesterday: "yesterday", today: "today",
+    postura: "TODAY'S STANCE", record: "Track record", recordOf: "stances validated",
+    recordLink: "see the public scoreboard →",
+    agenda: "TODAY'S CALENDAR (CDMX)", agendaEmpty: "No high-impact data today",
+    agendaNext: "Next up",
+    shareLine: "Was this Pre-Market useful? Help us grow:",
+    shareInvite: "Invite a colleague →", shareX: "Share on X",
   } : {
     premarket: "El Pre-Market",
     bandsQ: `¿Qué significa “${riskState}”? Conoce las 4 bandas del índice →`,
@@ -351,39 +447,127 @@ async function handler(request) {
     advisory: "Agenda asesoría", advisoryCta: "📅 Agenda una asesoría 1:1",
     advisoryPlain: "Agenda una asesoría",
     unsub: "Darse de baja", footerTag: "PREMARKET DIARIO",
+    strip30: "Últimos 30 días", yesterday: "ayer", today: "hoy",
+    postura: "POSTURA DEL DÍA", record: "Marcador", recordOf: "posturas validadas",
+    recordLink: "ver el marcador público →",
+    agenda: "AGENDA DE HOY (CDMX)", agendaEmpty: "Sin datos de alto impacto hoy",
+    agendaNext: "Próximo",
+    shareLine: "¿Te sirvió este Pre-Market? Ayúdanos a crecer:",
+    shareInvite: "Invita a un colega →", shareX: "Compártelo en X",
   };
   const sans = "'Helvetica Neue',Arial,sans-serif";
   const serif = "Georgia,'Times New Roman',serif";
 
-  const tableRows = market.map((d, i) => {
+  // Fila USD/MXN destacada al frente (EL dato de esta audiencia; % contra
+  // cierre previo verificado por /api/market) + flechas ▲▼ en todos.
+  const pctClass = (v) => (v == null ? "" : v >= 0 ? "em-up" : "em-down");
+  const mxnTr = mxnRow ? (() => {
+    const pc = mxnRow.chgPct == null ? C.faint : mxnRow.chgPct >= 0 ? C.up : C.down;
+    return `<tr>
+      <td class="em-soft em-text" style="padding:11px 8px;background:${C.bone};border-bottom:1px solid ${C.border};color:${C.text};font-family:${sans};font-size:14px;font-weight:700">USD/MXN</td>
+      <td class="em-soft em-text" style="padding:11px 0;background:${C.bone};border-bottom:1px solid ${C.border};text-align:right;color:${C.text};font-family:${sans};font-size:14px;font-weight:700;font-variant-numeric:tabular-nums">${mxnRow.price.toFixed(4)}</td>
+      <td class="em-soft ${pctClass(mxnRow.chgPct)}" style="padding:11px 8px 11px 0;background:${C.bone};border-bottom:1px solid ${C.border};text-align:right;color:${pc};font-family:${sans};font-size:14px;font-weight:700;font-variant-numeric:tabular-nums">${fmtPctArrow(mxnRow.chgPct)}</td>
+    </tr>`;
+  })() : "";
+  const tableRows = mxnTr + market.map((d, i) => {
     const bb = i === market.length - 1 ? "" : `border-bottom:1px solid ${C.border};`;
     const pc = d.chgPct == null ? C.faint : d.chgPct >= 0 ? C.up : C.down;
     return `<tr>
-      <td style="padding:11px 0;${bb}color:${C.text};font-family:${sans};font-size:14px">${en ? (d.name_en ?? d.name) : d.name}</td>
-      <td style="padding:11px 0;${bb}text-align:right;color:${C.text};font-family:${sans};font-size:14px;font-weight:600;font-variant-numeric:tabular-nums">${fmtPrice(d.price, d.kind)}</td>
-      <td style="padding:11px 0;${bb}text-align:right;color:${pc};font-family:${sans};font-size:14px;font-variant-numeric:tabular-nums">${fmtPct(d.chgPct)}</td>
+      <td class="em-text em-border" style="padding:11px 0 11px 8px;${bb}color:${C.text};font-family:${sans};font-size:14px">${en ? (d.name_en ?? d.name) : d.name}</td>
+      <td class="em-text em-border" style="padding:11px 0;${bb}text-align:right;color:${C.text};font-family:${sans};font-size:14px;font-weight:600;font-variant-numeric:tabular-nums">${fmtPrice(d.price, d.kind)}</td>
+      <td class="em-border ${pctClass(d.chgPct)}" style="padding:11px 8px 11px 0;${bb}text-align:right;color:${pc};font-family:${sans};font-size:14px;font-variant-numeric:tabular-nums">${fmtPctArrow(d.chgPct)}</td>
     </tr>`;
   }).join("");
 
   const watchRows = watch.map((item) => `
     <tr>
       <td style="padding:0;vertical-align:top;width:18px"><div style="width:6px;height:6px;border-radius:50%;background:${color};margin-top:8px"></div></td>
-      <td style="padding:0 0 14px 0;font-family:${sans};font-size:14px;color:#3a3a3a;line-height:1.65">${boldToHtml(item)}</td>
+      <td class="em-body" style="padding:0 0 14px 0;font-family:${sans};font-size:14px;color:#3a3a3a;line-height:1.65">${boldToHtml(item)}</td>
     </tr>`).join("");
 
   const navLink = (href, label) =>
-    `<a href="${href}" style="font-family:${sans};font-size:13px;color:${C.text};text-decoration:none;font-weight:600">${label}</a>`;
+    `<a href="${href}" class="em-text" style="font-family:${sans};font-size:13px;color:${C.text};text-decoration:none;font-weight:600">${label}</a>`;
+
+  // ── Tira de régimen 30d: una celdita por view, coloreada por su banda ────────
+  const stripHtml = stripPoints.length >= 5 ? `
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="table-layout:fixed;margin-bottom:7px"><tr>
+            ${stripPoints.map((p) => `<td class="em-border" style="height:9px;background:${riskStateFromScore(p.score).color};border-right:2px solid ${C.card};font-size:0;line-height:0">&nbsp;</td>`).join("")}
+          </tr></table>
+          <div class="em-faint" style="font-family:${sans};font-size:10.5px;color:${C.faint};letter-spacing:0.5px;margin-bottom:22px">${L.strip30}${prevScore != null ? ` · ${L.yesterday} ${prevScore} → ${L.today} <span style="color:${score >= prevScore ? C.up : C.down};font-weight:700" class="${score >= prevScore ? "em-up" : "em-down"}">${score}${arrow}</span>` : ""}</div>` : "";
+
+  // ── Postura del día + récord auditable ───────────────────────────────────────
+  const bias = BIAS_META[post.postura_bias];
+  const condicion = stripBold(post.postura_condicion ?? ""); // solo ES en el front-matter
+  const posturaHtml = bias ? `
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="em-soft" style="background:${C.bg};border-left:3px solid ${bias.color};border-radius:4px;margin-bottom:28px">
+            <tr><td style="padding:16px 20px">
+              <div class="em-faint" style="font-family:${sans};font-size:11px;letter-spacing:2px;color:${C.faint};font-weight:700;margin-bottom:9px">🎯 ${L.postura}</div>
+              <div style="margin-bottom:${condicion ? "8px" : "0"}"><span style="display:inline-block;padding:4px 10px;border-radius:3px;background:${bias.color};color:#FFFFFF;font-family:${sans};font-size:12px;font-weight:700;letter-spacing:1px">${en ? bias.en : bias.es}</span></div>
+              ${condicion ? `<div class="em-body" style="font-family:${serif};font-size:14px;font-style:italic;color:#3a3a3a;line-height:1.55">${condicion}</div>` : ""}
+              ${record?.resolved ? `<div class="em-muted" style="font-family:${sans};font-size:12px;color:${C.muted};margin-top:10px">${L.record}: <strong class="em-text" style="color:${C.text}">${record.hits}/${record.resolved}</strong> ${L.recordOf} · <a href="${SITE}/indice" class="em-muted" style="color:${C.muted};text-decoration:underline">${L.recordLink}</a></div>` : ""}
+            </td></tr>
+          </table>` : "";
+
+  // ── Agenda de hoy (alto impacto) o el próximo evento ────────────────────────
+  const evName = (e) => (en ? (e.event_en ?? e.event_es) : e.event_es);
+  const agendaRows = agendaToday.length
+    ? agendaToday.map((e) => `
+      <tr>
+        <td class="em-text" style="padding:0 0 8px 0;width:56px;vertical-align:top;font-family:${sans};font-size:13px;font-weight:700;color:${C.text};font-variant-numeric:tabular-nums">${e.time ?? ""}</td>
+        <td class="em-body" style="padding:0 0 8px 0;font-family:${sans};font-size:13.5px;color:#3a3a3a;line-height:1.5">${e.flag ?? ""} ${evName(e)}</td>
+      </tr>`).join("")
+    : `<tr><td class="em-muted" style="font-family:${sans};font-size:13px;color:${C.muted};line-height:1.5">${L.agendaEmpty}${agendaNext ? ` · ${L.agendaNext}: <strong class="em-text" style="color:${C.text}">${new Date(`${agendaNext.date}T12:00:00Z`).toLocaleDateString(locale, { weekday: "short", day: "numeric", timeZone: "UTC" }).replace(".", "")} ${agendaNext.flag ?? ""} ${evName(agendaNext)}</strong>` : ""}</td></tr>`;
+  const agendaHtml = `
+          <div class="em-faint" style="font-family:${sans};font-size:11px;letter-spacing:2px;color:${C.faint};font-weight:700;margin-bottom:12px">📅 ${L.agenda}</div>
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:34px">${agendaRows}</table>`;
+
+  // ── Bloque compartir/crecer ─────────────────────────────────────────────────
+  const shareHtml = `
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="em-soft" style="background:${C.bg};border-radius:4px;margin-bottom:30px">
+            <tr><td style="padding:16px 20px;text-align:center">
+              <div class="em-body" style="font-family:${sans};font-size:13px;color:#3a3a3a;margin-bottom:9px">${L.shareLine}</div>
+              <a href="${SITE}/suscribete" class="em-text" style="font-family:${sans};font-size:13px;font-weight:700;color:${C.text};text-decoration:underline">${L.shareInvite}</a>
+              <span class="em-faint" style="color:${C.faint}">&nbsp;·&nbsp;</span>
+              <a href="${composeTweetUrl(post, lang, riskState)}" class="em-text" style="font-family:${sans};font-size:13px;font-weight:700;color:${C.text};text-decoration:underline">𝕏 ${L.shareX}</a>
+            </td></tr>
+          </table>`;
+
+  // Modo oscuro: paleta propia vía prefers-color-scheme (Apple Mail, Outlook
+  // móvil y otros la respetan; el Gmail app aplica su propia inversión y este
+  // diseño crema/tinta invierte razonablemente). El masthead se queda claro en
+  // dark a propósito — el logo es tinta oscura y así sigue legible (etiqueta
+  // de papel sobre fondo oscuro).
+  const darkCss = `
+    :root { color-scheme: light dark; supported-color-schemes: light dark; }
+    @media (prefers-color-scheme: dark) {
+      .em-bg    { background: #101014 !important; }
+      .em-card  { background: #17171C !important; border-color: #26262E !important; }
+      .em-soft  { background: #1E1E24 !important; }
+      .em-bone  { background: #FFFFFF !important; }
+      .em-text  { color: #ECEAE4 !important; }
+      .em-body  { color: #C9C5BD !important; }
+      .em-muted { color: #A39E96 !important; }
+      .em-faint { color: #7E7970 !important; }
+      .em-border{ border-color: #26262E !important; }
+      .em-rule  { border-color: #ECEAE4 !important; }
+      .em-track { background: #26262E !important; }
+      .em-up    { color: #2FB89A !important; }
+      .em-down  { color: #E4735F !important; }
+      .em-btn      { background: #ECEAE4 !important; }
+      .em-btn-txt  { color: #17171C !important; }
+      .em-outline  { border-color: #ECEAE4 !important; color: #ECEAE4 !important; }
+    }`;
 
   const html = `<!DOCTYPE html>
 <html>
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light only"></head>
-<body style="margin:0;padding:0;background:${C.bg};-webkit-text-size-adjust:100%">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light dark"><meta name="supported-color-schemes" content="light dark"><style>${darkCss}</style></head>
+<body class="em-bg" style="margin:0;padding:0;background:${C.bg};-webkit-text-size-adjust:100%">
   <div style="display:none;max-height:0;overflow:hidden;opacity:0">◇ ${riskState} · ${score}/100 — ${title}</div>
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${C.bg}">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="em-bg" style="background:${C.bg}">
     <tr><td align="center" style="padding:28px 16px">
 
-      <!-- Masthead -->
-      <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:${C.card};border:1px solid ${C.border};border-bottom:none;border-radius:4px 4px 0 0">
+      <!-- Masthead (claro también en dark: el logo es tinta) -->
+      <table role="presentation" width="600" cellpadding="0" cellspacing="0" class="em-bone em-border" style="max-width:600px;width:100%;background:${C.card};border:1px solid ${C.border};border-bottom:none;border-radius:4px 4px 0 0">
         <tr><td align="center" style="padding:34px 44px 22px 44px">
           <img src="${SITE}/riskon-logo.png" width="148" alt="Risk On" style="display:block;width:148px;max-width:55%;height:auto;margin:0 auto" />
           <div style="font-family:${sans};font-size:10px;letter-spacing:3px;color:${C.faint};text-transform:uppercase;margin-top:14px">Daily views by Mauricio Mercenario</div>
@@ -391,83 +575,95 @@ async function handler(request) {
       </table>
 
       <!-- Card -->
-      <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:${C.card};border:1px solid ${C.border};border-top:none;border-radius:0 0 4px 4px">
+      <table role="presentation" width="600" cellpadding="0" cellspacing="0" class="em-card" style="max-width:600px;width:100%;background:${C.card};border:1px solid ${C.border};border-top:none;border-radius:0 0 4px 4px">
         <tr><td style="padding:36px 44px 40px 44px">
 
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
             <tr>
-              <td style="font-family:${sans};font-size:11px;letter-spacing:2px;color:${C.faint};font-weight:700;text-transform:uppercase">${L.premarket}</td>
-              <td style="text-align:right;font-family:${sans};font-size:12px;color:${C.muted};text-transform:capitalize">${dateLongL}</td>
+              <td class="em-faint" style="font-family:${sans};font-size:11px;letter-spacing:2px;color:${C.faint};font-weight:700;text-transform:uppercase">${L.premarket}</td>
+              <td class="em-muted" style="text-align:right;font-family:${sans};font-size:12px;color:${C.muted};text-transform:capitalize">${dateLongL}</td>
             </tr>
           </table>
-          <div style="border-bottom:2px solid ${C.text};margin:12px 0 ${greeting ? "18px" : "26px"} 0"></div>
+          <div class="em-rule" style="border-bottom:2px solid ${C.text};margin:12px 0 ${greeting ? "18px" : "26px"} 0"></div>
 
-          ${greeting ? `<div style="font-family:${serif};font-size:16px;font-style:italic;color:${C.text};margin-bottom:24px">${GREET_TOKEN}</div>` : ""}
+          ${greeting ? `<div class="em-text" style="font-family:${serif};font-size:16px;font-style:italic;color:${C.text};margin-bottom:24px">${GREET_TOKEN}</div>` : ""}
 
           <!-- Score gauge -->
-          <div style="font-family:${sans};font-size:11px;letter-spacing:2px;color:${C.faint};font-weight:700;margin-bottom:10px">RISK ON SCORE</div>
+          <div class="em-faint" style="font-family:${sans};font-size:11px;letter-spacing:2px;color:${C.faint};font-weight:700;margin-bottom:10px">RISK ON SCORE</div>
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:7px"><tr>
-            <td style="background:#ECE8DF;border-radius:7px;padding:0;font-size:0;line-height:0">
+            <td class="em-track" style="background:#ECE8DF;border-radius:7px;padding:0;font-size:0;line-height:0">
               <table role="presentation" width="${score}%" cellpadding="0" cellspacing="0"><tr>
                 <td style="background:${color};border-radius:7px;height:14px;font-size:0;line-height:0">&nbsp;</td>
               </tr></table>
             </td>
           </tr></table>
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px"><tr>
-            <td style="font-family:${sans};font-size:10px;color:${C.faint};letter-spacing:0.5px">0 · risk-off</td>
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:14px"><tr>
+            <td class="em-faint" style="font-family:${sans};font-size:10px;color:${C.faint};letter-spacing:0.5px">0 · risk-off</td>
             <td style="text-align:center;white-space:nowrap"><span style="font-family:${sans};font-size:22px;font-weight:700;color:${color}">${score}</span> <span style="font-family:${sans};font-size:12px;font-weight:700;color:${color};letter-spacing:1px">◇ ${riskState}</span></td>
-            <td style="text-align:right;font-family:${sans};font-size:10px;color:${C.faint};letter-spacing:0.5px">risk-on · 100</td>
+            <td class="em-faint" style="text-align:right;font-family:${sans};font-size:10px;color:${C.faint};letter-spacing:0.5px">risk-on · 100</td>
           </tr></table>
 
+          <!-- Tira de régimen: el último mes de views coloreado por banda -->
+          ${stripHtml}
+
           <!-- Qué significa: link a la explicación de las bandas -->
-          <div style="font-family:${sans};font-size:11px;color:${C.muted};margin:-14px 0 24px 0">
-            <a href="${SITE}/#bandas" style="color:${C.muted};text-decoration:underline">${L.bandsQ}</a>
+          <div class="em-muted" style="font-family:${sans};font-size:11px;color:${C.muted};margin:0 0 24px 0">
+            <a href="${SITE}/#bandas" class="em-muted" style="color:${C.muted};text-decoration:underline">${L.bandsQ}</a>
           </div>
 
           <!-- Headline + summary -->
-          <div style="font-family:${serif};font-size:26px;line-height:1.25;color:${C.text};font-weight:700;margin-bottom:18px">${title}</div>
-          <div style="font-family:${sans};font-size:15px;line-height:1.7;color:#3a3a3a;margin-bottom:26px">${summary}</div>
+          <div class="em-text" style="font-family:${serif};font-size:26px;line-height:1.25;color:${C.text};font-weight:700;margin-bottom:18px">${title}</div>
+          <div class="em-body" style="font-family:${sans};font-size:15px;line-height:1.7;color:#3a3a3a;margin-bottom:26px">${summary}</div>
+
+          <!-- Postura del día + récord -->
+          ${posturaHtml}
 
           <!-- Article CTA -->
           <table role="presentation" cellpadding="0" cellspacing="0" style="margin-bottom:34px">
-            <tr><td style="background:${C.text};border-radius:4px">
-              <a href="${articleUrl}" style="display:inline-block;padding:13px 26px;font-family:${sans};font-size:14px;font-weight:600;color:${C.bone};text-decoration:none">${L.cta}</a>
+            <tr><td class="em-btn" style="background:${C.text};border-radius:4px">
+              <a href="${articleUrl}" class="em-btn-txt" style="display:inline-block;padding:13px 26px;font-family:${sans};font-size:14px;font-weight:600;color:${C.bone};text-decoration:none">${L.cta}</a>
             </td></tr>
           </table>
 
           <!-- Market data -->
-          <div style="font-family:${sans};font-size:11px;letter-spacing:2px;color:${C.faint};font-weight:700;margin-bottom:6px">${L.marketData}</div>
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid ${C.text};margin-bottom:34px">${tableRows}</table>
+          <div class="em-faint" style="font-family:${sans};font-size:11px;letter-spacing:2px;color:${C.faint};font-weight:700;margin-bottom:6px">${L.marketData}</div>
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="em-rule" style="border-top:1px solid ${C.text};margin-bottom:34px">${tableRows}</table>
+
+          <!-- Agenda de hoy -->
+          ${agendaHtml}
 
           ${watch.length ? `
-          <div style="font-family:${sans};font-size:11px;letter-spacing:2px;color:${C.faint};font-weight:700;margin-bottom:14px">${L.watch}</div>
+          <div class="em-faint" style="font-family:${sans};font-size:11px;letter-spacing:2px;color:${C.faint};font-weight:700;margin-bottom:14px">${L.watch}</div>
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:34px">${watchRows}</table>` : ""}
 
           ${support || resistance ? `
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${C.bg};border-radius:4px;margin-bottom:36px">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="em-soft" style="background:${C.bg};border-radius:4px;margin-bottom:36px">
             <tr><td style="padding:18px 22px">
-              <div style="font-family:${sans};font-size:11px;letter-spacing:2px;color:${C.faint};font-weight:700;margin-bottom:12px">${L.levels}</div>
+              <div class="em-faint" style="font-family:${sans};font-size:11px;letter-spacing:2px;color:${C.faint};font-weight:700;margin-bottom:12px">${L.levels}</div>
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-                <tr><td style="font-family:${sans};font-size:13px;color:${C.muted}">${L.support}</td><td style="text-align:right;font-family:${sans};font-size:15px;font-weight:700;color:${C.up};font-variant-numeric:tabular-nums">${support ?? "—"}</td></tr>
-                <tr><td style="font-family:${sans};font-size:13px;color:${C.muted};padding-top:6px">${L.resistance}</td><td style="text-align:right;font-family:${sans};font-size:15px;font-weight:700;color:${C.down};padding-top:6px;font-variant-numeric:tabular-nums">${resistance ?? "—"}</td></tr>
+                <tr><td class="em-muted" style="font-family:${sans};font-size:13px;color:${C.muted}">${L.support}</td><td class="em-up" style="text-align:right;font-family:${sans};font-size:15px;font-weight:700;color:${C.up};font-variant-numeric:tabular-nums">${support ?? "—"}</td></tr>
+                <tr><td class="em-muted" style="font-family:${sans};font-size:13px;color:${C.muted};padding-top:6px">${L.resistance}</td><td class="em-down" style="text-align:right;font-family:${sans};font-size:15px;font-weight:700;color:${C.down};padding-top:6px;font-variant-numeric:tabular-nums">${resistance ?? "—"}</td></tr>
               </table>
             </td></tr>
           </table>` : ""}
 
-          ${signoff ? `<div style="font-family:${serif};font-size:15px;font-style:italic;color:${C.muted};text-align:center;padding:4px 10px 28px 10px">— ${signoff}</div>` : ""}
+          ${signoff ? `<div class="em-muted" style="font-family:${serif};font-size:15px;font-style:italic;color:${C.muted};text-align:center;padding:4px 10px 26px 10px">— ${signoff}</div>` : ""}
+
+          <!-- Compartir / crecer -->
+          ${shareHtml}
 
           <!-- Nav -->
-          <div style="border-top:1px solid ${C.border};padding-top:24px;text-align:center">
-            <div style="font-family:${sans};font-size:11px;letter-spacing:2px;color:${C.faint};font-weight:700;margin-bottom:14px">${L.explore}</div>
+          <div class="em-border" style="border-top:1px solid ${C.border};padding-top:24px;text-align:center">
+            <div class="em-faint" style="font-family:${sans};font-size:11px;letter-spacing:2px;color:${C.faint};font-weight:700;margin-bottom:14px">${L.explore}</div>
             <table role="presentation" cellpadding="0" cellspacing="0" align="center"><tr>
               <td style="padding:0 14px">${navLink(SITE + "/markets", L.markets)}</td>
-              <td style="color:${C.border}">|</td>
+              <td class="em-faint" style="color:${C.border}">|</td>
               <td style="padding:0 14px">${navLink(SITE + "/learn", L.learn)}</td>
-              <td style="color:${C.border}">|</td>
+              <td class="em-faint" style="color:${C.border}">|</td>
               <td style="padding:0 14px">${navLink(CALENDLY, L.advisory)}</td>
             </tr></table>
             <div style="margin-top:18px">
-              <a href="${CALENDLY}" style="display:inline-block;padding:11px 22px;border:1.5px solid ${C.text};border-radius:4px;font-family:${sans};font-size:13px;font-weight:600;color:${C.text};text-decoration:none">${L.advisoryCta}</a>
+              <a href="${CALENDLY}" class="em-outline" style="display:inline-block;padding:11px 22px;border:1.5px solid ${C.text};border-radius:4px;font-family:${sans};font-size:13px;font-weight:600;color:${C.text};text-decoration:none">${L.advisoryCta}</a>
             </div>
           </div>
 
@@ -476,11 +672,11 @@ async function handler(request) {
 
       <!-- Footer -->
       <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%">
-        <tr><td style="padding:20px 44px;text-align:center;font-family:${sans};font-size:11px;letter-spacing:1px;color:${C.faint};line-height:1.7">
+        <tr><td class="em-faint" style="padding:20px 44px;text-align:center;font-family:${sans};font-size:11px;letter-spacing:1px;color:${C.faint};line-height:1.7">
           RISKON.LAT · ${L.footerTag}<br>
-          <a href="${SITE}" style="color:${C.muted};text-decoration:none">riskon.lat</a>
+          <a href="${SITE}" class="em-muted" style="color:${C.muted};text-decoration:none">riskon.lat</a>
           &nbsp;·&nbsp;
-          <a href="${UNSUB}" style="color:${C.faint};text-decoration:underline">${L.unsub}</a>
+          <a href="${UNSUB}" class="em-faint" style="color:${C.faint};text-decoration:underline">${L.unsub}</a>
         </td></tr>
       </table>
 
@@ -492,7 +688,7 @@ async function handler(request) {
   // Versión texto plano (deliverability + accesibilidad)
   const text = [
     `${L.premarket.toUpperCase()} · ${dateLongL}`,
-    `Risk On score ${score}/100 · ${riskState}`,
+    `Risk On score ${score}/100 · ${riskState}${prevScore != null ? ` (${L.yesterday} ${prevScore})` : ""}`,
     `${L.bandsQPlain} ${SITE}/#bandas`,
     "",
     ...(greeting ? [GREET_TOKEN, ""] : []),
@@ -500,10 +696,20 @@ async function handler(request) {
     "",
     stripBold(summaryRaw),
     "",
+    ...(bias ? [
+      `${L.postura}: ${en ? bias.en : bias.es}${condicion ? ` — ${condicion}` : ""}`,
+      ...(record?.resolved ? [`${L.record}: ${record.hits}/${record.resolved} ${L.recordOf} · ${SITE}/indice`] : []),
+      "",
+    ] : []),
     `${L.cta.replace(" →", "")}: ${articleUrl}`,
     "",
     L.marketData,
+    ...(mxnRow ? [`  USD/MXN: ${mxnRow.price.toFixed(4)} (${fmtPct(mxnRow.chgPct)})`] : []),
     ...market.map((d) => `  ${en ? (d.name_en ?? d.name) : d.name}: ${fmtPrice(d.price, d.kind)} (${fmtPct(d.chgPct)})`),
+    "",
+    `${L.agenda}: ${agendaToday.length
+      ? agendaToday.map((e) => `${e.time ?? ""} ${evName(e)}`).join(" · ")
+      : `${L.agendaEmpty}${agendaNext ? ` · ${L.agendaNext}: ${agendaNext.date.slice(5)} ${evName(agendaNext)}` : ""}`}`,
     "",
     ...(watch.length ? [L.watch, ...watch.map((w) => `  - ${stripBold(w)}`), ""] : []),
     `USD/MXN — ${L.support} ${support ?? "—"} / ${L.resistance} ${resistance ?? "—"}`,
@@ -511,6 +717,7 @@ async function handler(request) {
     `${L.markets}: ${SITE}/markets`,
     `${L.learn}: ${SITE}/learn`,
     `${L.advisoryPlain}: ${CALENDLY}`,
+    `${L.shareInvite.replace(" →", "")}: ${SITE}/suscribete`,
     "",
     ...(signoff ? [`— ${signoff}`, ""] : []),
     `${L.unsub}: ${UNSUB}`,
@@ -544,6 +751,16 @@ async function handler(request) {
   const emails = { es: buildEmail("es") };
   if (recipients.some((s) => s.lang === "en")) emails.en = buildEmail("en");
   const emailFor = (sub) => (sub.lang === "en" && emails.en ? emails.en : emails.es);
+
+  // ?html=1 (solo con ?only=): devuelve el HTML del correo SIN enviar — para
+  // QA visual (Playwright claro/oscuro) sin gastar envíos ni spamear.
+  if (only && reqUrl.searchParams.get("html")) {
+    const v = emailFor(recipients[0] ?? {});
+    const rendered = v.html
+      .split(UNSUB).join(`${SITE}/api/unsubscribe?email=test`)
+      .split(GREET_TOKEN).join(personalizeGreeting(v.greeting, recipients[0] ?? {}) ?? "");
+    return new Response(rendered, { headers: { "Content-Type": "text/html; charset=utf-8" } });
+  }
 
   // ?preview=1 → diagnóstico: devuelve asunto/saludo YA resueltos por
   // destinatario (con su idioma) SIN enviar. Úsalo con &resend=1&only=correo.
