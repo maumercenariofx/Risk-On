@@ -57,21 +57,13 @@ const GLOBE_IDX = HERO_FORMS.findIndex(f => f.id === "GLOBE");
 const ATOM_IDX  = HERO_FORMS.findIndex(f => f.id === "ATOM");
 
 // Hover effect: while the cursor is MOVING, nearby particles are pushed
-// outward (repel/crater). If the cursor stays still for IDLE_THRESHOLD,
-// it flips to "black hole" mode — particles get absorbed and held orbiting
-// at the event-horizon rim (ORBIT_RADIUS) instead of spiraling into the
-// center, growing faster the longer the cursor stays still. Moving again
-// snaps back to repel and everything springs home with inertia (overdamped,
-// no bounce).
+// outward (repel/crater). El modo "hoyo negro" (cursor quieto absorbía
+// partículas en órbita) se ELIMINÓ el 2026-07-27 a petición del usuario —
+// lo reemplaza el PULSO SÍSMICO de click/tap (onda expansiva en shader,
+// ver uRipple*), que además funciona en móvil.
 const HOVER_RADIUS       = 0.455;
 const HOVER_RADIUS2      = HOVER_RADIUS * HOVER_RADIUS;
-const ORBIT_RADIUS       = HOVER_RADIUS * 0.65;
-const RADIAL_K           = 12;
-const IDLE_THRESHOLD     = 0.6;
 const REPEL_ACCEL        = 14;
-const ATTRACT_ACCEL_BASE = 6;
-const ATTRACT_ACCEL_GROWTH = 18;
-const ATTRACT_RAMP       = 1.5;
 const SPRING_K           = 9;
 const DAMPING            = 0.88;
 
@@ -268,6 +260,10 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
           // Fly-to país (uFocusId = maskId enfocado, 0 = ninguno)
           uFocusId:       { value: 0 },
           uFocusLift:     { value: 0 },
+          // Pulso sísmico de click/tap (uRippleT < 0 = apagado)
+          uRippleDir:     { value: new THREE.Vector3(0, 0, 1) },
+          uRippleT:       { value: -1 },
+          uRippleColor:   { value: new THREE.Color(0.45, 0.75, 0.65) },
         },
         vertexShader: GLOBE_VERTEX_SHADER,
         fragmentShader: GLOBE_FRAGMENT_SHADER,
@@ -382,7 +378,7 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
       let focusTarget = null;
       // Fly-to: estado del país enfocado + tweens de cámara/relieve.
       let focusData = null, focusLift = 0, focusLiftTarget = 0, camZTarget = 6.5, focusTilt = 0;
-      let stormTarget = 0;
+      let stormTarget = 0, rippleStart = -1;
       const tmpV = new THREE.Vector3();
 
       selectRef.current = {
@@ -408,6 +404,8 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
           // Clima de riesgo: la tormenta crece conforme cae el score (curva
           // suave; el loop hace el lerp para que el cambio nunca sea brusco).
           stormTarget = Math.pow(1 - Math.max(0, Math.min(100, score)) / 100, 1.6);
+          // El pulso sísmico hereda el color de banda del día (sin pastelear).
+          material.uniforms.uRippleColor.value.set(hex);
         },
         // Flujos de capital: dirección (risk-on → hacia EM), color de banda y
         // pulso del arco NY↔CDMX según el movimiento del USD/MXN del día.
@@ -628,6 +626,9 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
         const storm = material.uniforms.uStorm.value + (stormTarget - material.uniforms.uStorm.value) * 0.02;
         material.uniforms.uStorm.value = storm;
         atmoMat.uniforms.uStorm.value  = storm;
+        // Pulso sísmico: reloj del frente de onda (se apaga solo a los ~3s).
+        material.uniforms.uRippleT.value =
+          rippleStart >= 0 && elapsed - rippleStart < 3.2 ? elapsed - rippleStart : -1;
         flowMat.uniforms.uTime.value   = elapsed;
         flowMat.uniforms.uColorT.value = material.uniforms.uColorT.value;
 
@@ -664,14 +665,10 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
         }
 
         const idleTime = elapsed - lastMoveAt;
-        // Cursor ESTACIONADO (>6s sin moverse): libera el efecto — si no, un
-        // mouse olvidado sobre el hero dejaba un vórtice permanente de
-        // partículas desplazadas ("puntitos en el mar") y simulación eterna.
-        if (mouseActive && idleTime > 6) mouseActive = false;
-        const isAttract = mouseActive && idleTime >= IDLE_THRESHOLD;
-        const attractAccel = isAttract
-          ? ATTRACT_ACCEL_BASE + Math.min(idleTime - IDLE_THRESHOLD, ATTRACT_RAMP) * ATTRACT_ACCEL_GROWTH
-          : 0;
+        // Cursor ESTACIONADO (>1.2s sin moverse): libera el cráter y las
+        // partículas regresan a casa — sin el viejo modo hoyo negro, un
+        // cursor quieto ya no debe sostener ningún efecto.
+        if (mouseActive && idleTime > 1.2) mouseActive = false;
 
         // Continuously orbit ATOM's ring particles while it's the active form.
         if (currentIdx === ATOM_IDX) {
@@ -706,26 +703,11 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
               const falloff = 1 - d / HOVER_RADIUS;
               const invD = 1 / d;
               const rx = dx * invD, ry = dy * invD, rz = dz * invD;
-              if (isAttract) {
-                // Black hole: absorb the particle and hold it orbiting at
-                // ORBIT_RADIUS (a spring centered on the rim, pulling in
-                // particles still further out and pushing back any that
-                // overshoot toward the center) while a tangential term
-                // spins it around the rim, faster the longer the cursor idles.
-                const tx = -ry, ty = rx, tz = 0;
-                const radialErr   = d - ORBIT_RADIUS;
-                const radialAccel = radialErr * RADIAL_K;
-                const orbitAccel  = falloff * attractAccel;
-                fx = rx * radialAccel + tx * orbitAccel;
-                fy = ry * radialAccel + ty * orbitAccel;
-                fz = rz * radialAccel + tz * orbitAccel;
-              } else {
-                // Repel: push away from the cursor (crater follows the mouse).
-                const accel = falloff * REPEL_ACCEL;
-                fx = -rx * accel;
-                fy = -ry * accel;
-                fz = -rz * accel;
-              }
+              // Repel: push away from the cursor (crater follows the mouse).
+              const accel = falloff * REPEL_ACCEL;
+              fx = -rx * accel;
+              fy = -ry * accel;
+              fz = -rz * accel;
             } else {
               fx = -dispX[i] * SPRING_K;
               fy = -dispY[i] * SPRING_K;
@@ -777,8 +759,23 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
       animate();
 
       // Esc o click sobre el globo con un país enfocado → regreso del fly-to.
+      // Sin foco, el click/tap dispara el PULSO SÍSMICO desde el punto tocado
+      // (reemplazo del viejo hoyo negro; en móvil es el único efecto táctil).
       const onKeyDown = (e) => { if (e.key === "Escape" && focusData) selectRef.current?.flyBack?.(); };
-      const onCanvasClick = () => { if (focusData) selectRef.current?.flyBack?.(); };
+      const onCanvasClick = (e) => {
+        if (focusData) { selectRef.current?.flyBack?.(); return; }
+        const rect = container.getBoundingClientRect();
+        const nd = new THREE.Vector2(
+          ((e.clientX - rect.left) / rect.width) * 2 - 1,
+          -((e.clientY - rect.top) / rect.height) * 2 + 1
+        );
+        raycaster.setFromCamera(nd, camera);
+        const rayLocal = raycaster.ray.clone().applyMatrix4(localMatrix.copy(group.matrixWorld).invert());
+        if (rayLocal.intersectSphere(hitSphere, hitPoint)) {
+          material.uniforms.uRippleDir.value.copy(hitPoint).normalize();
+          rippleStart = elapsed;
+        }
+      };
       window.addEventListener("keydown", onKeyDown);
       canvas.addEventListener("click", onCanvasClick);
 
