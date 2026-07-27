@@ -7,6 +7,7 @@ import {
   ATMO_VERTEX_SHADER, ATMO_FRAGMENT_SHADER,
   BORDER_LINE_VERTEX_SHADER, BORDER_LINE_FRAGMENT_SHADER, makeBorderPositions,
   FIN_CENTERS, FLOW_VERTEX_SHADER, FLOW_FRAGMENT_SHADER, makeFlowGeometry,
+  COMET_VERTEX_SHADER, COMET_FRAGMENT_SHADER, makeCometGeometry,
   sunDirNow, cityGlowNow,
 } from "../lib/quantForms";
 
@@ -250,9 +251,13 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
           uBrightBase:    { value: 0.22 },
           uBrightScale:   { value: 0.72 },
           uShimmerSpeed:  { value: 1.8 },
-          // Día/noche real + luces de plaza (se refrescan cada 60s en el loop)
+          // Día/noche real + luces de plaza (se refrescan cada 60s en el loop).
+          // En móvil la noche es menos profunda y las ciudades brillan más:
+          // en OLED a distancia de brazo el 0.40 del desktop se veía lodoso.
           uSunDir:        { value: (() => { const d = sunDirNow(); return new THREE.Vector3(d.x, d.y, d.z); })() },
           uNightAmt:      { value: 0 },
+          uNightFloor:    { value: isSmall ? 0.52 : 0.40 },
+          uCityBoost:     { value: isSmall ? 1.35 : 1.0 },
           uCityDir:       { value: FIN_CENTERS.map((c) => { const d = latLonToDir(c.lat, c.lon); return new THREE.Vector3(d.x, d.y, d.z); }) },
           uCityGlow:      { value: cityGlowNow() },
           // Clima de riesgo (0 sereno → 1 tormenta) — setHalo lo deriva del score
@@ -334,6 +339,31 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
       const flows = new THREE.LineSegments(flowGeo, flowMat);
       group.add(flows);
 
+      // Cabezas de cometa sobre los arcos (uniforms COMPARTIDOS con flowMat:
+      // actualizar uno actualiza ambos). frustumCulled off — la posición real
+      // la calcula el shader, el bounding del placeholder no aplica.
+      const cometGeo = makeCometGeometry(THREE, R * 1.012);
+      const cometMat = new THREE.ShaderMaterial({
+        uniforms: {
+          uTime:      flowMat.uniforms.uTime,
+          uColorT:    flowMat.uniforms.uColorT,
+          uFlowDir:   flowMat.uniforms.uFlowDir,
+          uFlowColor: flowMat.uniforms.uFlowColor,
+          uMxnPulse:  flowMat.uniforms.uMxnPulse,
+          uDot:       { value: tex },
+          uRadius:    { value: R * 1.012 },
+          uPixelsPerUnit: material.uniforms.uPixelsPerUnit,
+          uPixelRatio:    material.uniforms.uPixelRatio,
+          uSize:      { value: 0.055 },
+        },
+        vertexShader: COMET_VERTEX_SHADER,
+        fragmentShader: COMET_FRAGMENT_SHADER,
+        transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+      });
+      const comets = new THREE.Points(cometGeo, cometMat);
+      comets.frustumCulled = false;
+      group.add(comets);
+
       group.scale.set(groupScale, groupScale, groupScale);
       scene.add(group);
 
@@ -349,11 +379,13 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
         "backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)";
       container.appendChild(panel);
 
-      // ── Bloom cinematográfico (solo desktop tier alto): la página detrás
-      // es #000, así que renderizar OPACO es visualmente idéntico — y el
-      // UnrealBloom de r128 no compone bien sobre canvas transparente. ──
+      // ── Bloom cinematográfico (tier alto, TAMBIÉN móvil desde 2026-07-27:
+      // el pase interno de UnrealBloom ya corre a media resolución y la
+      // escalera lo sacrifica PRIMERO si el equipo no lo sostiene). La página
+      // detrás es #000, así que renderizar OPACO es visualmente idéntico — y
+      // el UnrealBloom de r128 no compone bien sobre canvas transparente. ──
       let composer = null, bloomPass = null;
-      if (!isSmall && !lowEnd) {
+      if (!lowEnd) {
         try {
           await loadPostProcessing();
           if (!destroyed && window.THREE.UnrealBloomPass) {
@@ -560,20 +592,20 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
           if (rawDt > 34) qSlow++;
           if (++qFrames >= 90) {
             if (qSlow > 30) { // >1/3 de frames lentos → un peldaño abajo
-              DPR = Math.max(1.5, DPR - 0.5);
-              renderer.setPixelRatio(DPR);
-              renderer.setSize(container.clientWidth, container.clientHeight);
-              material.uniforms.uPixelRatio.value = DPR;
-              canvas.dataset.dpr = String(DPR);
-              composer?.setPixelRatio?.(DPR);
-              composer?.setSize(container.clientWidth, container.clientHeight);
-              if (DPR <= 2 && composer) {
-                // El bloom es lo primero que se sacrifica si el equipo sufre.
+              if (composer) {
+                // Primer peldaño: sacrificar el BLOOM completo antes de tocar
+                // la resolución (recupera más frame-time que medio DPR).
                 composer = null; bloomPass = null;
                 renderer.setClearColor(0x000000, 0);
                 delete canvas.dataset.bloom;
+              } else {
+                DPR = Math.max(1.5, DPR - 0.5);
+                renderer.setPixelRatio(DPR);
+                renderer.setSize(container.clientWidth, container.clientHeight);
+                material.uniforms.uPixelRatio.value = DPR;
+                canvas.dataset.dpr = String(DPR);
+                if (DPR <= 1.5) qDone = true; // piso alcanzado
               }
-              if (DPR <= 1.5) qDone = true; // piso alcanzado
             } else {
               qDone = true; // ventana limpia → esta calidad se sostiene
             }
@@ -821,6 +853,7 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
         atmo.geometry.dispose(); atmoMat.dispose();
         borderGeo.dispose(); borderMat.dispose();
         flowGeo.dispose(); flowMat.dispose();
+        cometGeo.dispose(); cometMat.dispose();
         bloomPass?.dispose?.();
         renderer.dispose();
         if (panel.parentNode === container) container.removeChild(panel);
