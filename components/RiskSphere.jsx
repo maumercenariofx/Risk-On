@@ -350,11 +350,12 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
           uFlowDir:   flowMat.uniforms.uFlowDir,
           uFlowColor: flowMat.uniforms.uFlowColor,
           uMxnPulse:  flowMat.uniforms.uMxnPulse,
-          uDot:       { value: tex },
           uRadius:    { value: R * 1.012 },
           uPixelsPerUnit: material.uniforms.uPixelsPerUnit,
           uPixelRatio:    material.uniforms.uPixelRatio,
-          uSize:      { value: 0.055 },
+          // Más chico que la 1ª versión (0.055 se veía como disco en móvil);
+          // el glow procedural del fragment hace que lea como luz.
+          uSize:      { value: 0.038 },
         },
         vertexShader: COMET_VERTEX_SHADER,
         fragmentShader: COMET_FRAGMENT_SHADER,
