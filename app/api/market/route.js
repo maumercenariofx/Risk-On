@@ -366,6 +366,11 @@ export async function GET(request) {
     spxChgSeries:     tail(dailyPct(c.spx?.closes)),
     btcChgSeries:     tail(dailyPct(c.btc?.closes)),
     goldChgSeries:    tail(dailyPct(c.gold?.closes)),
+    // Series para el ranking de ÁNGULOS del view diario (lib/dailyView.js):
+    // qué movimiento de hoy es más inusual vs su propia historia.
+    wtiChgSeries:     tail(dailyPct(c.wti?.closes)),
+    ipcChgSeries:     tail(dailyPct(c.ipc?.closes)),
+    us10ySeries:      tail(c.us10y?.closes),
   };
 
   return Response.json(data, {
