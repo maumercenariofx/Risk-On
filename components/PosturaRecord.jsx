@@ -41,6 +41,16 @@ export default function PosturaRecord({ data }) {
             </span>
           </span>
         )}
+        {data.byBias && Object.keys(data.byBias).length > 1 && (
+          <span style={{ fontFamily: "var(--font-mono)", fontSize: 10.5, color: "#9CA3AF" }}>
+            {Object.entries(data.byBias).map(([b, s], i) => (
+              <span key={b}>
+                {i > 0 && " · "}
+                <span style={{ color: (BIAS[b] ?? BIAS.neutral).color }}>{lang === "en" ? (BIAS[b] ?? BIAS.neutral).en : (BIAS[b] ?? BIAS.neutral).es}</span> {s.hits}/{s.n}
+              </span>
+            ))}
+          </span>
+        )}
       </div>
       <p style={{ fontSize: 13, color: "#C0C0BC", lineHeight: 1.65, margin: "0 0 14px" }}>
         <T
@@ -65,6 +75,12 @@ export default function PosturaRecord({ data }) {
                       color: b.color, border: `1px solid ${b.color}44`,
                       borderRadius: 20, padding: "3px 9px",
                     }}>{lang === "en" ? b.en : b.es}</span>
+                    {r.prior && r.prior !== r.bias && (
+                      <span title={lang === "en" ? `quant prior was ${r.prior}` : `el prior cuant era ${r.prior}`}
+                        style={{ marginLeft: 6, fontSize: 9, fontFamily: "var(--font-mono)", color: "#6A6A70", letterSpacing: 0.5 }}>
+                        ≠<T es=" prior" en=" prior" />
+                      </span>
+                    )}
                   </td>
                   <td style={{ padding: "10px 10px 10px 0", textAlign: "right", fontFamily: "var(--font-mono)", fontSize: 12, fontVariantNumeric: "tabular-nums", color: r.mxn5 == null ? "#4A4A50" : r.mxn5 < 0 ? "#2FB89A" : "#CE5555", whiteSpace: "nowrap" }}>
                     {r.mxn5 == null ? "—" : `${r.mxn5 > 0 ? "+" : ""}${r.mxn5.toFixed(2)}%`}
@@ -90,8 +106,8 @@ export default function PosturaRecord({ data }) {
 
       <p style={{ fontSize: 11.5, color: "#6A6A70", lineHeight: 1.6, margin: "12px 0 0" }}>
         <T
-          es="Regla de evaluación (fija): pro-peso acierta si el USD/MXN cerró más abajo 5 días hábiles después; pro-dólar si cerró más arriba; neutral si el movimiento fue ≤0.35% en cualquier dirección. Las posturas se publican desde el 10-jul-2026; la muestra crece un punto por día hábil. Verde = peso más fuerte."
-          en="Evaluation rule (fixed): pro-peso hits if USD/MXN closed lower 5 trading days later; pro-USD if it closed higher; neutral if the move was ≤0.35% either way. Stances are published since Jul 10, 2026; the sample grows one point per trading day. Green = stronger peso."
+          es="Regla de evaluación (fija): pro-peso acierta si el USD/MXN cerró más abajo 5 días hábiles después; pro-dólar si cerró más arriba; neutral si el movimiento fue ≤0.35% en cualquier dirección. Las posturas se publican desde el 10-jul-2026; la muestra crece un punto por día hábil. Verde = peso más fuerte. Desde el 31-jul-2026 cada view registra además el prior cuantitativo del día (backtest de 5 años) — la marca ≠ prior señala cuándo el criterio editorial se apartó del modelo, para auditar cuál suma."
+          en="Evaluation rule (fixed): pro-peso hits if USD/MXN closed lower 5 trading days later; pro-USD if it closed higher; neutral if the move was ≤0.35% either way. Stances are published since Jul 10, 2026; the sample grows one point per trading day. Green = stronger peso. Since Jul 31, 2026 each view also records the day's quant prior (5-year backtest) — the ≠ prior mark flags when the editorial call departed from the model, so you can audit which one adds value."
         />
       </p>
     </div>

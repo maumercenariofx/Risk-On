@@ -1,21 +1,23 @@
 "use client";
 // components/BandEvidence.jsx
 // La evidencia de 5 años del índice: qué hizo el USD/MXN después de cada banda.
-// Cifras ESTÁTICAS del backtest 2021-07 → 2026-07 (~1,190 días hábiles),
-// reproducible con scripts/calibrate-scale-floor.mjs. El hallazgo clave es
+// Cifras ESTÁTICAS del backtest 2021-11 → 2026-07 (~1,180 días hábiles),
+// reproducible con scripts/research-posturas.mjs. El hallazgo clave es
 // CONTRARIAN: los extremos revierten — RISK-OFF ha sido históricamente zona de
 // rebote del peso, no de huida. Se muestra como estadística, jamás como promesa.
 import { useLang, T } from "./Lang";
 import { BANDS } from "../lib/riskScore";
 import { cardStyle, sectionLabel } from "../lib/chartHelpers";
 
-// Backtest 5y (2026-07-13): días por banda, retorno USD/MXN promedio a 5/10
-// días hábiles y % de ventanas de 5d en que el peso se apreció. Base: 57%.
+// Backtest 5y (actualizado 2026-07-30 con carry y curva HISTÓRICOS reales —
+// antes constantes; reproducible con scripts/research-posturas.mjs): días por
+// banda, retorno USD/MXN promedio a 5/10 días hábiles y % de ventanas de 5d en
+// que el peso se apreció. Base: 57%.
 const EVIDENCE = [
-  { key: "RISK-OFF",     n: 35,  fwd5: -0.86, fwd10: -1.69, hit: 80 },
-  { key: "DEFENSIVE",    n: 415, fwd5: -0.00, fwd10: -0.14, hit: 55 },
-  { key: "CONSTRUCTIVE", n: 708, fwd5: -0.07, fwd10: -0.04, hit: 57 },
-  { key: "RISK-ON",      n: 37,  fwd5: +0.19, fwd10: +0.33, hit: 51 },
+  { key: "RISK-OFF",     n: 38,  fwd5: -0.76, fwd10: -1.58, hit: 76 },
+  { key: "DEFENSIVE",    n: 462, fwd5: -0.04, fwd10: -0.15, hit: 55 },
+  { key: "CONSTRUCTIVE", n: 658, fwd5: -0.03, fwd10: -0.02, hit: 57 },
+  { key: "RISK-ON",      n: 22,  fwd5: +0.05, fwd10: +0.13, hit: 50 },
 ];
 const BASE_HIT = 57;
 
@@ -32,8 +34,8 @@ export default function BandEvidence() {
       </div>
       <p style={{ fontSize: 13, color: "#C0C0BC", lineHeight: 1.65, margin: "0 0 14px" }}>
         <T
-          es="Qué hizo el USD/MXN después de cada banda del índice, en ~1,190 días hábiles (jul 2021 → jul 2026). La lectura sorprende: los extremos son señales contrarias."
-          en="What USD/MXN did after each index band, across ~1,190 trading days (Jul 2021 → Jul 2026). The surprising read: the extremes are contrarian signals."
+          es="Qué hizo el USD/MXN después de cada banda del índice, en ~1,180 días hábiles (nov 2021 → jul 2026), con carry y curva históricos reales. La lectura sorprende: los extremos son señales contrarias."
+          en="What USD/MXN did after each index band, across ~1,180 trading days (Nov 2021 → Jul 2026), with real historical carry and curve. The surprising read: the extremes are contrarian signals."
         />
       </p>
 
@@ -79,8 +81,8 @@ export default function BandEvidence() {
 
       <p style={{ fontSize: 12, color: "#9CA3AF", lineHeight: 1.65, margin: "12px 0 0" }}>
         <T
-          es={`★ El dato que importa: tras un día en RISK-OFF, el peso se apreció en los 5 días siguientes el 80% de las veces (base histórica: ${BASE_HIT}%). El pánico extremo ha sido zona de rebote, no de huida. El índice describe el régimen de HOY (nowcast) — no es promesa de retornos ni recomendación de inversión. Verde = peso más fuerte (USD/MXN a la baja).`}
-          en={`★ The stat that matters: after a RISK-OFF day, the peso appreciated over the next 5 days 80% of the time (historical base: ${BASE_HIT}%). Extreme panic has been a rebound zone, not an exit. The index describes TODAY's regime (a nowcast) — it is not a promise of returns or investment advice. Green = stronger peso (USD/MXN falling).`}
+          es={`★ El dato que importa: tras un día en RISK-OFF, el peso se apreció en los 5 días siguientes el 76% de las veces (base histórica: ${BASE_HIT}%). El pánico extremo ha sido zona de rebote, no de huida. El índice describe el régimen de HOY (nowcast) — no es promesa de retornos ni recomendación de inversión. Verde = peso más fuerte (USD/MXN a la baja).`}
+          en={`★ The stat that matters: after a RISK-OFF day, the peso appreciated over the next 5 days 76% of the time (historical base: ${BASE_HIT}%). Extreme panic has been a rebound zone, not an exit. The index describes TODAY's regime (a nowcast) — it is not a promise of returns or investment advice. Green = stronger peso (USD/MXN falling).`}
         />
       </p>
     </div>
