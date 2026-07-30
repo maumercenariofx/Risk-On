@@ -16,7 +16,7 @@ export const revalidate = 3600;
 export const metadata = {
   title: "Suscríbete · El Pre-Market",
   description:
-    "El análisis pre-market de Mauricio Mercenario en tu correo cada mañana antes de la apertura: Índice Risk On, niveles de USD/MXN y una postura clara. Gratis, sin spam.",
+    "El análisis pre-market de Mauricio Mercenario en tu bandeja antes de las 7:00 CDMX, con datos de minutos: Índice Risk On, niveles de USD/MXN y una postura clara. Gratis, sin spam.",
   alternates: { canonical: "/suscribete" },
 };
 
@@ -54,8 +54,8 @@ export default function SuscribetePage() {
         </h1>
         <p className="mt-2 text-sm leading-relaxed text-muted">
           <T
-            es="Cada mañana hábil, antes de la apertura (~7:00 CDMX), un correo corto y directo: dónde amanece el riesgo global, qué niveles importan en USD/MXN y qué vigilar hoy. Escrito para decidir, no para llenar la bandeja."
-            en="Every weekday morning, before the open (~7:00 CDMX), one short and direct email: where global risk stands, which USD/MXN levels matter and what to watch today. Written to help you decide, not to fill your inbox."
+            es="Cada mañana hábil está en tu bandeja antes de las 7:00 (CDMX), con datos de minutos — no de anoche: dónde amanece el riesgo global, qué niveles importan en USD/MXN y qué vigilar hoy. Cuando te sientas con el café, el view ya te está esperando."
+            en="Every weekday morning it's in your inbox before 7:00 (CDMX), built on minutes-old data — not last night's: where global risk stands, which USD/MXN levels matter and what to watch today. By the time you sit down with your coffee, the view is already waiting."
           />
         </p>
       </div>

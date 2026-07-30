@@ -49,15 +49,15 @@ function welcomeEmail({ name, lang }) {
     : (en ? "Welcome!" : "¡Bienvenido!");
 
   const lead = en
-    ? "You're in. Starting tomorrow, every market morning before the open you'll get <strong>El Pre-Market</strong>: one short email with the day's Risk On score, the macro context behind the moves and what to watch — with a clear focus on the peso."
-    : "Ya estás dentro. A partir de mañana, cada mañana de mercado antes de la apertura recibirás <strong>El Pre-Market</strong>: un correo corto con el Risk On score del día, el contexto macro detrás de los movimientos y qué vigilar — con foco en el peso.";
+    ? "You're in. Starting tomorrow, every market morning <strong>El Pre-Market</strong> lands in your inbox <strong>before 7:00 (CDMX)</strong>, built on minutes-old data: the day's Risk On score, the macro context behind the moves and what to watch — with a clear focus on the peso."
+    : "Ya estás dentro. A partir de mañana, cada mañana de mercado <strong>El Pre-Market</strong> llega a tu bandeja <strong>antes de las 7:00 (CDMX)</strong>, con datos de minutos: el Risk On score del día, el contexto macro detrás de los movimientos y qué vigilar — con foco en el peso.";
 
   const bullets = en
     ? ["The Risk On index (0–100): risk-off, defensive, constructive or risk-on.",
-       "Live market data and what's moving it.",
+       "The exact USD/MXN spot at send time — minutes old, never last night's close.",
        "Direct, analytical read — the why behind the moves, no noise."]
     : ["El índice Risk On (0–100): risk-off, defensivo, constructivo o risk-on.",
-       "Datos de mercado en vivo y qué los está moviendo.",
+       "El spot exacto del USD/MXN al momento del envío — datos de minutos, nunca el cierre de anoche.",
        "Lectura directa y analítica — el porqué de los movimientos, sin ruido."];
 
   const noSpam = en
@@ -115,8 +115,8 @@ function welcomeEmail({ name, lang }) {
 
   const text = [
     hi, "",
-    (en ? "You're in. Starting tomorrow you'll get El Pre-Market every market morning before the open: the day's Risk On score, the macro context and what to watch — focused on the peso."
-        : "Ya estás dentro. A partir de mañana recibirás El Pre-Market cada mañana de mercado antes de la apertura: el Risk On score del día, el contexto macro y qué vigilar — con foco en el peso."),
+    (en ? "You're in. Starting tomorrow, El Pre-Market lands in your inbox before 7:00 (CDMX) every market morning, built on minutes-old data: the day's Risk On score, the macro context and what to watch — focused on the peso."
+        : "Ya estás dentro. A partir de mañana, El Pre-Market llega a tu bandeja antes de las 7:00 (CDMX) cada mañana de mercado, con datos de minutos: el Risk On score del día, el contexto macro y qué vigilar — con foco en el peso."),
     "",
     ...bullets.map((b) => `- ${b}`),
     "",
