@@ -100,8 +100,12 @@ async function handler(request) {
   let wk = null;
   try { wk = await gatherWeek(slug); } catch {}
 
-  // Destinatarios (misma lógica del diario, con ?only= para pruebas).
-  let recipients = await getSubscribers();
+  // Destinatarios (misma lógica del diario, con ?only= para pruebas). Si el
+  // Sheet no responde tras los reintentos, alerta y sale con el piso de respaldo.
+  let recipients = await getSubscribers({
+    onDegraded: (err) =>
+      alertAdmin(`Sheet de suscriptores inalcanzable (recap ${slug}) — envío degradado al piso de respaldo`, { slug, err }),
+  });
   if (only) {
     const wanted = only.split(",").map((s) => clean(s)).filter(Boolean);
     recipients = wanted.map((e) => recipients.find((s) => s.email === e) ?? { email: e });

@@ -744,7 +744,13 @@ async function handler(request) {
     const byEmail = new Map((await getSubscribers()).map((s) => [s.email, s]));
     recipients = wanted.map((e) => byEmail.get(e) ?? { email: e });
   } else {
-    recipients = await getSubscribers();
+    // Envío real: si el Sheet no responde tras los reintentos, se manda al piso
+    // de respaldo pero con ALERTA (antes degradaba en silencio y ~30 altas
+    // nuevas se quedaban sin correo sin dejar rastro).
+    recipients = await getSubscribers({
+      onDegraded: (err) =>
+        alertAdmin(`Sheet de suscriptores inalcanzable (${slug}) — envío degradado al piso de respaldo`, { slug, err }),
+    });
   }
 
   // Versión por idioma: la ES siempre; la EN solo si algún destinatario la pide.
