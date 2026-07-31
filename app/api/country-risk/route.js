@@ -29,7 +29,11 @@ const COUNTRIES = [
   { id: "kr", fx: "KRW=X", eq: "^KS11",     fallback: 42 },
   { id: "za", fx: "ZAR=X", eq: "EZA",       fallback: 55 },
   { id: "ar", fx: "ARS=X", eq: "^MERV",     fallback: 58 },
-  { id: "cl", fx: "CLP=X", eq: "^IPSA",     fallback: 44 },
+  // ^IPSA murió en Yahoo (1 cierre/mes desde jul-2026) → ETF ECH como za/co.
+  { id: "cl", fx: "CLP=X", eq: "ECH",       fallback: 44 },
+  // GXG está en liquidación (datos ralos, ~13 cierres/mes; ICOL y ^COLCAP no
+  // existen en Yahoo). Mientras siga cotizando aporta algo; cuando muera, el
+  // score de co degrada limpio a solo-FX gracias a la renormalización de pesos.
   { id: "co", fx: "COP=X", eq: "GXG",       fallback: 50 },
 ];
 
@@ -64,25 +68,37 @@ function realizedVol(arr) {
   return Math.sqrt(variance) * Math.sqrt(252) * 100;
 }
 
+// Promedio ponderado SOLO sobre los componentes disponibles. Antes un
+// componente faltante entraba como "?? 0" = mercado plano, lo que sumaba ~11
+// pts fantasma y diluía la señal real (Chile llevaba semanas así con ^IPSA
+// muerto). Renormalizar = mismo resultado cuando está todo, degradación
+// honesta cuando falta algo.
+function weighted(parts) {
+  const avail = parts.filter(([, v]) => v != null);
+  if (!avail.length) return null;
+  const w = avail.reduce((s, [a]) => s + a, 0);
+  return Math.round((avail.reduce((s, [a, v]) => s + a * v, 0) / w) * 100);
+}
+
 async function tensionFor(c) {
   if (c.id === "us") {
     const [vix, spx] = await Promise.all([closes(c.vix), closes(c.eq)]);
     const vixLast = vix[vix.length - 1];
     const spxChg = chgPct(spx, 20);
-    if (vixLast == null && spxChg == null) return c.fallback;
-    const t = 0.6 * norm(vixLast ?? 15, 12, 30) + 0.4 * norm(-(spxChg ?? 0), -6, 8);
-    return Math.round(t * 100);
+    return weighted([
+      [0.6, vixLast != null ? norm(vixLast, 12, 30) : null],
+      [0.4, spxChg != null ? norm(-spxChg, -6, 8) : null],
+    ]) ?? c.fallback;
   }
   const [fx, eq] = await Promise.all([closes(c.fx), closes(c.eq)]);
   const fxVol = realizedVol(fx);
   const fxDep = chgPct(fx, 20);   // USD/local 20d: + = divisa local más débil
   const eqChg = chgPct(eq, 20);   // bolsa 20d: − = tensión
-  if (fxVol == null && fxDep == null && eqChg == null) return c.fallback;
-  const t =
-    0.45 * norm(fxVol ?? 8, 4, 22) +
-    0.30 * norm(fxDep ?? 0, -3, 6) +
-    0.25 * norm(-(eqChg ?? 0), -6, 8);
-  return Math.round(t * 100);
+  return weighted([
+    [0.45, fxVol != null ? norm(fxVol, 4, 22) : null],
+    [0.30, fxDep != null ? norm(fxDep, -3, 6) : null],
+    [0.25, eqChg != null ? norm(-eqChg, -6, 8) : null],
+  ]) ?? c.fallback;
 }
 
 export async function GET() {
