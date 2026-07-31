@@ -71,13 +71,17 @@ export async function GET(request) {
 
     const ts     = result.timestamp ?? [];
     const closes = result.indicators?.quote?.[0]?.close ?? [];
+    // Fecha de sesión = local de la bolsa (gmtoffset), no UTC: las barras FX
+    // vienen estampadas en Europe/London (23:00 UTC) y sin el corrimiento toda
+    // la serie quedaba etiquetada un día antes (mismo fix que forwardReturns).
+    const off = result.meta?.gmtoffset ?? 0;
 
     const prices = [], labels = [], isoDates = [];
     for (let i = 0; i < ts.length; i++) {
       const c = closes[i];
       if (c == null || isNaN(c)) continue;
-      const d     = new Date(ts[i] * 1000);
-      const label = d.toLocaleDateString("es-MX", { day: "numeric", month: "short" });
+      const d     = new Date((ts[i] + off) * 1000);
+      const label = d.toLocaleDateString("es-MX", { day: "numeric", month: "short", timeZone: "UTC" });
       prices.push(Math.round(c * 10000) / 10000);
       labels.push(label);
       isoDates.push(d.toISOString().slice(0, 10)); // para alinear por fecha con los views

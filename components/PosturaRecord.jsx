@@ -82,12 +82,20 @@ export default function PosturaRecord({ data }) {
                       </span>
                     )}
                   </td>
-                  <td style={{ padding: "10px 10px 10px 0", textAlign: "right", fontFamily: "var(--font-mono)", fontSize: 12, fontVariantNumeric: "tabular-nums", color: r.mxn5 == null ? "#4A4A50" : r.mxn5 < 0 ? "#2FB89A" : "#CE5555", whiteSpace: "nowrap" }}>
-                    {r.mxn5 == null ? "—" : `${r.mxn5 > 0 ? "+" : ""}${r.mxn5.toFixed(2)}%`}
+                  <td style={{ padding: "10px 10px 10px 0", textAlign: "right", fontFamily: "var(--font-mono)", fontSize: 12, fontVariantNumeric: "tabular-nums", color: r.mxn5 == null ? "#9CA3AF" : r.mxn5 < 0 ? "#2FB89A" : "#CE5555", whiteSpace: "nowrap" }}>
+                    {r.mxn5 != null
+                      ? `${r.mxn5 > 0 ? "+" : ""}${r.mxn5.toFixed(2)}%`
+                      : r.sofar != null
+                      ? `${r.sofar > 0 ? "+" : ""}${r.sofar.toFixed(2)}%`
+                      : "—"}
                   </td>
                   <td style={{ padding: "10px 0 10px 0", whiteSpace: "nowrap", fontFamily: "var(--font-mono)", fontSize: 11 }}>
                     {r.verdict == null ? (
-                      <span style={{ color: "#4A4A50" }}>⏳ <T es="en curso" en="pending" /></span>
+                      <span style={{ color: "#4A4A50" }}>
+                        ⏳ {r.days > 0
+                          ? (lang === "en" ? `day ${r.days}/5` : `día ${r.days}/5`)
+                          : <T es="en curso" en="pending" />}
+                      </span>
                     ) : r.verdict ? (
                       <span style={{ color: "#2FB89A" }}>✓ <T es="acierto" en="hit" /></span>
                     ) : (
@@ -106,8 +114,8 @@ export default function PosturaRecord({ data }) {
 
       <p style={{ fontSize: 11.5, color: "#6A6A70", lineHeight: 1.6, margin: "12px 0 0" }}>
         <T
-          es="Regla de evaluación (fija): pro-peso acierta si el USD/MXN cerró más abajo 5 días hábiles después; pro-dólar si cerró más arriba; neutral si el movimiento fue ≤0.35% en cualquier dirección. Las posturas se publican desde el 10-jul-2026; la muestra crece un punto por día hábil. Verde = peso más fuerte. Desde el 31-jul-2026 cada view registra además el prior cuantitativo del día (backtest de 5 años) — la marca ≠ prior señala cuándo el criterio editorial se apartó del modelo, para auditar cuál suma."
-          en="Evaluation rule (fixed): pro-peso hits if USD/MXN closed lower 5 trading days later; pro-USD if it closed higher; neutral if the move was ≤0.35% either way. Stances are published since Jul 10, 2026; the sample grows one point per trading day. Green = stronger peso. Since Jul 31, 2026 each view also records the day's quant prior (5-year backtest) — the ≠ prior mark flags when the editorial call departed from the model, so you can audit which one adds value."
+          es="Regla de evaluación (fija): pro-peso acierta si el USD/MXN cerró más abajo 5 días hábiles después; pro-dólar si cerró más arriba; neutral si el movimiento fue ≤0.35% en cualquier dirección. Las filas en curso muestran su avance parcial (día X/5 y movimiento acumulado, en gris) — el veredicto siempre se toma al cierre del día 5. Las posturas se publican desde el 10-jul-2026. Verde = peso más fuerte. Desde el 31-jul-2026 cada view registra además el prior cuantitativo del día (backtest de 5 años) — la marca ≠ prior señala cuándo el criterio editorial se apartó del modelo, para auditar cuál suma."
+          en="Evaluation rule (fixed): pro-peso hits if USD/MXN closed lower 5 trading days later; pro-USD if it closed higher; neutral if the move was ≤0.35% either way. Pending rows show their partial progress (day X/5 and accumulated move, in gray) — the verdict is always taken at day 5's close. Stances are published since Jul 10, 2026. Green = stronger peso. Since Jul 31, 2026 each view also records the day's quant prior (5-year backtest) — the ≠ prior mark flags when the editorial call departed from the model, so you can audit which one adds value."
         />
       </p>
     </div>
