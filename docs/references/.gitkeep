@@ -1,0 +1,3 @@
+# Drop project-specific reference docs in this folder.
+# Wire each into CLAUDE.md's References section as a one-line, read-on-demand rule.
+# Examples: python_best_practices.md, agent-design-best-practices.md, BRAND_GUIDELINES.md

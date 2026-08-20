@@ -1,0 +1,3 @@
+# Design business/project-specific agents here, one file per agent.
+# Read on demand when working on a given agent - never bulk-read.
+# Examples: research-agent.md, reconciliation-agent.md, orchestrator.md
