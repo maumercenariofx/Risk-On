@@ -45,7 +45,7 @@ export default function WhatHappenedNext({ data }) {
                 <th key={i} style={{
                   textAlign: i === 0 ? "left" : "right", padding: "6px 8px 10px 0",
                   fontFamily: "var(--font-mono)", fontSize: 9.5, letterSpacing: 1.5,
-                  textTransform: "uppercase", color: "#4B5563", fontWeight: 400,
+                  textTransform: "uppercase", color: "#8A8A8E", fontWeight: 400,
                 }}>
                   {lang === "en" ? h.en : h.es}
                 </th>

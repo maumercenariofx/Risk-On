@@ -8,7 +8,7 @@ export default function NotFound() {
     <div className="flex min-h-[55vh] flex-col items-center justify-center py-16 text-center">
       <div
         className="font-mono"
-        style={{ fontSize: 11, letterSpacing: 4, color: "#4A4A50", textTransform: "uppercase" }}
+        style={{ fontSize: 11, letterSpacing: 4, color: "#8A8A8E", textTransform: "uppercase" }}
       >
         Error 404
       </div>

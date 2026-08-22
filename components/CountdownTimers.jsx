@@ -35,7 +35,7 @@ function Unit({ value, label }) {
       }}>
         {pad(value)}
       </div>
-      <div style={{ fontSize: 9.5, letterSpacing: 2, textTransform: "uppercase", color: "#3A3A3E", marginTop: 4 }}>
+      <div style={{ fontSize: 9.5, letterSpacing: 2, textTransform: "uppercase", color: "#8A8A8E", marginTop: 4 }}>
         {label}
       </div>
     </div>
@@ -45,7 +45,7 @@ function Unit({ value, label }) {
 function Colon() {
   return (
     <div style={{
-      fontFamily: "var(--font-mono)", fontSize: 16, color: "#2E2E32",
+      fontFamily: "var(--font-mono)", fontSize: 16, color: "#8A8A8E",
       alignSelf: "flex-start", marginTop: 4, flexShrink: 0,
     }}>:</div>
   );
@@ -62,15 +62,15 @@ function Countdown({ isoDate, label_es, label_en }) {
         borderRadius: 12, padding: "16px 18px", flex: "1 1 200px",
       }}
     >
-      <div style={{ fontSize: 9.5, letterSpacing: 2.5, textTransform: "uppercase", color: "#4A4A50", marginBottom: 14 }}>
+      <div style={{ fontSize: 9.5, letterSpacing: 2.5, textTransform: "uppercase", color: "#8A8A8E", marginBottom: 14 }}>
         <T es={label_es} en={label_en} />
       </div>
       {!isoDate ? (
-        <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "#3A3A3E", letterSpacing: 1 }}>
+        <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "#8A8A8E", letterSpacing: 1 }}>
           —
         </div>
       ) : r?.past ? (
-        <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "#3A3A3E", letterSpacing: 1 }}>
+        <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "#8A8A8E", letterSpacing: 1 }}>
           <T es="Reunión en curso o finalizada" en="Meeting ongoing or concluded" />
         </div>
       ) : (
@@ -100,7 +100,7 @@ export default function CountdownTimers() {
 
   return (
     <section className="reveal" style={{ animationDelay: "0.2s" }}>
-      <div style={{ fontSize: 10, letterSpacing: 3, textTransform: "uppercase", color: "#4A4A50", marginBottom: 12 }}>
+      <div style={{ fontSize: 10, letterSpacing: 3, textTransform: "uppercase", color: "#8A8A8E", marginBottom: 12 }}>
         &mdash; <T es="Próximas decisiones de política monetaria" en="Next monetary policy decisions" />
       </div>
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>

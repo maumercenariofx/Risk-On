@@ -81,7 +81,7 @@ export default function IntradaySpark() {
           fontFamily: "var(--font-mono)",
         }}
       >
-        <span style={{ fontSize: 9.5, letterSpacing: 1.5, color: "#4A4A50" }}>USD/MXN</span>
+        <span style={{ fontSize: 9.5, letterSpacing: 1.5, color: "#8A8A8E" }}>USD/MXN</span>
         <span style={{ fontSize: 10.5, fontWeight: 700, color: "#B9BDC4" }}>
           {last.toFixed(4)}{" "}
           <span style={{ color: col, fontWeight: 600 }}>

@@ -205,6 +205,15 @@ export default function RiskGauge({ post, prevScore = null, scoreHistory = null,
 
   useEffect(() => {
     if (!result) return;
+    // El número titular del producto animaba también para quien pidió que nada
+    // animara: este setInterval no tenía guarda, mientras lib/useCountUp.js —que
+    // sí la tiene— existía a un import de distancia (auditoría 2026-08-21).
+    // No se migra a useCountUp porque `display` alimenta además la aguja del
+    // medidor; aquí basta con saltar al valor final.
+    if (typeof matchMedia !== "undefined" && matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setDisplay(score);
+      return;
+    }
     let n = 0;
     const iv = setInterval(() => {
       n += 2;
@@ -329,14 +338,14 @@ export default function RiskGauge({ post, prevScore = null, scoreHistory = null,
           <h1 style={{ margin: 0, fontSize: "inherit", fontWeight: "inherit", lineHeight: "inherit", letterSpacing: "inherit" }}>
             <span className="hero-line" style={{ display: "block" }}><span style={{ color: "#F5F5F2" }}>WHAT'S</span></span>
             <span className="hero-line" style={{ display: "block" }}><span style={{ color: "#F5F5F2" }}>TODAY'S</span></span>
-            <span className="hero-line" style={{ display: "block" }}><span style={{ color: "#2E2E34" }}>RISK?</span></span>
+            <span className="hero-line" style={{ display: "block" }}><span style={{ color: "#8A8A8E" }}>RISK?</span></span>
           </h1>
           <div className="hero-late" style={{
             fontFamily: "var(--font-mono)",
             fontSize: "clamp(8px, 0.85vw, 11px)",
             fontWeight: 400,
             letterSpacing: 2,
-            color: "#3A3A40",
+            color: "#8A8A8E",
             marginTop: 14,
             lineHeight: 1,
           }}>
@@ -391,7 +400,7 @@ export default function RiskGauge({ post, prevScore = null, scoreHistory = null,
                   </button>
                 </div>
               )}
-              <div style={{ fontSize: 9.5, letterSpacing: 2, textTransform: "uppercase", color: "#4A4A50", pointerEvents: "none" }}>
+              <div style={{ fontSize: 9.5, letterSpacing: 2, textTransform: "uppercase", color: "#8A8A8E", pointerEvents: "none" }}>
                 <T es="Países en alerta" en="Countries on alert" />
               </div>
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "flex-end", pointerEvents: "auto" }}>
@@ -447,7 +456,7 @@ export default function RiskGauge({ post, prevScore = null, scoreHistory = null,
               pointerEvents: "none",
             }}>
               <div className="score-blink" style={{ color: accentColor }}>{display}.</div>
-              <div style={{ color: "#2E2E34" }}>
+              <div style={{ color: "#8A8A8E" }}>
                 <T es={label.es} en={label.en} />
               </div>
               <div style={{
@@ -481,7 +490,7 @@ export default function RiskGauge({ post, prevScore = null, scoreHistory = null,
               fontSize: 9.5,
               letterSpacing: 2,
               textTransform: "uppercase",
-              color: "#2E2E32",
+              color: "#8A8A8E",
             }}>
               {dataFreshness(data.asOf, lang)}
             </div>
@@ -491,7 +500,7 @@ export default function RiskGauge({ post, prevScore = null, scoreHistory = null,
 
         {/* Hint de scroll: el hero llena la pantalla, esto invita a bajar */}
         <div style={{ position: "absolute", bottom: 10, left: 0, right: 0, display: "flex", justifyContent: "center", pointerEvents: "none" }}>
-          <span className="scroll-hint" style={{ color: "#3A3A40", fontSize: 13, lineHeight: 1 }}>▼</span>
+          <span className="scroll-hint" style={{ color: "#8A8A8E", fontSize: 13, lineHeight: 1 }}>▼</span>
         </div>
       </div>
 
@@ -515,7 +524,7 @@ export default function RiskGauge({ post, prevScore = null, scoreHistory = null,
           </div>
           <div style={{
             display: "flex", justifyContent: "space-between", marginTop: 6,
-            fontFamily: "var(--font-mono)", fontSize: 9.5, letterSpacing: 1, color: "#5A5A62",
+            fontFamily: "var(--font-mono)", fontSize: 9.5, letterSpacing: 1, color: "#8A8A8E",
           }}>
             <span><T es="0 · Pánico" en="0 · Panic" /></span>
             <span style={{ color: accentColor, fontWeight: 600 }}>
@@ -543,7 +552,7 @@ export default function RiskGauge({ post, prevScore = null, scoreHistory = null,
                     borderRadius: 20, padding: "4px 11px",
                   }}>
                     {up ? "▲" : "▼"} {up ? "+" : ""}{delta}{" "}
-                    <span style={{ color: "#5A5A62" }}>
+                    <span style={{ color: "#8A8A8E" }}>
                       <T es="vs ayer" en="vs yesterday" />
                       {crossed ? ` · ${prevBand.key} → ${label.key}` : ` (${prevScore})`}
                     </span>
@@ -553,7 +562,7 @@ export default function RiskGauge({ post, prevScore = null, scoreHistory = null,
               {scoreHistory && scoreHistory.length >= 5 && (
                 <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <ScoreSparkline history={scoreHistory} color={accentColor} />
-                  <span style={{ fontFamily: "var(--font-mono)", fontSize: 9.5, letterSpacing: 1.5, color: "#4A4A50" }}>
+                  <span style={{ fontFamily: "var(--font-mono)", fontSize: 9.5, letterSpacing: 1.5, color: "#8A8A8E" }}>
                     30D
                   </span>
                 </span>
@@ -571,8 +580,13 @@ export default function RiskGauge({ post, prevScore = null, scoreHistory = null,
           (localStorage riskon-sub) el renglón "Suscríbete" no se muestra. */}
       {heroGone && result && (
         <a
-          href="#subscribe"
+          href="/suscribete"
           onClick={(e) => {
+            // Solo interceptamos si el form está en esta pantalla. Antes el href
+            // era "#subscribe" con preventDefault incondicional: en la landing
+            // no existe ese ancla (SubscribeForm solo se monta en /suscribete),
+            // así que el CTA no hacía nada (auditoría 2026-08-21).
+            if (!document.getElementById("subscribe")) return;
             e.preventDefault();
             const go = () => document.getElementById("subscribe")?.scrollIntoView({ behavior: "smooth", block: "start" });
             go(); setTimeout(go, 300);
@@ -605,7 +619,7 @@ export default function RiskGauge({ post, prevScore = null, scoreHistory = null,
                 {display}
               </div>
               <div style={{ lineHeight: 1.5 }}>
-                <div style={{ fontSize: 9.5, letterSpacing: 2, color: "#3A3A40", textTransform: "uppercase", fontFamily: "var(--font-mono)" }}>
+                <div style={{ fontSize: 9.5, letterSpacing: 2, color: "#8A8A8E", textTransform: "uppercase", fontFamily: "var(--font-mono)" }}>
                   RISK ON
                 </div>
                 <div style={{ fontSize: 9.5, letterSpacing: 1.5, color: accentColor, textTransform: "uppercase", fontFamily: "var(--font-mono)" }}>
@@ -648,12 +662,12 @@ export default function RiskGauge({ post, prevScore = null, scoreHistory = null,
             }}
           >
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-              <div style={{ fontSize: 9.5, letterSpacing: 1.5, textTransform: "uppercase", color: "#4A4A50" }}>
+              <div style={{ fontSize: 9.5, letterSpacing: 1.5, textTransform: "uppercase", color: "#8A8A8E" }}>
                 <T es={`Noticias · ${c?.name_es ?? ""} · últimas 48h`} en={`News · ${c?.name_en ?? ""} · last 48h`} />
               </div>
               <button
                 onClick={() => setNewsCountry(null)}
-                style={{ background: "none", border: "none", cursor: "pointer", color: "#4A4A50", fontSize: 12, padding: 0 }}
+                style={{ background: "none", border: "none", cursor: "pointer", color: "#8A8A8E", fontSize: 12, padding: 0 }}
                 aria-label="close"
               >
                 ✕
@@ -688,14 +702,14 @@ export default function RiskGauge({ post, prevScore = null, scoreHistory = null,
                     }}
                   >
                     <span style={{
-                      fontFamily: "var(--font-mono)", fontSize: 10, color: "#5A5A62",
+                      fontFamily: "var(--font-mono)", fontSize: 10, color: "#8A8A8E",
                       flexShrink: 0, minWidth: 28,
                     }}>
                       {newsAge(n.pubDate, lang)}
                     </span>
                     <span style={{ flex: 1 }}>
                       {n.title}
-                      {n.source && <span style={{ color: "#5A5A62" }}> — {n.source}</span>}
+                      {n.source && <span style={{ color: "#8A8A8E" }}> — {n.source}</span>}
                     </span>
                   </a>
                 ))}
@@ -731,7 +745,7 @@ export default function RiskGauge({ post, prevScore = null, scoreHistory = null,
                     color: "#F5F5F2", transition: "border-color .2s",
                   }}
                 >
-                  <div style={{ fontSize: 10, color: "#4A4A50", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 5 }}>
+                  <div style={{ fontSize: 10, color: "#8A8A8E", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 5 }}>
                     {s.label}
                     {s.sub && (
                       <span style={{ opacity: 0.65 }}>
@@ -802,7 +816,7 @@ export default function RiskGauge({ post, prevScore = null, scoreHistory = null,
                       <div style={{ height: "100%", width: `${s.w * 4}%`, background: "#3A3A44", borderRadius: 2 }} />
                     </div>
                     <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "#8A8A8E", width: 30, textAlign: "right", flexShrink: 0 }}>{s.w}%</div>
-                    <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "#5A5A62", width: 78, textAlign: "right", flexShrink: 0 }}>{s.range}</div>
+                    <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "#8A8A8E", width: 78, textAlign: "right", flexShrink: 0 }}>{s.range}</div>
                   </div>
                 ))}
               </div>

@@ -18,7 +18,7 @@ export default function AlertasPage() {
             fontFamily: "var(--font-mono)",
             fontSize: 9.5,
             letterSpacing: 2,
-            color: "#4A4A50",
+            color: "#8A8A8E",
             textTransform: "uppercase",
             marginBottom: 10,
           }}

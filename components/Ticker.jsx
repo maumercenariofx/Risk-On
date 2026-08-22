@@ -63,9 +63,25 @@ export default function Ticker() {
   }, []);
 
   const arrow = (dir) => (dir === 1 ? "▲" : dir === 0 ? "▼" : "·");
-  // Tonos con contraste AA sobre negro (los de marca #0F8A5F/#A32D2D dan
-  // 4.5/2.8:1 y esto es texto de 10px — auditoría a11y 2026-07-13).
-  const color = (dir) => (dir === 1 ? "#14A276" : dir === 0 ? "#CE5555" : "#8A8A8E");
+  // Tonos con contraste AA sobre negro (los de marca #0F8A5F/#A32D2D daban
+  // 4.5/2.8:1 y esto es texto de 10px — auditoría a11y 2026-07-13). Desde
+  // 2026-08-21 los tokens `riskon`/`riskoff` de tailwind.config.js ya valen
+  // exactamente esto, así que este parche local dejó de ser un parche.
+  //
+  // CONVENCIÓN DIRECCIONAL: en los pares del PESO el color es relativo al peso,
+  // no al par — USD/MXN a la baja = peso más fuerte = verde. Es lo que ya hacen
+  // IntradaySpark, PosturaRecord y BandEvidence ("Verde = peso más fuerte"), y
+  // el ticker era el único que decía lo contrario: mostraba el mismo movimiento
+  // en verde a centímetros del spark que lo pintaba en rojo (auditoría
+  // 2026-08-21). Para todo lo demás (índices, acciones, cripto) arriba = verde,
+  // que es la convención universal.
+  const PESO_PAIRS = new Set(["USD/MXN", "EUR/MXN", "CHF/MXN"]);
+  const color = (dir, name) => {
+    if (dir === 2) return "#8A8A8E";
+    const up = dir === 1;
+    const good = PESO_PAIRS.has(name) ? !up : up;
+    return good ? "#14A276" : "#CE5555";
+  };
 
   const row = (key) =>
     items.map((t, i) => {
@@ -73,7 +89,7 @@ export default function Ticker() {
         <>
           <span style={{ color: "#8A8A8E", letterSpacing: 1 }}>{t[0]}</span>
           <span style={{ color: "#F5F5F2", fontWeight: 500 }}>{t[1]}</span>
-          <span style={{ color: color(t[2]), fontSize: 10 }}>{arrow(t[2])} {t[3]}</span>
+          <span style={{ color: color(t[2], t[0]), fontSize: 10 }}>{arrow(t[2])} {t[3]}</span>
         </>
       );
       const style = {

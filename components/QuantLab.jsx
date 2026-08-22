@@ -143,7 +143,22 @@ export default function QuantLab() {
         setFormIdx(idx);
       };
 
+      // Dos guardas que RiskSphere ya tenía y aquí faltaban (auditoría 2026-08-21):
+      // el bucle corría aunque el bloque estuviera fuera de pantalla —cuesta
+      // frames a toda la página de /learn— y no respetaba reduced-motion.
+      const reducedMotion =
+        typeof matchMedia !== "undefined" &&
+        matchMedia("(prefers-reduced-motion: reduce)").matches;
+      let visible = true;
+
       function animate(ts = 0) {
+        if (!visible) { animId = 0; return; }
+        // Escena armada + reduced-motion → último render y se corta el bucle.
+        if (reducedMotion && morphT >= 1) {
+          animId = 0;
+          renderer.render(scene, camera);
+          return;
+        }
         animId = requestAnimationFrame(animate);
         if (ts - lastFrame < 1000 / 60) return;
         const dt = Math.min((ts - lastFrame) / 1000, 0.05);
@@ -185,6 +200,16 @@ export default function QuantLab() {
       }
       animate();
 
+      // Mismo patrón que RiskSphere.jsx: fuera del viewport se detiene el rAF.
+      const vio = new IntersectionObserver(([entry]) => {
+        if (entry.isIntersecting) {
+          if (!visible) { visible = true; lastFrame = 0; if (!animId) animate(); }
+        } else {
+          visible = false;
+        }
+      }, { threshold: 0.02 });
+      vio.observe(container);
+
       const onResize = () => {
         camera.aspect = container.clientWidth / container.clientHeight;
         camera.updateProjectionMatrix();
@@ -195,6 +220,7 @@ export default function QuantLab() {
 
       cleanup = () => {
         cancelAnimationFrame(animId);
+        vio.disconnect();
         window.removeEventListener("resize", onResize);
         geometry.dispose(); wireGeom.dispose();
         dotTex.dispose(); geoTex.dispose();
@@ -243,7 +269,7 @@ export default function QuantLab() {
         style={{ marginTop: 10, background: "rgba(11,11,12,0.92)", border: "1px solid #1E1E20", borderRadius: 12, padding: "14px 16px" }}
       >
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8, marginBottom: 8 }}>
-          <div style={{ fontSize: 9.5, letterSpacing: 1.5, textTransform: "uppercase", color: "#4A4A50" }}>
+          <div style={{ fontSize: 9.5, letterSpacing: 1.5, textTransform: "uppercase", color: "#8A8A8E" }}>
             <T es={form.label_es} en={form.label_en} />
           </div>
           <div style={{

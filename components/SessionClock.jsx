@@ -99,7 +99,7 @@ export default function SessionClock() {
           );
         })}
       </div>
-      <div style={{ fontSize: 9.5, letterSpacing: 2, color: "#3A3A40", textTransform: "uppercase" }}>
+      <div style={{ fontSize: 9.5, letterSpacing: 2, color: "#8A8A8E", textTransform: "uppercase" }}>
         {next.id} {verb} {t}
       </div>
     </div>

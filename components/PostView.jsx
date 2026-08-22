@@ -51,7 +51,7 @@ function ShareBar({ post, lang }) {
 
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 10, paddingTop: 4 }}>
-      <span style={{ fontSize: 9.5, letterSpacing: 2, textTransform: "uppercase", color: "#4A4A50" }}>
+      <span style={{ fontSize: 9.5, letterSpacing: 2, textTransform: "uppercase", color: "#8A8A8E" }}>
         <T es="Compartir" en="Share" />
       </span>
       <a
@@ -99,7 +99,7 @@ function WhatHappenedCard({ fwd, lang }) {
     v == null ? "#5A5A62" : (invert ? v < 0 : v > 0) ? "#3FA77E" : "#C0392B";
   const cell = (label, v, invert) => (
     <div>
-      <div style={{ fontFamily: "var(--font-mono)", fontSize: 9.5, letterSpacing: 1.2, textTransform: "uppercase", color: "#4A4A50", marginBottom: 4 }}>
+      <div style={{ fontFamily: "var(--font-mono)", fontSize: 9.5, letterSpacing: 1.2, textTransform: "uppercase", color: "#8A8A8E", marginBottom: 4 }}>
         {label}
       </div>
       <div style={{ fontFamily: "var(--font-mono)", fontSize: 15, fontWeight: 600, fontVariantNumeric: "tabular-nums", color: col(v, invert) }}>
@@ -118,7 +118,7 @@ function WhatHappenedCard({ fwd, lang }) {
         {cell("S&P +5d", fwd.spx5, false)}
         {cell("S&P +10d", fwd.spx10, false)}
       </div>
-      <p style={{ fontSize: 11, color: "#5A5A62", lineHeight: 1.6, margin: "10px 0 0 0" }}>
+      <p style={{ fontSize: 11, color: "#8A8A8E", lineHeight: 1.6, margin: "10px 0 0 0" }}>
         <T
           es="Retorno del mercado en los días hábiles posteriores a la publicación. En USD/MXN, negativo = el peso se apreció. Evaluación automática — no es recomendación."
           en="Market return over the trading days after publication. For USD/MXN, negative = the peso appreciated. Automatic evaluation — not investment advice."

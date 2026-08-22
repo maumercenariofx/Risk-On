@@ -125,7 +125,7 @@ export default function LearnPage() {
         </p>
       </div>
       <div className="reveal" style={{ animationDelay: "0.05s" }}>
-        <div style={{ fontSize: 10, letterSpacing: 3, textTransform: "uppercase", color: "#4A4A50", marginBottom: 12 }}>
+        <div style={{ fontSize: 10, letterSpacing: 3, textTransform: "uppercase", color: "#8A8A8E", marginBottom: 12 }}>
           &mdash; <T es="Laboratorio cuant" en="Quant lab" />
         </div>
         <QuantLab />
@@ -133,7 +133,7 @@ export default function LearnPage() {
 
       {CATEGORIES.map((cat) => (
         <div key={cat.en} className="space-y-3">
-          <div style={{ fontSize: 10, letterSpacing: 3, textTransform: "uppercase", color: "#4A4A50" }}>
+          <div style={{ fontSize: 10, letterSpacing: 3, textTransform: "uppercase", color: "#8A8A8E" }}>
             &mdash; <T es={cat.es} en={cat.en} />
           </div>
           <div className="grid gap-3 sm:grid-cols-2">

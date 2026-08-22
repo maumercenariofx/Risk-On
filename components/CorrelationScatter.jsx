@@ -22,7 +22,7 @@ function corrStrength(r) {
   if (abs >= 0.85) return { es: "Muy alta", en: "Very high", color: GREEN };
   if (abs >= 0.65) return { es: "Alta",     en: "High",      color: "#FACC15" };
   if (abs >= 0.40) return { es: "Moderada", en: "Moderate",  color: "#FF8040" };
-  return               { es: "Baja",     en: "Low",       color: "#6B7280" };
+  return               { es: "Baja",     en: "Low",       color: "#8A8A8E" };
 }
 
 export default function CorrelationScatter() {
@@ -105,12 +105,12 @@ export default function CorrelationScatter() {
           scales: {
             x: {
               ...xScaleDefaults(8),
-              title: { display: true, text: "VIX", color: "#4B5563", font: { size: 10 } },
+              title: { display: true, text: "VIX", color: "#8A8A8E", font: { size: 10 } },
             },
             y: {
               ...yScaleDefaults((v) => v.toFixed(2)),
               position: "right",
-              title: { display: true, text: "USD/MXN", color: "#4B5563", font: { size: 10 } },
+              title: { display: true, text: "USD/MXN", color: "#8A8A8E", font: { size: 10 } },
             },
           },
         },
@@ -153,7 +153,7 @@ export default function CorrelationScatter() {
         <svg width="22" height="8">
           <line x1="0" y1="4" x2="22" y2="4" stroke={GREEN} strokeWidth="2" style={{ filter: `drop-shadow(0 0 3px ${GREEN})` }} />
         </svg>
-        <span style={{ fontSize: 9.5, color: "#4B5563", letterSpacing: 1, fontFamily: "var(--font-mono)" }}>
+        <span style={{ fontSize: 9.5, color: "#8A8A8E", letterSpacing: 1, fontFamily: "var(--font-mono)" }}>
           <T es="Regresión lineal" en="Linear trend" />
         </span>
       </div>

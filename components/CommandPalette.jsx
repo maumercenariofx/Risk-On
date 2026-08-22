@@ -223,7 +223,7 @@ export default function CommandPalette() {
         />
         <div ref={listRef} style={{ maxHeight: "48vh", overflowY: "auto", padding: "6px 0 8px" }}>
           {flat.length === 0 && (
-            <div style={{ padding: "18px 18px 14px", fontSize: 13, color: "#5A5A62" }}>
+            <div style={{ padding: "18px 18px 14px", fontSize: 13, color: "#8A8A8E" }}>
               {lang === "en" ? "Nothing matches — try an asset or a page." : "Nada coincide — prueba un activo o una página."}
             </div>
           )}
@@ -232,7 +232,7 @@ export default function CommandPalette() {
               <div style={{
                 padding: "10px 18px 5px",
                 fontFamily: "var(--font-mono)", fontSize: 9.5,
-                letterSpacing: 2, textTransform: "uppercase", color: "#4A4A50",
+                letterSpacing: 2, textTransform: "uppercase", color: "#8A8A8E",
               }}>
                 {g.title}
               </div>
@@ -260,7 +260,7 @@ export default function CommandPalette() {
                       {item.label}
                     </span>
                     {item.href && (
-                      <span style={{ fontFamily: "var(--font-mono)", fontSize: 9.5, color: "#4A4A50", flexShrink: 0 }}>
+                      <span style={{ fontFamily: "var(--font-mono)", fontSize: 9.5, color: "#8A8A8E", flexShrink: 0 }}>
                         {item.href.split("?")[0]}
                       </span>
                     )}
@@ -273,7 +273,7 @@ export default function CommandPalette() {
         <div style={{
           display: "flex", gap: 14, padding: "9px 18px",
           borderTop: "1px solid rgba(255,255,255,0.08)",
-          fontFamily: "var(--font-mono)", fontSize: 9.5, letterSpacing: 1, color: "#4A4A50",
+          fontFamily: "var(--font-mono)", fontSize: 9.5, letterSpacing: 1, color: "#8A8A8E",
         }}>
           <span>↑↓ {lang === "en" ? "navigate" : "navegar"}</span>
           <span>↵ {lang === "en" ? "open" : "abrir"}</span>

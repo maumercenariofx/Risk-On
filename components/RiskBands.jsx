@@ -39,7 +39,7 @@ export default function RiskBands() {
         border: "1px solid #1E1E20", borderRadius: 12, padding: "18px 18px",
       }}
     >
-      <div style={{ fontSize: 10, letterSpacing: 3, textTransform: "uppercase", color: "#4A4A50", marginBottom: 6 }}>
+      <div style={{ fontSize: 10, letterSpacing: 3, textTransform: "uppercase", color: "#8A8A8E", marginBottom: 6 }}>
         &mdash; <T es="Qué significa el índice" en="What the index means" />
       </div>
       <p style={{ fontSize: 13, lineHeight: 1.7, color: "#8A8A8E", marginBottom: 16 }}>
@@ -79,7 +79,7 @@ export default function RiskBands() {
         })}
       </div>
 
-      <p style={{ fontSize: 11, lineHeight: 1.6, color: "#5A5A62", marginTop: 16, fontStyle: "italic" }}>
+      <p style={{ fontSize: 11, lineHeight: 1.6, color: "#8A8A8E", marginTop: 16, fontStyle: "italic" }}>
         <T
           es="El índice Risk On es un indicador propietario, diseñado y mantenido por Mauricio Mercenario. Es una herramienta de lectura de mercado, no una recomendación de inversión."
           en="The Risk On index is a proprietary indicator, designed and maintained by Mauricio Mercenario. It is a market-reading tool, not investment advice."

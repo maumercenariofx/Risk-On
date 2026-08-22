@@ -5,7 +5,7 @@ import { track } from "@vercel/analytics";
 import { useLang, T } from "./Lang";
 
 const FIELD_CLS =
-  "min-w-0 flex-1 rounded-md border border-edge bg-transparent px-3 py-2 text-sm text-bone outline-none placeholder:text-muted focus:border-bone/50";
+  "min-w-0 flex-1 rounded-md border border-line bg-transparent px-3 py-2 text-sm text-bone outline-none placeholder:text-muted focus:border-bone/50";
 
 export default function SubscribeForm() {
   const { lang } = useLang();
@@ -174,7 +174,7 @@ export default function SubscribeForm() {
                 value={apellidos}
                 onChange={(e) => setApellidos(e.target.value)}
                 placeholder={lang === "en" ? "Last name(s)" : "Apellidos"}
-                className="w-full rounded-md border border-edge bg-transparent px-3 py-2 text-sm text-bone outline-none placeholder:text-muted focus:border-bone/50"
+                className="w-full rounded-md border border-line bg-transparent px-3 py-2 text-sm text-bone outline-none placeholder:text-muted focus:border-bone/50"
               />
               <p className="pt-1 text-xs text-muted">
                 <T es="WhatsApp (opcional): estamos preparando alertas intradía de niveles clave — deja tu número y estarás en la lista de acceso anticipado."
@@ -186,7 +186,7 @@ export default function SubscribeForm() {
                 onChange={(e) => setWhatsapp(e.target.value)}
                 placeholder={lang === "en" ? "+52 55 1234 5678" : "+52 55 1234 5678"}
                 autoComplete="tel"
-                className="w-full rounded-md border border-edge bg-transparent px-3 py-2 text-sm text-bone outline-none placeholder:text-muted focus:border-bone/50"
+                className="w-full rounded-md border border-line bg-transparent px-3 py-2 text-sm text-bone outline-none placeholder:text-muted focus:border-bone/50"
               />
             </div>
           )}

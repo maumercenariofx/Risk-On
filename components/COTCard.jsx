@@ -27,7 +27,7 @@ function crowdLabel(pct) {
     color: "#FF8040", tag_es: "CORTO ELEVADO", tag_en: "ELEVATED SHORT" };
   return { es: "Posicionamiento neutral — no hay señal de exceso",
     en: "Neutral positioning — no excess signal in either direction",
-    color: "#6B7280", tag_es: "NEUTRAL", tag_en: "NEUTRAL" };
+    color: "#8A8A8E", tag_es: "NEUTRAL", tag_en: "NEUTRAL" };
 }
 
 export default function COTCard() {
@@ -80,13 +80,13 @@ export default function COTCard() {
           }} />
         </div>
         <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6 }}>
-          <span style={{ fontSize: 9.5, color: "#374151", fontFamily: "var(--font-mono)", letterSpacing: 1 }}>
+          <span style={{ fontSize: 9.5, color: "#8A8A8E", fontFamily: "var(--font-mono)", letterSpacing: 1 }}>
             <T es="CORTO EX." en="EX. SHORT" />
           </span>
           <span style={{ fontSize: 9.5, letterSpacing: 1.5, fontFamily: "var(--font-mono)", color: crowd.color, fontVariantNumeric: "tabular-nums" }}>
             {lang === "en" ? crowd.tag_en : crowd.tag_es} · {pct}%
           </span>
-          <span style={{ fontSize: 9.5, color: "#374151", fontFamily: "var(--font-mono)", letterSpacing: 1 }}>
+          <span style={{ fontSize: 9.5, color: "#8A8A8E", fontFamily: "var(--font-mono)", letterSpacing: 1 }}>
             <T es="LARGO EX." en="EX. LONG" />
           </span>
         </div>
@@ -103,7 +103,7 @@ export default function COTCard() {
         )}
       </p>
 
-      <div style={{ fontSize: 9.5, color: "#374151", marginTop: 8, fontFamily: "var(--font-mono)" }}>
+      <div style={{ fontSize: 9.5, color: "#8A8A8E", marginTop: 8, fontFamily: "var(--font-mono)" }}>
         <T es="Reporte CFTC" en="CFTC report" />: {data.date}
       </div>
     </div>

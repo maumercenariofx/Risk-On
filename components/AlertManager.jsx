@@ -85,7 +85,7 @@ export default function AlertManager() {
   if (!creds) {
     return (
       <div className="card-glass rounded-xl border border-edge p-6">
-        <div style={{ ...MONO, fontSize: 9.5, letterSpacing: 2, color: "#4A4A50", textTransform: "uppercase", marginBottom: 10 }}>
+        <div style={{ ...MONO, fontSize: 9.5, letterSpacing: 2, color: "#8A8A8E", textTransform: "uppercase", marginBottom: 10 }}>
           <T es="Acceso Pro" en="Pro access" />
         </div>
         <p className="mb-4 text-sm text-muted">
@@ -106,7 +106,7 @@ export default function AlertManager() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder={label("tu@correo.com", "you@email.com")}
-              className="min-w-[220px] flex-1 rounded-md border border-edge bg-black px-3 py-2 text-sm text-bone outline-none focus:border-bone/40"
+              className="min-w-[220px] flex-1 rounded-md border border-line bg-black px-3 py-2 text-sm text-bone outline-none focus:border-bone/40"
             />
             <button
               disabled={busy}
@@ -148,7 +148,7 @@ export default function AlertManager() {
 
       {/* Tendencia: siempre activa en Pro */}
       <div className="card-glass rounded-xl border border-edge p-5">
-        <div style={{ ...MONO, fontSize: 9.5, letterSpacing: 2, color: "#4A4A50", textTransform: "uppercase", marginBottom: 8 }}>
+        <div style={{ ...MONO, fontSize: 9.5, letterSpacing: 2, color: "#8A8A8E", textTransform: "uppercase", marginBottom: 8 }}>
           <T es="Cambios de tendencia" en="Trend changes" />
         </div>
         <p className="text-sm text-muted">
@@ -162,7 +162,7 @@ export default function AlertManager() {
 
       {/* Niveles de TC */}
       <div className="card-glass rounded-xl border border-edge p-5">
-        <div style={{ ...MONO, fontSize: 9.5, letterSpacing: 2, color: "#4A4A50", textTransform: "uppercase", marginBottom: 10 }}>
+        <div style={{ ...MONO, fontSize: 9.5, letterSpacing: 2, color: "#8A8A8E", textTransform: "uppercase", marginBottom: 10 }}>
           <T es="Tus niveles de USD/MXN" en="Your USD/MXN levels" />
         </div>
 
@@ -182,7 +182,7 @@ export default function AlertManager() {
             value={level}
             onChange={(e) => setLevel(e.target.value)}
             placeholder="17.6500"
-            className="w-32 rounded-md border border-edge bg-black px-3 py-2 text-sm text-bone outline-none focus:border-bone/40"
+            className="w-32 rounded-md border border-line bg-black px-3 py-2 text-sm text-bone outline-none focus:border-bone/40"
             style={MONO}
           />
           <select
@@ -214,7 +214,7 @@ export default function AlertManager() {
           >
             <span style={{ ...MONO, fontSize: 13, color: a.status === "active" ? "#F5F5F2" : "#5A5A62" }}>
               {Number(a.level).toFixed(4)}{" "}
-              <span style={{ fontSize: 10.5, color: "#5A5A62" }}>
+              <span style={{ fontSize: 10.5, color: "#8A8A8E" }}>
                 {a.direction === "above" ? "▲ " + label("al alza", "upside") : "▼ " + label("a la baja", "downside")}
                 {a.status === "fired" && ` · ${label("DISPARADA", "FIRED")} ${String(a.fired_at || "").slice(0, 16)}`}
               </span>
@@ -242,7 +242,7 @@ export default function AlertManager() {
 
       {/* WhatsApp */}
       <div className="card-glass rounded-xl border border-edge p-5">
-        <div style={{ ...MONO, fontSize: 9.5, letterSpacing: 2, color: "#4A4A50", textTransform: "uppercase", marginBottom: 8 }}>
+        <div style={{ ...MONO, fontSize: 9.5, letterSpacing: 2, color: "#8A8A8E", textTransform: "uppercase", marginBottom: 8 }}>
           WhatsApp
         </div>
         <p className="mb-3 text-sm text-muted">
@@ -263,7 +263,7 @@ export default function AlertManager() {
             value={wa}
             onChange={(e) => setWa(e.target.value)}
             placeholder="+5215512345678"
-            className="w-52 rounded-md border border-edge bg-black px-3 py-2 text-sm text-bone outline-none focus:border-bone/40"
+            className="w-52 rounded-md border border-line bg-black px-3 py-2 text-sm text-bone outline-none focus:border-bone/40"
             style={MONO}
           />
           <button

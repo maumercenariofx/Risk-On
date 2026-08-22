@@ -504,6 +504,16 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
       let settled = false, settleFrames = 0;
       // visible = false (hero fuera del viewport) → se detiene el rAF entero.
       let visible = true;
+      // prefers-reduced-motion: el objeto de movimiento más grande del sitio
+      // —globo a pantalla completa que rota, respira y hace morph— lo ignoraba
+      // por completo. globals.css:274 apagaba la animación CSS de ENTRADA, pero
+      // el bucle rAF seguía girando para siempre: disparador de vértigo
+      // ocupando el 100% de la primera pantalla (auditoría 2026-08-21).
+      // No congelamos en el frame 0 —un globo a medio armar se ve roto—: se deja
+      // que la escena termine de asentarse y ahí se detiene el bucle.
+      const reducedMotion =
+        typeof matchMedia !== "undefined" &&
+        matchMedia("(prefers-reduced-motion: reduce)").matches;
       // Calidad adaptativa ESCALONADA: arranca nítido y si el dispositivo no
       // sostiene ~30fps en reposo (sim dormida, sin scroll), baja el pixel
       // ratio de a 0.5 con re-medición entre pasos, hasta el piso 1.5. Se da
@@ -573,6 +583,14 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
 
       function animate(ts = 0) {
         if (!visible) { animId = 0; return; } // pausa total fuera de pantalla
+        // Escena ya armada y el lector pidió no ver movimiento → último render y
+        // se corta el bucle. Queda un globo nítido y quieto, no un hueco negro.
+        if (reducedMotion && settled && morphT >= 1) {
+          animId = 0;
+          if (composer) composer.render();
+          else renderer.render(scene, camera);
+          return;
+        }
         animId = requestAnimationFrame(animate);
         // Throttle acumulador: 60fps promedio limpios en 60/90/120/144Hz.
         // El `ts - 32` re-ancla el reloj tras pausas (tab oculto, IO) para no

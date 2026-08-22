@@ -53,7 +53,7 @@ export default function RegimeStrip({ history }) {
           fontFamily: "var(--font-mono)",
           fontSize: 9.5,
           letterSpacing: 1.5,
-          color: "#4A4A50",
+          color: "#8A8A8E",
           textTransform: "uppercase",
         }}
       >

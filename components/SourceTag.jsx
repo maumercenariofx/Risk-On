@@ -32,7 +32,7 @@ export default function SourceTag({ source, asOf, style }) {
     <div
       style={{
         fontFamily: "var(--font-mono)", fontSize: 9.5, letterSpacing: 1.2,
-        textTransform: "uppercase", color: "#3A3A3E", ...style,
+        textTransform: "uppercase", color: "#8A8A8E", ...style,
       }}
     >
       {source}

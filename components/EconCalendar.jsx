@@ -13,7 +13,7 @@ const FLAG_BADGE = {
 const IMPACT = {
   high:   { color: "#A32D2D", label_es: "ALTO",  label_en: "HIGH" },
   medium: { color: "#BA7517", label_es: "MEDIO", label_en: "MED"  },
-  low:    { color: "#3A3A3E", label_es: "BAJO",  label_en: "LOW"  },
+  low:    { color: "#8A8A8E", label_es: "BAJO",  label_en: "LOW"  },
 };
 
 // Patterns that directly move USD/MXN — mapped to a 1-line MXN impact note
@@ -93,7 +93,7 @@ export default function EconCalendar() {
 
   return (
     <section className="reveal" style={{ animationDelay: "0.35s" }}>
-      <div style={{ fontSize: 10, letterSpacing: 3, textTransform: "uppercase", color: "#4A4A50", marginBottom: 12 }}>
+      <div style={{ fontSize: 10, letterSpacing: 3, textTransform: "uppercase", color: "#8A8A8E", marginBottom: 12 }}>
         &mdash; <T es="Calendario económico — próximos 14 días" en="Economic calendar — next 14 days" />
       </div>
       <div
@@ -109,12 +109,12 @@ export default function EconCalendar() {
         }}
       >
         {events === null && (
-          <div style={{ padding: "20px 16px", fontSize: 12, color: "#3A3A3E" }}>
+          <div style={{ padding: "20px 16px", fontSize: 12, color: "#8A8A8E" }}>
             <T es="Cargando calendario…" en="Loading calendar…" />
           </div>
         )}
         {events !== null && sorted.length === 0 && (
-          <div style={{ padding: "20px 16px", fontSize: 12, color: "#3A3A3E" }}>
+          <div style={{ padding: "20px 16px", fontSize: 12, color: "#8A8A8E" }}>
             <T es="Sin eventos de alto impacto en los próximos 14 días." en="No high-impact events in the next 14 days." />
           </div>
         )}
@@ -150,7 +150,7 @@ export default function EconCalendar() {
                 </div>
 
                 {/* Time */}
-                <div style={{ minWidth: 42, fontFamily: "var(--font-mono)", fontSize: 10, color: "#3A3A3E" }}>
+                <div style={{ minWidth: 42, fontFamily: "var(--font-mono)", fontSize: 10, color: "#8A8A8E" }}>
                   {ev.time}
                 </div>
 
@@ -182,7 +182,7 @@ export default function EconCalendar() {
                     {lang === "en" ? imp.label_en : imp.label_es}
                   </span>
                   {hasMxn && (
-                    <span style={{ fontSize: 9.5, color: "#4A4A50", marginLeft: 2 }}>
+                    <span style={{ fontSize: 9.5, color: "#8A8A8E", marginLeft: 2 }}>
                       {isOpen ? "▲" : "▼"}
                     </span>
                   )}

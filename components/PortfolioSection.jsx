@@ -329,7 +329,7 @@ export default function PortfolioSection() {
           <button
             onClick={handleReset}
             style={{
-              fontSize: 12, color: "#4B5563", background: "rgba(255,255,255,0.04)",
+              fontSize: 12, color: "#8A8A8E", background: "rgba(255,255,255,0.04)",
               border: "1px solid rgba(255,255,255,0.07)", borderRadius: 20,
               padding: "5px 11px", cursor: "pointer",
             }}
@@ -344,7 +344,7 @@ export default function PortfolioSection() {
         {/* Chart */}
         <div style={{ position: "relative", height: 260 }}>
           {!initialized && (
-            <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", color: "#374151", fontSize: 11, letterSpacing: 2.5, textTransform: "uppercase", fontFamily: "var(--font-mono)" }}>
+            <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", color: "#8A8A8E", fontSize: 11, letterSpacing: 2.5, textTransform: "uppercase", fontFamily: "var(--font-mono)" }}>
               — <T es="cargando" en="loading" /> —
             </div>
           )}
@@ -374,7 +374,7 @@ export default function PortfolioSection() {
                       {name}
                     </span>
                     {sym !== TBILL_KEY && (
-                      <span style={{ fontFamily: "var(--font-mono)", fontSize: 9.5, color: "#374151", letterSpacing: 0.5 }}>{sym}</span>
+                      <span style={{ fontFamily: "var(--font-mono)", fontSize: 9.5, color: "#8A8A8E", letterSpacing: 0.5 }}>{sym}</span>
                     )}
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
@@ -384,7 +384,7 @@ export default function PortfolioSection() {
                     <button
                       onClick={() => handleRemove(sym)}
                       aria-label={`Quitar ${name}`}
-                      style={{ color: "#374151", fontSize: 16, lineHeight: 1, background: "none", border: "none", cursor: "pointer", padding: "0 3px", transition: "color .15s" }}
+                      style={{ color: "#8A8A8E", fontSize: 16, lineHeight: 1, background: "none", border: "none", cursor: "pointer", padding: "0 3px", transition: "color .15s" }}
                       onMouseEnter={(e) => e.currentTarget.style.color = RED}
                       onMouseLeave={(e) => e.currentTarget.style.color = "#374151"}
                     >×</button>
@@ -463,7 +463,7 @@ export default function PortfolioSection() {
                     <span style={{ fontSize: 12.5, color: "#D5D5D2", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       {s.name}
                     </span>
-                    <span style={{ fontFamily: "var(--font-mono)", fontSize: 10.5, color: "#6B7280", flexShrink: 0, letterSpacing: 0.5 }}>
+                    <span style={{ fontFamily: "var(--font-mono)", fontSize: 10.5, color: "#8A8A8E", flexShrink: 0, letterSpacing: 0.5 }}>
                       {s.symbol}
                     </span>
                   </button>
@@ -486,7 +486,7 @@ export default function PortfolioSection() {
                   onClick={() => { setSymbols((p) => [...p, s]); setWeights((p) => ({ ...p, [s]: 0 })); fetchAsset(s); }}
                   style={{
                     fontSize: 9.5, letterSpacing: 0.5, fontFamily: "var(--font-mono)",
-                    color: "#4B5563", border: "1px solid rgba(255,255,255,0.07)",
+                    color: "#8A8A8E", border: "1px solid rgba(255,255,255,0.07)",
                     background: "transparent", borderRadius: 20, padding: "3px 9px", cursor: "pointer", transition: "all .15s",
                   }}
                   onMouseEnter={(e) => { e.currentTarget.style.color = "#F5F5F2"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.2)"; }}
@@ -499,10 +499,10 @@ export default function PortfolioSection() {
 
         {/* Footer */}
         <div style={{ marginTop: 16, paddingTop: 14, borderTop: "1px solid rgba(255,255,255,0.05)", display: "flex", justifyContent: "space-between" }}>
-          <span style={{ fontSize: 11, color: "#4B5563", fontFamily: "var(--font-mono)" }}>
+          <span style={{ fontSize: 11, color: "#8A8A8E", fontFamily: "var(--font-mono)" }}>
             <T es="Asignado" en="Allocated" />: <span style={{ color: "#F5F5F2" }}>{total}%</span>
           </span>
-          <span style={{ fontSize: 11, color: "#4B5563", fontFamily: "var(--font-mono)" }}>
+          <span style={{ fontSize: 11, color: "#8A8A8E", fontFamily: "var(--font-mono)" }}>
             <T es="Efectivo libre" en="Cash" />:{" "}
             <span style={{ color: 100 - total > 0 ? "#FACC15" : "#374151", fontVariantNumeric: "tabular-nums" }}>
               {Math.max(0, 100 - total)}%
@@ -510,7 +510,7 @@ export default function PortfolioSection() {
           </span>
         </div>
 
-        <p style={{ marginTop: 8, fontSize: 10, color: "#374151", fontFamily: "var(--font-mono)", lineHeight: 1.5 }}>
+        <p style={{ marginTop: 8, fontSize: 10, color: "#8A8A8E", fontFamily: "var(--font-mono)", lineHeight: 1.5 }}>
           <T
             es="Base 100 · sin ajuste por dividendos · simulación educativa, no asesoría"
             en="Base 100 · unadjusted for dividends · educational simulation, not advice"
