@@ -18,7 +18,8 @@
 // a 1/5/10 días (IC de Spearman + retornos promedio por banda + hit rate).
 //
 // Uso: node scripts/calibrate-scale-floor.mjs
-import { writeFileSync } from "node:fs";
+import { writeFileSync, mkdirSync } from "node:fs";
+import path from "node:path";
 
 const YAHOO_UA =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
@@ -35,11 +36,19 @@ async function fetchDaily(symbol) {
       const r = (await res.json())?.chart?.result?.[0];
       if (!r) throw new Error("no result");
       const ts = r.timestamp ?? [], closes = r.indicators?.quote?.[0]?.close ?? [];
+      // La fecha de la barra es la LOCAL de la bolsa, no la UTC. Yahoo estampa
+      // MXN=X en Europe/London (abre 23:00 UTC) → sin gmtoffset TODA la serie del
+      // peso queda etiquetada un día ANTES contra la rejilla de ^GSPC, y las
+      // ventanas fwd5 salen corridas una sesión. Es el mismo bug que
+      // lib/forwardReturns.js:29 corrigió el 2026-07-31 y que nunca se propagó a
+      // los scripts de backtest (auditoría 2026-08-21). Sin esto, la banda
+      // RISK-OFF "acierta" 76% en vez de 58.3%.
+      const off = r.meta?.gmtoffset ?? 0;
       const map = new Map();
       for (let i = 0; i < ts.length; i++) {
         const c = closes[i];
         if (c == null || isNaN(c)) continue;
-        map.set(new Date(ts[i] * 1000).toISOString().slice(0, 10), c);
+        map.set(new Date((ts[i] + off) * 1000).toISOString().slice(0, 10), c);
       }
       return map;
     } catch (e) {
@@ -258,7 +267,11 @@ console.log("  subs FLOOR:", Object.fromEntries(Object.entries(t.floor.subs).map
 console.log("  subs PROD :", Object.fromEntries(Object.entries(t.prod.subs).map(([k, v]) => [k, Math.round(v)])));
 
 // CSV
-const OUT = "C:/Users/mauri/AppData/Local/Temp/claude/C--Users-mauri/754804e9-70cb-4f8e-b481-dadb5c5f8437/scratchpad/calibrate-floor.csv";
+// Antes apuntaba al scratchpad de una sesión muerta: el CSV fallaba al escribir
+// y la calibración no quedaba archivada (auditoría 2026-08-21).
+const OUT_DIR = path.join(process.cwd(), "data", "backtest");
+mkdirSync(OUT_DIR, { recursive: true });
+const OUT = path.join(OUT_DIR, "calibrate-floor.csv");
 writeFileSync(OUT, "date,old,prod,floor,fwd5\n" + rows.map((r) => [r.date, r.old.score, r.prod.score, r.floor.score, fwd(r.i, 5)?.toFixed(3) ?? ""].join(",")).join("\n"));
 console.log(`\n✓ CSV: ${OUT}`);
 console.log(`  PISOS calibrados: ${JSON.stringify(Object.fromEntries(Object.entries(FLOORS).map(([k, v]) => [k, +v.toFixed(2)])))}`);

@@ -22,15 +22,18 @@
 //   E. Marcador real: las posturas publicadas desde 2026-07-10 vs realizado
 //
 // Uso:  node scripts/research-posturas.mjs
-// Salida: consola + CSV en el scratchpad.
+// Salida: consola + CSV en data/backtest/ (versionado en git). Antes escribía
+// al scratchpad de una sesión de Claude que ya no existe, así que el CSV fallaba
+// y ningún resultado quedaba archivado: nadie podía reproducir las cifras que el
+// sitio publicaba (auditoría 2026-08-21).
 
-import { writeFileSync, readdirSync, readFileSync } from "node:fs";
+import { writeFileSync, readdirSync, readFileSync, mkdirSync } from "node:fs";
 import path from "node:path";
 
 const YAHOO_UA =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
-const SCRATCH =
-  "C:/Users/mauri/AppData/Local/Temp/claude/C--Users-mauri/67ea65cf-821c-47f8-ac0a-4263fe412ce2/scratchpad";
+const SCRATCH = path.join(process.cwd(), "data", "backtest");
+mkdirSync(SCRATCH, { recursive: true });
 
 // ── Réplica EXACTA de lib/riskScore.js ───────────────────────────────────────
 const DYN_N = 60, DYN_K = 1.1;
@@ -71,11 +74,19 @@ async function fetchYahoo(symbol) {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const r = (await res.json())?.chart?.result?.[0];
       const ts = r?.timestamp ?? [], closes = r?.indicators?.quote?.[0]?.close ?? [];
+      // La fecha de la barra es la LOCAL de la bolsa, no la UTC. Yahoo estampa
+      // MXN=X en Europe/London (abre 23:00 UTC) → sin gmtoffset TODA la serie del
+      // peso queda etiquetada un día ANTES contra la rejilla de ^GSPC, y las
+      // ventanas fwd5 salen corridas una sesión. Es el mismo bug que
+      // lib/forwardReturns.js:29 corrigió el 2026-07-31 y que nunca se propagó a
+      // los scripts de backtest (auditoría 2026-08-21). Sin esto, la banda
+      // RISK-OFF "acierta" 76% en vez de 58.3%.
+      const off = r?.meta?.gmtoffset ?? 0;
       const map = new Map();
       for (let i = 0; i < ts.length; i++) {
         const c = closes[i];
         if (c == null || isNaN(c)) continue;
-        map.set(new Date(ts[i] * 1000).toISOString().slice(0, 10), c);
+        map.set(new Date((ts[i] + off) * 1000).toISOString().slice(0, 10), c);
       }
       if (!map.size) throw new Error("serie vacía");
       return map;

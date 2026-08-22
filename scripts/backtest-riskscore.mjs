@@ -39,11 +39,19 @@ async function fetchDaily(symbol) {
       if (!r) throw new Error("no result");
       const ts = r.timestamp ?? [];
       const closes = r.indicators?.quote?.[0]?.close ?? [];
+      // La fecha de la barra es la LOCAL de la bolsa, no la UTC. Yahoo estampa
+      // MXN=X en Europe/London (abre 23:00 UTC) → sin gmtoffset TODA la serie del
+      // peso queda etiquetada un día ANTES contra la rejilla de ^GSPC, y las
+      // ventanas fwd5 salen corridas una sesión. Es el mismo bug que
+      // lib/forwardReturns.js:29 corrigió el 2026-07-31 y que nunca se propagó a
+      // los scripts de backtest (auditoría 2026-08-21). Sin esto, la banda
+      // RISK-OFF "acierta" 76% en vez de 58.3%.
+      const off = r.meta?.gmtoffset ?? 0;
       const map = new Map(); // 'YYYY-MM-DD' -> close
       for (let i = 0; i < ts.length; i++) {
         const c = closes[i];
         if (c == null || isNaN(c)) continue;
-        const d = new Date(ts[i] * 1000).toISOString().slice(0, 10);
+        const d = new Date((ts[i] + off) * 1000).toISOString().slice(0, 10);
         map.set(d, c);
       }
       return map;
