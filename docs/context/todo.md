@@ -5,8 +5,11 @@ to results.md. Format: `- [ ] (pending|in_progress) task - short note`.
 
 <!-- Soft cap ~2.5k tokens (bytes / 4). -->
 
+## Fase 1 — una sola verdad (auditoría 2026-08-21)
+- [ ] (pending) Persistir veredicto y banda en el front-matter al publicar, en vez de recalcularlos. Mata de un golpe la reclasificación retroactiva (`app/indice/page.jsx:16` + `forwardReturns.js:147`) y la fuga del marcador por la ventana `range=6mo` de `forwardReturns.js:14`.
+- [ ] (pending) Unificar la ventana de soporte/resistencia: `api/market/route.js:148` usa 10 días y `api/ta/route.js:90` usa 20, ambos rotulados "Soporte / Resistencia".
+
 ## README desactualizado (verificado 2026-08-20 contra el código)
-- [ ] (pending) Corregir la tabla del índice en `README.md` — dice 4 componentes con VIX 40% / DXY 25% / MOVE 20% / MXN vol 15%; `lib/riskIndex.js` tiene 5 con VIX 35% / DXY 22% / MOVE 18% / US10Y 15% / MXN vol 10%. Falta US 10Y por completo.
 - [ ] (pending) Corregir las fuentes de datos en `README.md` — dice "Frankfurter para FX, Stooq para VIX/índices"; `app/api/market/route.js` usa Yahoo Finance como fuente dominante y Frankfurter solo parcialmente. Stooq ya no aparece.
 - [ ] (pending) Borrar del `README.md` la nota de que `mxnVol` se ajusta manual — hoy se calcula con `rollingVol()` sobre la serie de cierres del USD/MXN (`route.js:283`).
 - [ ] (pending) Reescribir la nota de compliance del `README.md` — dice "el sitio no usa correos ni canales institucionales", pero el producto central hoy ES un correo diario con suscriptores.

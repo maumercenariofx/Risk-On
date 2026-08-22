@@ -68,19 +68,24 @@ El prompt de sistema canónico vive en `lib/dailyView.js` (const `SYSTEM`, ~lín
 
 ## El índice Risk On y los modelos cuantitativos
 
-`lib/riskIndex.js` — compuesto de 5 señales normalizadas 0-100 (0 = pánico, 100 = apetito total):
+`lib/riskScore.js` — compuesto de **9 señales** normalizadas 0-100 (0 = pánico, 100 = apetito total). Hasta el 21-ago-2026 este documento describía `lib/riskIndex.js`, código muerto sin un solo importador que ya se borró. El índice real **no usa DXY**:
 
 | Componente | Peso | Mide |
 |---|---|---|
-| VIX | 35% | Miedo en el S&P 500 |
-| DXY | 22% | Fuerza del dólar |
-| MOVE | 18% | Vol. de bonos del Tesoro |
-| US 10Y | 15% | Restricción de tasas |
+| VIX | 20% | Miedo en el S&P 500 |
+| USD/MXN | 18% | El par mismo, z contra su propia deriva |
+| S&P 500 | 15% | Apetito de riesgo en renta variable |
+| Carry | 10% | Diferencial Banxico − Fed |
 | MXN vol | 10% | Vol. realizada del USD/MXN |
+| MOVE | 8% | Vol. de bonos del Tesoro |
+| Bitcoin | 7% | Beta de riesgo especulativo |
+| Curva 2s10s | 7% | Pendiente de la curva US |
+| Oro | 5% | Refugio |
 
 `lib/posturaPrior.js` — prior cuantitativo de la postura, respaldado por `scripts/research-posturas.mjs` (backtest 5 años, ~1,180 días, señales reales). Hallazgos que fijan la regla:
-- Banda **RISK-OFF → pro-peso acierta 76%** (n=38). Es el edge real del índice.
-- **Estiramiento** (spot − MA20)/ATR14 > +1 → pro-peso 62% (n=335, estable en ambas mitades).
+- ~~Banda **RISK-OFF → pro-peso acierta 76%** (n=38)~~ **RETIRADO 21-ago-2026.** El backtest etiquetaba las barras sin `meta.gmtoffset`, así que la serie `MXN=X` (Europe/London) iba corrida un día. Corregido y re-corrido: **58%, n=36**, contra una base pro-peso de 56.9% — indistinguible de un volado (random-entry p=0.51). No lo cites como edge.
+- **Estiramiento** (spot − MA20)/ATR14 > +1 → pro-peso **61%, n=308** tras la corrección de fechas. Es el único componente que sobrevive, y apenas: contra la base pro-peso queda al filo del 5% nominal y muere con cualquier corrección por multiple testing.
+- **El compuesto predice menos que el estiramiento solo** (IC 5d del score +0.029 vs −0.14 del estiramiento). `carry` (10%) y `curve` (7%) tienen IC de −0.013 y +0.007: 17% del peso es ruido.
 - **NEUTRAL es trampa** bajo la regla del marcador (~21%): solo se justifica como tesis de rango explícita.
 - **PRO-DÓLAR** exige catalizador del día, no estadística (43% base).
 - El score es un **NOWCAST**: nunca usarlo como pronóstico direccional lineal.

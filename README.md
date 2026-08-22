@@ -56,14 +56,19 @@ Puedes usar **negritas** y separar en párrafos.
 
 ## 📊 El índice Risk On
 
-Vive en `lib/riskIndex.js`. Es un indicador **compuesto y transparente**:
+Vive en `lib/riskScore.js` (9 señales). Hasta el 21-ago-2026 este README describía `lib/riskIndex.js`, un archivo muerto de 5 señales que ya se borró; el índice real **no usa DXY**:
 
 | Componente | Peso | Qué mide |
 |---|---|---|
-| VIX | 40% | Miedo en el S&P 500 |
-| DXY | 25% | Fuerza del dólar |
-| MOVE | 20% | Volatilidad de bonos US |
-| MXN vol | 15% | Volatilidad implícita del peso |
+| VIX | 20% | Miedo en el S&P 500 |
+| USD/MXN | 18% | El par mismo, z contra su propia deriva |
+| S&P 500 | 15% | Apetito de riesgo en renta variable |
+| Carry | 10% | Diferencial Banxico − Fed |
+| MXN vol | 10% | Volatilidad realizada del USD/MXN |
+| MOVE | 8% | Volatilidad de bonos del Tesoro |
+| Bitcoin | 7% | Beta de riesgo especulativo |
+| Curva 2s10s | 7% | Pendiente de la curva US |
+| Oro | 5% | Refugio |
 
 Los pesos y rangos son editables ahí mismo. Los datos llegan de APIs gratuitas vía `app/api/market/route.js` (Frankfurter para FX, Stooq para VIX/índices), con valores de respaldo si una fuente falla.
 
