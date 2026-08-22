@@ -6,10 +6,17 @@ import { createContext, useContext, useState, useEffect } from "react";
 const LangContext = createContext({ lang: "es", setLang: () => {} });
 
 export function LangProvider({ children }) {
-  const [lang, setLang] = useState("en");
+  // Arranca en ES: el <html lang> del SSR es "es" y la audiencia declarada es
+  // México. Estaba en "en" y todo visitante nuevo veía el sitio en inglés
+  // mientras Google indexaba contenido EN bajo lang="es" (auditoría 2026-08-21).
+  const [lang, setLang] = useState("es");
   useEffect(() => {
     const saved = typeof window !== "undefined" && window.localStorage?.getItem("riskon-lang");
-    if (saved === "en" || saved === "es") setLang(saved);
+    if (saved === "en" || saved === "es") { setLang(saved); return; }
+    // Sin preferencia guardada: respetamos el idioma del navegador. Solo un
+    // navegador declarado en inglés cambia; cualquier otro se queda en ES.
+    const nav = typeof navigator !== "undefined" ? navigator.language : "";
+    if (typeof nav === "string" && nav.toLowerCase().startsWith("en")) setLang("en");
   }, []);
   // El <html lang> del SSR es "es" fijo; se sincroniza con el idioma real del
   // lector (screen readers y SEO — auditoría 2026-07-13).

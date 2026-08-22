@@ -31,16 +31,19 @@ export default function Nav() {
   // form. En móvil el contenido async (cards, datos) carga DESPUÉS y empuja el
   // form hacia abajo, así que el hash nativo aterriza arriba → reintentos tras
   // el reflow. Desde cualquier otra página navega a la landing /suscribete.
+  // La condición se pregunta al DOM, no al pathname: #subscribe solo existe
+  // donde se monta <SubscribeForm>, y hoy eso es únicamente /suscribete. Con la
+  // condición por pathname, en "/" el preventDefault mataba la navegación del
+  // <Link> y el scroll no encontraba ancla — el CTA no hacía absolutamente nada
+  // (auditoría 2026-08-21).
   const handleSubscribe = (e) => {
     setOpen(false);
-    if (pathname === "/" || pathname === "/suscribete") {
-      e.preventDefault();
-      const go = () => document.getElementById("subscribe")?.scrollIntoView({ behavior: "smooth", block: "start" });
-      go();
-      setTimeout(go, 300);
-      setTimeout(go, 800);
-    }
-    // En otras páginas dejamos que el <Link> navegue a /suscribete.
+    if (!document.getElementById("subscribe")) return; // deja navegar a /suscribete
+    e.preventDefault();
+    const go = () => document.getElementById("subscribe")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    go();
+    setTimeout(go, 300);
+    setTimeout(go, 800);
   };
 
   const links = [

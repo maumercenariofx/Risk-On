@@ -62,27 +62,11 @@ function computeSessionChanges(prices, timestamps) {
   return out;
 }
 
-// ── fallback data ────────────────────────────────────────────────────────────
-
-function genSeries(n, start, end) {
-  const a = []; let v = start;
-  for (let i = 0; i < n; i++) {
-    v += (end - start) / n + Math.sin(i / 4) * 0.02 + (Math.random() - 0.5) * 0.03;
-    v = Math.max(16, Math.min(22, v));
-    a.push(Math.round(v * 10000) / 10000);
-  }
-  a[n - 1] = end;
-  return a;
-}
-
-function genLabels(n, daysBack) {
-  const now = new Date();
-  return Array.from({ length: n }, (_, i) => {
-    const d = new Date(now);
-    d.setDate(d.getDate() - Math.round(((n - 1 - i) / (n - 1)) * daysBack));
-    return d.toLocaleDateString("es-MX", { day: "numeric", month: "short" });
-  });
-}
+// Aquí vivían genSeries()/genLabels(), que ante un fallo de /api/history
+// dibujaban una serie INVENTADA entre 18.10 y 18.42 sin avisar al lector —
+// con el spot real en 16.89. Contradice la regla de la casa ("si un número no
+// está verificado, no existe") y es justo lo que /api/history evita al
+// devolver arreglos vacíos. Si no hay datos, no hay gráfica (2026-08-21).
 
 // ── Chart.js plugins ─────────────────────────────────────────────────────────
 
@@ -167,6 +151,7 @@ export default function MarketsClient({ embed = false }) {
   const [priceInfo,    setPriceInfo]    = useState(null);
   const [lineColor,    setLineColor]    = useState(GREEN);
   const [loading,      setLoading]      = useState(true);
+  const [noData,       setNoData]       = useState(false);
   const [sessChanges,  setSessChanges]  = useState(null);
   const [activeSess,   setActiveSess]   = useState(null);
 
@@ -184,6 +169,7 @@ export default function MarketsClient({ embed = false }) {
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
+    setNoData(false);
     setSessChanges(null);
     setActiveSess(null);
 
@@ -322,24 +308,17 @@ export default function MarketsClient({ embed = false }) {
         if (prices?.length > 0) {
           dataCache.current[cacheKey] = { prices, labels, timestamps: ts };
           buildChart(prices, labels, ts ?? []);
-        } else if (!isIntraday) {
-          const fp = genSeries(range, 18.1, 18.42);
-          const fl = genLabels(range, range);
-          dataCache.current[cacheKey] = { prices: fp, labels: fl };
-          buildChart(fp, fl, []);
         } else {
+          // Sin datos NO se dibuja nada. No se cachea: el siguiente intento
+          // vuelve a pedir en vez de servir un hueco pegado.
+          setNoData(true);
           setLoading(false);
         }
       })
       .catch(() => {
         if (cancelled) return;
-        if (!isIntraday) {
-          const fp = genSeries(range, 18.1, 18.42);
-          const fl = genLabels(range, range);
-          buildChart(fp, fl, []);
-        } else {
-          setLoading(false);
-        }
+        setNoData(true);
+        setLoading(false);
       });
 
     return () => { cancelled = true; };
@@ -416,7 +395,7 @@ export default function MarketsClient({ embed = false }) {
           <div style={{ minWidth: 0 }}>
             <div style={{
               fontSize: 10, letterSpacing: 2.5, textTransform: "uppercase",
-              color: "#4B5563", marginBottom: 6, fontFamily: "var(--font-mono)",
+              color: "#8A8A8E", marginBottom: 6, fontFamily: "var(--font-mono)",
             }}>
               {currentPair.label}
               {isIntraday && activeSess && (
@@ -498,17 +477,39 @@ export default function MarketsClient({ embed = false }) {
             <div style={{
               position: "absolute", inset: 0, display: "flex",
               alignItems: "center", justifyContent: "center",
-              color: "#374151", fontSize: 11, letterSpacing: 2.5, textTransform: "uppercase",
+              // #374151 daba 2.04:1 sobre negro: el estado de carga era
+              // invisible y parecía que la gráfica estaba rota (a11y 2026-08-21).
+              color: "#8A8A8E", fontSize: 11, letterSpacing: 2.5, textTransform: "uppercase",
               fontFamily: "var(--font-mono)",
             }}>
               — <T es="cargando" en="loading" /> —
+            </div>
+          )}
+          {noData && !loading && (
+            <div style={{
+              position: "absolute", inset: 0, display: "flex", flexDirection: "column",
+              alignItems: "center", justifyContent: "center", gap: 8, padding: "0 24px",
+              textAlign: "center",
+            }}>
+              <span style={{
+                color: "#8A8A8E", fontSize: 11, letterSpacing: 2.5,
+                textTransform: "uppercase", fontFamily: "var(--font-mono)",
+              }}>
+                <T es="sin datos" en="no data" />
+              </span>
+              <span style={{ color: "#8A8A8E", fontSize: 12, lineHeight: 1.6, maxWidth: 320 }}>
+                <T
+                  es="La fuente de precios no respondió. Preferimos no mostrar nada antes que mostrar un número que no verificamos."
+                  en="The price source didn't respond. We'd rather show nothing than a number we haven't verified."
+                />
+              </span>
             </div>
           )}
           <canvas
             ref={canvasRef}
             role="img"
             aria-label={`${currentPair.label} price chart`}
-            style={{ opacity: loading ? 0 : 1, transition: "opacity .35s" }}
+            style={{ opacity: loading || noData ? 0 : 1, transition: "opacity .35s" }}
           />
         </div>
 
@@ -538,7 +539,7 @@ export default function MarketsClient({ embed = false }) {
                       boxShadow:  `0 0 6px ${s.color}`,
                       flexShrink: 0,
                     }} />
-                    <span style={{ fontSize: 9.5, color: "#6B7280", letterSpacing: 1 }}>
+                    <span style={{ fontSize: 9.5, color: "#8A8A8E", letterSpacing: 1 }}>
                       {lang === "en" ? s.en : s.es}
                     </span>
                     <span style={{ fontSize: 12, fontWeight: 600, color: up ? "#00C805" : "#FF5000", fontVariantNumeric: "tabular-nums" }}>
@@ -557,7 +558,7 @@ export default function MarketsClient({ embed = false }) {
                     <line x1="0" y1="3" x2="18" y2="3" stroke={s.color} strokeWidth="2"
                       style={{ filter: `drop-shadow(0 0 2px ${s.color})` }} />
                   </svg>
-                  <span style={{ fontSize: 9.5, color: "#4B5563", fontFamily: "var(--font-mono)", letterSpacing: 1 }}>
+                  <span style={{ fontSize: 9.5, color: "#8A8A8E", fontFamily: "var(--font-mono)", letterSpacing: 1 }}>
                     {lang === "en" ? s.en.toUpperCase() : s.es.toUpperCase()}
                   </span>
                 </div>
@@ -566,7 +567,7 @@ export default function MarketsClient({ embed = false }) {
                 <svg width="18" height="6">
                   <line x1="0" y1="3" x2="18" y2="3" stroke={QUIET_COLOR} strokeWidth="2" strokeDasharray="4 2" />
                 </svg>
-                <span style={{ fontSize: 9.5, color: "#374151", fontFamily: "var(--font-mono)", letterSpacing: 1 }}>
+                <span style={{ fontSize: 9.5, color: "#8A8A8E", fontFamily: "var(--font-mono)", letterSpacing: 1 }}>
                   <T es="SILENCIO" en="QUIET" />
                 </span>
               </div>
@@ -577,7 +578,7 @@ export default function MarketsClient({ embed = false }) {
         {/* Footer */}
         <p style={{
           marginTop: isIntraday ? 10 : 12,
-          fontSize: 10, color: "#374151",
+          fontSize: 10, color: "#8A8A8E",
           fontFamily: "var(--font-mono)", letterSpacing: 0.5,
         }}>
           {isIntraday
