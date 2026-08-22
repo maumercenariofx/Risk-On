@@ -65,7 +65,7 @@ export default function Nav() {
       <nav className="mx-auto flex max-w-5xl items-center justify-between px-5 py-3">
         <Link href="/" className="flex flex-col leading-tight" onClick={() => setOpen(false)}>
           <span className="font-serif text-2xl font-medium tracking-tight text-bone">Risk On</span>
-          <span className="text-[10px] tracking-wide text-muted">
+          <span className="text-[11px] tracking-wide text-muted">
             <T es="Views diarios de Mauricio Mercenario" en="Daily views by Mauricio Mercenario" />
           </span>
         </Link>
@@ -100,7 +100,7 @@ export default function Nav() {
           <button
             onClick={() => window.dispatchEvent(new Event("riskon:palette"))}
             aria-label={lang === "en" ? "Open command palette" : "Abrir buscador"}
-            className="mr-1 hidden items-center gap-1 rounded-md border border-edge px-2.5 py-[5px] font-mono text-[10px] tracking-widest text-muted transition-colors hover:border-[#3A3A3E] hover:text-bone lg:flex"
+            className="mr-1 hidden items-center gap-1 rounded-md border border-edge px-2.5 py-[5px] font-mono text-[11px] tracking-widest text-muted transition-colors hover:border-[#3A3A3E] hover:text-bone lg:flex"
           >
             {isMac ? "⌘" : "CTRL"} K
           </button>

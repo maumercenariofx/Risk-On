@@ -6,6 +6,9 @@ to results.md. Format: `- [ ] (pending|in_progress) task - short note`.
 <!-- Soft cap ~2.5k tokens (bytes / 4). -->
 
 
+## Diseño (auditoría 2026-08-21)
+- [ ] (pending) Desborde horizontal de ~22px en móvil, PREEXISTENTE y hoy CLIPADO por `html { overflow-x: hidden }` en globals.css:13, así que no hay barra visible — es deuda latente, no un bug a la vista (producción: scrollWidth 397 vs clientWidth 375; medido 2026-08-21). Lo causan los bloques full-bleed que usan `width: 100vw; left: 50%; margin-left: -50vw` (`.hero-canvas` y el contenedor del `Ticker`): `100vw` incluye la barra de scroll. Fix: `width: 100%` con un wrapper `overflow-x: clip` en el body, o `calc(100vw - (100vw - 100%))`.
+
 ## README desactualizado (verificado 2026-08-20 contra el código)
 - [ ] (pending) Corregir las fuentes de datos en `README.md` — dice "Frankfurter para FX, Stooq para VIX/índices"; `app/api/market/route.js` usa Yahoo Finance como fuente dominante y Frankfurter solo parcialmente. Stooq ya no aparece.
 - [ ] (pending) Borrar del `README.md` la nota de que `mxnVol` se ajusta manual — hoy se calcula con `rollingVol()` sobre la serie de cierres del USD/MXN (`route.js:283`).

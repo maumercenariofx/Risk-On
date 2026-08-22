@@ -103,7 +103,7 @@ export default function ViewOverlay({ post, open, onClose }) {
             <span className="text-xs text-muted">{post.date}</span>
             {band && (
               <span style={{
-                fontSize: 9.5, letterSpacing: 2, fontFamily: "var(--font-mono)",
+                fontSize: 11, letterSpacing: 2, fontFamily: "var(--font-mono)",
                 color: band.color, border: `1px solid ${band.color}44`,
                 borderRadius: 20, padding: "3px 9px", whiteSpace: "nowrap",
               }}>

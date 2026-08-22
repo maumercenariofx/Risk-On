@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useLang } from "./Lang";
 
 // Cada item del ticker es un link: pares FX → /markets con el par abierto;
 // lo demás → /analisis con la lectura técnica del símbolo.
@@ -31,8 +32,10 @@ const NAMES = [
 const EMPTY = NAMES.map((n) => [n, "—", 2, ""]);
 
 export default function Ticker() {
+  const { lang } = useLang();
   const [items, setItems] = useState(EMPTY);
   const [arrived, setArrived] = useState(false); // flash al llegar datos reales
+  const [paused, setPaused] = useState(false);
 
   useEffect(() => {
     fetch("/api/market")
@@ -89,7 +92,7 @@ export default function Ticker() {
         <>
           <span style={{ color: "#8A8A8E", letterSpacing: 1 }}>{t[0]}</span>
           <span style={{ color: "#F5F5F2", fontWeight: 500 }}>{t[1]}</span>
-          <span style={{ color: color(t[2], t[0]), fontSize: 10 }}>{arrow(t[2])} {t[3]}</span>
+          <span style={{ color: color(t[2], t[0]), fontSize: 11 }}>{arrow(t[2])} {t[3]}</span>
         </>
       );
       const style = {
@@ -118,11 +121,29 @@ export default function Ticker() {
       {/* El flash va en la BANDA, no en la pista: .data-arrive define animation
           y en la pista pisaría el ticker-scroll (así se detuvo el marquee). */}
       <div className={`ticker-band${arrived ? " data-arrive" : ""}`} style={{ padding: "11px 0" }}>
-        <div className="ticker-track">
+        <div className={`ticker-track${paused ? " is-paused" : ""}`}>
           {row("a")}
           {row("b")}
         </div>
       </div>
+
+      {/* Control de pausa. WCAG 2.2.2 (nivel A) exige que todo contenido en
+          movimiento que arranque solo y dure más de 5s se pueda pausar; el
+          único mecanismo era :hover sobre la banda, que en táctil no existe —
+          y el producto se lee "a las 7am en celular" (auditoría 2026-08-21). */}
+      <button
+        type="button"
+        onClick={() => setPaused((v) => !v)}
+        aria-pressed={paused}
+        aria-label={
+          paused
+            ? (lang === "en" ? "Resume the ticker" : "Reanudar la cinta de precios")
+            : (lang === "en" ? "Pause the ticker" : "Pausar la cinta de precios")
+        }
+        className="ticker-pause"
+      >
+        {paused ? "▶" : "❚❚"}
+      </button>
     </div>
   );
 }

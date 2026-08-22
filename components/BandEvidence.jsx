@@ -64,7 +64,7 @@ export default function BandEvidence() {
                 lang === "en" ? "Peso gained (5d)" : "Peso ganó (5d)",
               ].map((h, i) => (
                 <th key={h} style={{
-                  ...sectionLabel, fontSize: 9, padding: "0 8px 8px 0",
+                  ...sectionLabel, fontSize: 11, padding: "0 8px 8px 0",
                   textAlign: i === 0 ? "left" : "right", fontWeight: 400,
                 }}>{h}</th>
               ))}
@@ -75,7 +75,7 @@ export default function BandEvidence() {
               <tr key={r.key} style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}>
                 <td style={{ padding: "9px 8px 9px 0" }}>
                   <span style={{
-                    fontSize: 9.5, letterSpacing: 2, fontFamily: "var(--font-mono)",
+                    fontSize: 11, letterSpacing: 2, fontFamily: "var(--font-mono)",
                     color: color(r.key), border: `1px solid ${color(r.key)}44`,
                     borderRadius: 20, padding: "3px 9px", whiteSpace: "nowrap",
                   }}>{r.key}</span>
@@ -89,7 +89,7 @@ export default function BandEvidence() {
                   ) : (
                     <>{r.hit}%</>
                   )}
-                  {r.revision ? <span style={{ marginLeft: 6, fontSize: 10, letterSpacing: 1.5 }}>†</span> : null}
+                  {r.revision ? <span style={{ marginLeft: 6, fontSize: 11, letterSpacing: 1.5 }}>†</span> : null}
                 </td>
               </tr>
             ))}

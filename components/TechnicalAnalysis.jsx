@@ -254,7 +254,7 @@ function StretchGauge({ idx, lang }) {
         <div className="text-xs uppercase tracking-wide text-muted">
           {t(lang, "Índice Técnico · Estiramiento", "Technical Index · Stretch")}
         </div>
-        <span className="rounded border border-edge px-2 py-0.5 text-[10px] text-muted"
+        <span className="rounded border border-edge px-2 py-0.5 text-[11px] text-muted"
           title={t(lang, "Validado con backtest de 5 años (IC + walk-forward).", "Validated on a 5-year backtest (IC + walk-forward).")}>
           ✓ {t(lang, "validado", "validated")}
         </span>
@@ -271,7 +271,7 @@ function StretchGauge({ idx, lang }) {
         style={{ background: "linear-gradient(90deg,#00C805,#5BC88A 25%,#9CA3AF 50%,#F59E0B 75%,#FF5000)" }}>
         <div className="absolute top-1/2 h-4 w-1 -translate-y-1/2 rounded-full bg-bone" style={{ left: `calc(${posture}% - 2px)` }} />
       </div>
-      <div className="mt-1.5 flex justify-between text-[9px] uppercase tracking-wide text-muted/70">
+      <div className="mt-1.5 flex justify-between text-[11px] uppercase tracking-wide text-muted/70">
         <span>{t(lang, "sobreventa", "oversold")}</span>
         <span>{t(lang, "equilibrio", "balanced")}</span>
         <span>{t(lang, "sobrecompra", "overbought")}</span>
@@ -304,7 +304,7 @@ function StretchGauge({ idx, lang }) {
           const v = factors[k];
           return (
             <div key={k}>
-              <div className="mb-1 flex justify-between text-[10px]">
+              <div className="mb-1 flex justify-between text-[11px]">
                 <span className="text-muted">{lang === "en" ? lab[1] : lab[0]}</span>
                 <span className="font-mono text-muted">{v == null ? "N/D" : Math.round(v)}</span>
               </div>
@@ -341,7 +341,7 @@ function Metric({ label, value, color, small }) {
 function Lvl({ tag, v, color }) {
   return (
     <div>
-      <div className="text-[10px] text-muted">{tag}</div>
+      <div className="text-[11px] text-muted">{tag}</div>
       <div style={color ? { color } : undefined} className={color ? "" : "text-bone"}>{v}</div>
     </div>
   );

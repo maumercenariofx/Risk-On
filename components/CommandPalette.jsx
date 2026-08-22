@@ -231,7 +231,7 @@ export default function CommandPalette() {
             <div key={g.key}>
               <div style={{
                 padding: "10px 18px 5px",
-                fontFamily: "var(--font-mono)", fontSize: 9.5,
+                fontFamily: "var(--font-mono)", fontSize: 11,
                 letterSpacing: 2, textTransform: "uppercase", color: "#8A8A8E",
               }}>
                 {g.title}
@@ -260,7 +260,7 @@ export default function CommandPalette() {
                       {item.label}
                     </span>
                     {item.href && (
-                      <span style={{ fontFamily: "var(--font-mono)", fontSize: 9.5, color: "#8A8A8E", flexShrink: 0 }}>
+                      <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "#8A8A8E", flexShrink: 0 }}>
                         {item.href.split("?")[0]}
                       </span>
                     )}
@@ -273,7 +273,7 @@ export default function CommandPalette() {
         <div style={{
           display: "flex", gap: 14, padding: "9px 18px",
           borderTop: "1px solid rgba(255,255,255,0.08)",
-          fontFamily: "var(--font-mono)", fontSize: 9.5, letterSpacing: 1, color: "#8A8A8E",
+          fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: 1, color: "#8A8A8E",
         }}>
           <span>↑↓ {lang === "en" ? "navigate" : "navegar"}</span>
           <span>↵ {lang === "en" ? "open" : "abrir"}</span>

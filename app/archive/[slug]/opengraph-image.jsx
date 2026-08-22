@@ -35,19 +35,19 @@ export default function OgImage({ params }) {
           display: "flex",
           flexDirection: "column",
           justifyContent: "space-between",
-          backgroundColor: "#0B0F16",
+          backgroundColor: "#0A0A0B",
           backgroundImage:
-            "radial-gradient(circle at 85% 20%, rgba(25,195,155,0.14), transparent 55%)",
+            "radial-gradient(circle at 85% 20%, rgba(20,162,118,0.14), transparent 55%)",
           padding: "56px 64px",
           fontFamily: "sans-serif",
-          color: "#E8EDF4",
+          color: "#F5F5F2",
         }}
       >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div style={{ display: "flex", fontSize: 34, letterSpacing: 6, fontWeight: 700 }}>
             RISK ON
           </div>
-          <div style={{ display: "flex", fontSize: 24, color: "#8B96A5" }}>{dateFmt}</div>
+          <div style={{ display: "flex", fontSize: 24, color: "#8A8A8E" }}>{dateFmt}</div>
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: 48 }}>
@@ -92,10 +92,10 @@ export default function OgImage({ params }) {
         </div>
 
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div style={{ display: "flex", fontSize: 24, color: "#8B96A5" }}>
+          <div style={{ display: "flex", fontSize: 24, color: "#8A8A8E" }}>
             Índice Risk On · inteligencia macro pre-market
           </div>
-          <div style={{ display: "flex", fontSize: 26, color: "#19C39B", fontWeight: 600 }}>
+          <div style={{ display: "flex", fontSize: 26, color: "#14A276", fontWeight: 600 }}>
             riskon.lat
           </div>
         </div>

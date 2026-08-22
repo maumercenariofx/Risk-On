@@ -31,7 +31,7 @@ export default function ScoreGauge({ score = 50, signals = [] }) {
       {/* Score + estado */}
       <div className="flex items-end justify-between">
         <div>
-          <div className="text-[10px] uppercase tracking-[2px] text-muted">Risk On Score</div>
+          <div className="text-[11px] uppercase tracking-[2px] text-muted">Risk On Score</div>
           <div className="mt-1 flex items-baseline gap-2">
             <span className="font-mono text-4xl font-medium tabular-nums" style={{ color: b.color }}>{score}</span>
             <span className="text-sm text-muted">/ 100</span>
@@ -56,7 +56,7 @@ export default function ScoreGauge({ score = 50, signals = [] }) {
           }}
         />
       </div>
-      <div className="mt-1.5 flex justify-between text-[9px] uppercase tracking-wide text-muted/70">
+      <div className="mt-1.5 flex justify-between text-[11px] uppercase tracking-wide text-muted/70">
         <span><T es="0 · risk-off" en="0 · risk-off" /></span>
         <span><T es="risk-on · 100" en="risk-on · 100" /></span>
       </div>
@@ -64,7 +64,7 @@ export default function ScoreGauge({ score = 50, signals = [] }) {
       {/* Desglose de señales */}
       {signals.length > 0 && (
         <div className="mt-5 border-t border-edge pt-4">
-          <div className="mb-3 text-[10px] uppercase tracking-[2px] text-muted">
+          <div className="mb-3 text-[11px] uppercase tracking-[2px] text-muted">
             <T es="Desglose ponderado" en="Weighted breakdown" />
           </div>
           <div className="space-y-2.5">
@@ -95,7 +95,7 @@ export default function ScoreGauge({ score = 50, signals = [] }) {
               </div>
             ))}
           </div>
-          <div className="mt-3 text-[10px] leading-relaxed text-muted/70">
+          <div className="mt-3 text-[11px] leading-relaxed text-muted/70">
             <T
               es="Cada señal se normaliza a 0-100 (100 = más risk-on) y se promedia por su peso. Pasa el cursor para ver el peso."
               en="Each signal is normalized to 0-100 (100 = more risk-on) and averaged by weight. Hover to see the weight."

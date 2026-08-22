@@ -316,7 +316,7 @@ export default function PortfolioSection() {
           <button
             onClick={() => setShowLines((v) => !v)}
             style={{
-              fontSize: 10, letterSpacing: 1.5, textTransform: "uppercase", fontFamily: "var(--font-mono)",
+              fontSize: 11, letterSpacing: 1.5, textTransform: "uppercase", fontFamily: "var(--font-mono)",
               color:      showLines ? "#000" : "#6B7280",
               border:     "none",
               background: showLines ? GREEN : "rgba(255,255,255,0.06)",
@@ -374,7 +374,7 @@ export default function PortfolioSection() {
                       {name}
                     </span>
                     {sym !== TBILL_KEY && (
-                      <span style={{ fontFamily: "var(--font-mono)", fontSize: 9.5, color: "#8A8A8E", letterSpacing: 0.5 }}>{sym}</span>
+                      <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "#8A8A8E", letterSpacing: 0.5 }}>{sym}</span>
                     )}
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
@@ -463,7 +463,7 @@ export default function PortfolioSection() {
                     <span style={{ fontSize: 12.5, color: "#D5D5D2", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       {s.name}
                     </span>
-                    <span style={{ fontFamily: "var(--font-mono)", fontSize: 10.5, color: "#8A8A8E", flexShrink: 0, letterSpacing: 0.5 }}>
+                    <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "#8A8A8E", flexShrink: 0, letterSpacing: 0.5 }}>
                       {s.symbol}
                     </span>
                   </button>
@@ -485,7 +485,7 @@ export default function PortfolioSection() {
                 <button key={s}
                   onClick={() => { setSymbols((p) => [...p, s]); setWeights((p) => ({ ...p, [s]: 0 })); fetchAsset(s); }}
                   style={{
-                    fontSize: 9.5, letterSpacing: 0.5, fontFamily: "var(--font-mono)",
+                    fontSize: 11, letterSpacing: 0.5, fontFamily: "var(--font-mono)",
                     color: "#8A8A8E", border: "1px solid rgba(255,255,255,0.07)",
                     background: "transparent", borderRadius: 20, padding: "3px 9px", cursor: "pointer", transition: "all .15s",
                   }}
@@ -510,7 +510,7 @@ export default function PortfolioSection() {
           </span>
         </div>
 
-        <p style={{ marginTop: 8, fontSize: 10, color: "#8A8A8E", fontFamily: "var(--font-mono)", lineHeight: 1.5 }}>
+        <p style={{ marginTop: 8, fontSize: 11, color: "#8A8A8E", fontFamily: "var(--font-mono)", lineHeight: 1.5 }}>
           <T
             es="Base 100 · sin ajuste por dividendos · simulación educativa, no asesoría"
             en="Base 100 · unadjusted for dividends · educational simulation, not advice"

@@ -394,7 +394,7 @@ export default function MarketsClient({ embed = false }) {
         <div className="mb-5 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
           <div style={{ minWidth: 0 }}>
             <div style={{
-              fontSize: 10, letterSpacing: 2.5, textTransform: "uppercase",
+              fontSize: 11, letterSpacing: 2.5, textTransform: "uppercase",
               color: "#8A8A8E", marginBottom: 6, fontFamily: "var(--font-mono)",
             }}>
               {currentPair.label}
@@ -433,7 +433,7 @@ export default function MarketsClient({ embed = false }) {
                   ({isUp ? "+" : ""}{priceInfo.change.toFixed(dec)})
                 </span>
                 {isIntraday && (
-                  <span style={{ opacity: 0.4, fontSize: 10, fontFamily: "var(--font-mono)", letterSpacing: 1 }}>
+                  <span style={{ opacity: 0.4, fontSize: 11, fontFamily: "var(--font-mono)", letterSpacing: 1 }}>
                     · 24H
                   </span>
                 )}
@@ -539,7 +539,7 @@ export default function MarketsClient({ embed = false }) {
                       boxShadow:  `0 0 6px ${s.color}`,
                       flexShrink: 0,
                     }} />
-                    <span style={{ fontSize: 9.5, color: "#8A8A8E", letterSpacing: 1 }}>
+                    <span style={{ fontSize: 11, color: "#8A8A8E", letterSpacing: 1 }}>
                       {lang === "en" ? s.en : s.es}
                     </span>
                     <span style={{ fontSize: 12, fontWeight: 600, color: up ? "#00C805" : "#FF5000", fontVariantNumeric: "tabular-nums" }}>
@@ -558,7 +558,7 @@ export default function MarketsClient({ embed = false }) {
                     <line x1="0" y1="3" x2="18" y2="3" stroke={s.color} strokeWidth="2"
                       style={{ filter: `drop-shadow(0 0 2px ${s.color})` }} />
                   </svg>
-                  <span style={{ fontSize: 9.5, color: "#8A8A8E", fontFamily: "var(--font-mono)", letterSpacing: 1 }}>
+                  <span style={{ fontSize: 11, color: "#8A8A8E", fontFamily: "var(--font-mono)", letterSpacing: 1 }}>
                     {lang === "en" ? s.en.toUpperCase() : s.es.toUpperCase()}
                   </span>
                 </div>
@@ -567,7 +567,7 @@ export default function MarketsClient({ embed = false }) {
                 <svg width="18" height="6">
                   <line x1="0" y1="3" x2="18" y2="3" stroke={QUIET_COLOR} strokeWidth="2" strokeDasharray="4 2" />
                 </svg>
-                <span style={{ fontSize: 9.5, color: "#8A8A8E", fontFamily: "var(--font-mono)", letterSpacing: 1 }}>
+                <span style={{ fontSize: 11, color: "#8A8A8E", fontFamily: "var(--font-mono)", letterSpacing: 1 }}>
                   <T es="SILENCIO" en="QUIET" />
                 </span>
               </div>
@@ -578,7 +578,7 @@ export default function MarketsClient({ embed = false }) {
         {/* Footer */}
         <p style={{
           marginTop: isIntraday ? 10 : 12,
-          fontSize: 10, color: "#8A8A8E",
+          fontSize: 11, color: "#8A8A8E",
           fontFamily: "var(--font-mono)", letterSpacing: 0.5,
         }}>
           {isIntraday

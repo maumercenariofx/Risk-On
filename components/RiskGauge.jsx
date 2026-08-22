@@ -342,7 +342,7 @@ export default function RiskGauge({ post, prevScore = null, scoreHistory = null,
           </h1>
           <div className="hero-late" style={{
             fontFamily: "var(--font-mono)",
-            fontSize: "clamp(8px, 0.85vw, 11px)",
+            fontSize: "clamp(11px, 0.85vw, 13px)",
             fontWeight: 400,
             letterSpacing: 2,
             color: "#8A8A8E",
@@ -371,7 +371,7 @@ export default function RiskGauge({ post, prevScore = null, scoreHistory = null,
                 <div className="hidden md:flex" style={{ alignItems: "center", gap: 8, pointerEvents: "auto", marginBottom: 2 }}>
                   {lapse != null && (
                     <>
-                      <span style={{ fontFamily: "var(--font-mono)", fontSize: 9.5, letterSpacing: 1, color: accent(scoreHistory[lapse.i]?.score ?? 50) }}>
+                      <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: 1, color: accent(scoreHistory[lapse.i]?.score ?? 50) }}>
                         {scoreHistory[lapse.i]?.slug?.slice(5)} · {scoreHistory[lapse.i]?.score}
                       </span>
                       <input
@@ -389,7 +389,7 @@ export default function RiskGauge({ post, prevScore = null, scoreHistory = null,
                     }}
                     aria-label={lang === "es" ? "Time-lapse del índice, 30 días" : "Index time-lapse, 30 days"}
                     style={{
-                      fontFamily: "var(--font-mono)", fontSize: 9.5, letterSpacing: 1, textTransform: "uppercase",
+                      fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: 1, textTransform: "uppercase",
                       padding: "3px 8px", borderRadius: 5, cursor: "pointer",
                       background: lapse != null ? `${accentColor}30` : "rgba(255,255,255,0.05)",
                       border: `1px solid ${lapse != null ? accentColor : "rgba(255,255,255,0.18)"}`,
@@ -400,7 +400,7 @@ export default function RiskGauge({ post, prevScore = null, scoreHistory = null,
                   </button>
                 </div>
               )}
-              <div style={{ fontSize: 9.5, letterSpacing: 2, textTransform: "uppercase", color: "#8A8A8E", pointerEvents: "none" }}>
+              <div style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "#8A8A8E", pointerEvents: "none" }}>
                 <T es="Países en alerta" en="Countries on alert" />
               </div>
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "flex-end", pointerEvents: "auto" }}>
@@ -430,7 +430,7 @@ export default function RiskGauge({ post, prevScore = null, scoreHistory = null,
                       }}
                       style={{
                         display: "flex", alignItems: "center", gap: 5,
-                        fontFamily: "var(--font-mono)", fontSize: 9.5, letterSpacing: 1, textTransform: "uppercase",
+                        fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: 1, textTransform: "uppercase",
                         padding: "3px 8px", borderRadius: 5, cursor: "pointer",
                         background: newsCountry === c.id ? `${col}38` : `${col}1A`,
                         border: `1px solid ${col}66`,
@@ -460,7 +460,7 @@ export default function RiskGauge({ post, prevScore = null, scoreHistory = null,
                 <T es={label.es} en={label.en} />
               </div>
               <div style={{
-                fontSize: 9.5, letterSpacing: 2.5, fontWeight: 400,
+                fontSize: 11, letterSpacing: 2.5, fontWeight: 400,
                 color: "#2A2A30", marginTop: 6, lineHeight: 1,
               }}>
                 {fxClosed() ? (
@@ -487,7 +487,7 @@ export default function RiskGauge({ post, prevScore = null, scoreHistory = null,
           <SessionClock />
           {data?.asOf && (
             <div style={{
-              fontSize: 9.5,
+              fontSize: 11,
               letterSpacing: 2,
               textTransform: "uppercase",
               color: "#8A8A8E",
@@ -524,7 +524,7 @@ export default function RiskGauge({ post, prevScore = null, scoreHistory = null,
           </div>
           <div style={{
             display: "flex", justifyContent: "space-between", marginTop: 6,
-            fontFamily: "var(--font-mono)", fontSize: 9.5, letterSpacing: 1, color: "#8A8A8E",
+            fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: 1, color: "#8A8A8E",
           }}>
             <span><T es="0 · Pánico" en="0 · Panic" /></span>
             <span style={{ color: accentColor, fontWeight: 600 }}>
@@ -546,7 +546,7 @@ export default function RiskGauge({ post, prevScore = null, scoreHistory = null,
                 const crossed = prevBand.key !== label.key;
                 return (
                   <span style={{
-                    fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: 1,
+                    fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: 1,
                     color: up ? "#3FA77E" : "#C0392B",
                     border: `1px solid ${up ? "#3FA77E33" : "#C0392B33"}`,
                     borderRadius: 20, padding: "4px 11px",
@@ -562,7 +562,7 @@ export default function RiskGauge({ post, prevScore = null, scoreHistory = null,
               {scoreHistory && scoreHistory.length >= 5 && (
                 <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <ScoreSparkline history={scoreHistory} color={accentColor} />
-                  <span style={{ fontFamily: "var(--font-mono)", fontSize: 9.5, letterSpacing: 1.5, color: "#8A8A8E" }}>
+                  <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: 1.5, color: "#8A8A8E" }}>
                     30D
                   </span>
                 </span>
@@ -619,10 +619,10 @@ export default function RiskGauge({ post, prevScore = null, scoreHistory = null,
                 {display}
               </div>
               <div style={{ lineHeight: 1.5 }}>
-                <div style={{ fontSize: 9.5, letterSpacing: 2, color: "#8A8A8E", textTransform: "uppercase", fontFamily: "var(--font-mono)" }}>
+                <div style={{ fontSize: 11, letterSpacing: 2, color: "#8A8A8E", textTransform: "uppercase", fontFamily: "var(--font-mono)" }}>
                   RISK ON
                 </div>
-                <div style={{ fontSize: 9.5, letterSpacing: 1.5, color: accentColor, textTransform: "uppercase", fontFamily: "var(--font-mono)" }}>
+                <div style={{ fontSize: 11, letterSpacing: 1.5, color: accentColor, textTransform: "uppercase", fontFamily: "var(--font-mono)" }}>
                   {lang === "en" ? label.en : label.es}
                 </div>
               </div>
@@ -630,7 +630,7 @@ export default function RiskGauge({ post, prevScore = null, scoreHistory = null,
             {!isSub && (
               <div style={{
                 borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: 7, marginTop: 8,
-                fontSize: 10, letterSpacing: 1.5, textTransform: "uppercase",
+                fontSize: 11, letterSpacing: 1.5, textTransform: "uppercase",
                 fontFamily: "var(--font-mono)", color: "#F5F5F2", textAlign: "center",
               }}>
                 <T es="Recibe El Pre-Market →" en="Get The Pre-Market →" />
@@ -642,7 +642,7 @@ export default function RiskGauge({ post, prevScore = null, scoreHistory = null,
             <span style={{ fontFamily: "var(--font-sans)", fontWeight: 800, fontSize: 17, lineHeight: 1, color: accentColor }}>
               {display}
             </span>
-            <span style={{ fontSize: 9.5, letterSpacing: 1.2, color: accentColor, textTransform: "uppercase", fontFamily: "var(--font-mono)" }}>
+            <span style={{ fontSize: 11, letterSpacing: 1.2, color: accentColor, textTransform: "uppercase", fontFamily: "var(--font-mono)" }}>
               {lang === "en" ? label.en : label.es}
             </span>
             {!isSub && <span style={{ color: "#F5F5F2", fontSize: 12, lineHeight: 1 }}>→</span>}
@@ -662,7 +662,7 @@ export default function RiskGauge({ post, prevScore = null, scoreHistory = null,
             }}
           >
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-              <div style={{ fontSize: 9.5, letterSpacing: 1.5, textTransform: "uppercase", color: "#8A8A8E" }}>
+              <div style={{ fontSize: 11, letterSpacing: 1.5, textTransform: "uppercase", color: "#8A8A8E" }}>
                 <T es={`Noticias · ${c?.name_es ?? ""} · últimas 48h`} en={`News · ${c?.name_en ?? ""} · last 48h`} />
               </div>
               <button
@@ -702,7 +702,7 @@ export default function RiskGauge({ post, prevScore = null, scoreHistory = null,
                     }}
                   >
                     <span style={{
-                      fontFamily: "var(--font-mono)", fontSize: 10, color: "#8A8A8E",
+                      fontFamily: "var(--font-mono)", fontSize: 11, color: "#8A8A8E",
                       flexShrink: 0, minWidth: 28,
                     }}>
                       {newsAge(n.pubDate, lang)}
@@ -745,7 +745,7 @@ export default function RiskGauge({ post, prevScore = null, scoreHistory = null,
                     color: "#F5F5F2", transition: "border-color .2s",
                   }}
                 >
-                  <div style={{ fontSize: 10, color: "#8A8A8E", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 5 }}>
+                  <div style={{ fontSize: 11, color: "#8A8A8E", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 5 }}>
                     {s.label}
                     {s.sub && (
                       <span style={{ opacity: 0.65 }}>
@@ -759,7 +759,7 @@ export default function RiskGauge({ post, prevScore = null, scoreHistory = null,
                   <div style={{ height: 1.5, background: "#1E1E20", borderRadius: 1, marginBottom: 5 }}>
                     <div style={{ height: "100%", borderRadius: 1, width: `${compScore}%`, background: ca, transition: "width 1.2s ease-out" }} />
                   </div>
-                  <div style={{ fontSize: 10, fontFamily: "var(--font-mono)", color: ca, letterSpacing: 0.5 }}>
+                  <div style={{ fontSize: 11, fontFamily: "var(--font-mono)", color: ca, letterSpacing: 0.5 }}>
                     {compScore}/100
                   </div>
                 </button>
@@ -780,13 +780,13 @@ export default function RiskGauge({ post, prevScore = null, scoreHistory = null,
             onClick={() => setMethOpen((o) => !o)}
             style={{
               marginTop: 12, background: "none", border: "none", cursor: "pointer",
-              fontSize: 10, letterSpacing: 2, textTransform: "uppercase",
+              fontSize: 11, letterSpacing: 2, textTransform: "uppercase",
               color: methOpen ? "#8A8A8E" : "#4A4A50",
               display: "flex", alignItems: "center", gap: 6,
               transition: "color .2s", padding: 0,
             }}
           >
-            <span style={{ fontSize: 8 }}>{methOpen ? "▲" : "▼"}</span>
+            <span style={{ fontSize: 11 }}>{methOpen ? "▲" : "▼"}</span>
             <T es="¿Cómo se calcula este índice?" en="How is this index calculated?" />
           </button>
 
@@ -811,12 +811,12 @@ export default function RiskGauge({ post, prevScore = null, scoreHistory = null,
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 {SIGNALS.map((s) => (
                   <div key={s.key} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "#6A6A70", width: 76, flexShrink: 0 }}>{s.label}</div>
+                    <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "#6A6A70", width: 76, flexShrink: 0 }}>{s.label}</div>
                     <div style={{ flex: 1, height: 3, background: "#1E1E20", borderRadius: 2 }}>
                       <div style={{ height: "100%", width: `${s.w * 4}%`, background: "#3A3A44", borderRadius: 2 }} />
                     </div>
-                    <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "#8A8A8E", width: 30, textAlign: "right", flexShrink: 0 }}>{s.w}%</div>
-                    <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "#8A8A8E", width: 78, textAlign: "right", flexShrink: 0 }}>{s.range}</div>
+                    <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "#8A8A8E", width: 30, textAlign: "right", flexShrink: 0 }}>{s.w}%</div>
+                    <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "#8A8A8E", width: 78, textAlign: "right", flexShrink: 0 }}>{s.range}</div>
                   </div>
                 ))}
               </div>

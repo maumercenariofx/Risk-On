@@ -93,7 +93,7 @@ export default function EconCalendar() {
 
   return (
     <section className="reveal" style={{ animationDelay: "0.35s" }}>
-      <div style={{ fontSize: 10, letterSpacing: 3, textTransform: "uppercase", color: "#8A8A8E", marginBottom: 12 }}>
+      <div style={{ fontSize: 11, letterSpacing: 3, textTransform: "uppercase", color: "#8A8A8E", marginBottom: 12 }}>
         &mdash; <T es="Calendario económico — próximos 14 días" en="Economic calendar — next 14 days" />
       </div>
       <div
@@ -143,14 +143,14 @@ export default function EconCalendar() {
               >
                 {/* Date */}
                 <div style={{
-                  minWidth: 86, fontFamily: "var(--font-mono)", fontSize: 10,
+                  minWidth: 86, fontFamily: "var(--font-mono)", fontSize: 11,
                   color: isToday ? "#C8C8C4" : "#4A4A50", letterSpacing: 0.5,
                 }}>
                   {dayLabel(ev.date, lang)}
                 </div>
 
                 {/* Time */}
-                <div style={{ minWidth: 42, fontFamily: "var(--font-mono)", fontSize: 10, color: "#8A8A8E" }}>
+                <div style={{ minWidth: 42, fontFamily: "var(--font-mono)", fontSize: 11, color: "#8A8A8E" }}>
                   {ev.time}
                 </div>
 
@@ -166,7 +166,7 @@ export default function EconCalendar() {
                   {/* MXN tag */}
                   {hasMxn && (
                     <span style={{
-                      fontSize: 9.5, letterSpacing: 1.5, fontFamily: "var(--font-mono)",
+                      fontSize: 11, letterSpacing: 1.5, fontFamily: "var(--font-mono)",
                       color: "#3FA77E", border: "1px solid #3FA77E44",
                       borderRadius: 3, padding: "1px 5px", flexShrink: 0,
                     }}>
@@ -178,11 +178,11 @@ export default function EconCalendar() {
                 {/* Impact + expand arrow */}
                 <div style={{ display: "flex", alignItems: "center", gap: 5, flexShrink: 0 }}>
                   <div style={{ width: 4, height: 4, borderRadius: "50%", background: imp.color }} />
-                  <span style={{ fontFamily: "var(--font-mono)", fontSize: 9.5, letterSpacing: 1.5, color: imp.color }}>
+                  <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: 1.5, color: imp.color }}>
                     {lang === "en" ? imp.label_en : imp.label_es}
                   </span>
                   {hasMxn && (
-                    <span style={{ fontSize: 9.5, color: "#8A8A8E", marginLeft: 2 }}>
+                    <span style={{ fontSize: 11, color: "#8A8A8E", marginLeft: 2 }}>
                       {isOpen ? "▲" : "▼"}
                     </span>
                   )}

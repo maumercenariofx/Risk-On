@@ -81,8 +81,8 @@ export default function IntradaySpark() {
           fontFamily: "var(--font-mono)",
         }}
       >
-        <span style={{ fontSize: 9.5, letterSpacing: 1.5, color: "#8A8A8E" }}>USD/MXN</span>
-        <span style={{ fontSize: 10.5, fontWeight: 700, color: "#B9BDC4" }}>
+        <span style={{ fontSize: 11, letterSpacing: 1.5, color: "#8A8A8E" }}>USD/MXN</span>
+        <span style={{ fontSize: 11, fontWeight: 700, color: "#B9BDC4" }}>
           {last.toFixed(4)}{" "}
           <span style={{ color: col, fontWeight: 600 }}>
             {up ? "▲" : "▼"} {chg >= 0 ? "+" : ""}{chg.toFixed(2)}%

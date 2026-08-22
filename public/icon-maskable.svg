@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <!-- Variante MASKABLE: Android recorta el icono a la forma del sistema
+       (círculo, squircle…), así que todo lo legible tiene que caber en la zona
+       segura — el 80% central. El icono normal (app/icon.svg) llega al borde y
+       se le comía el anillo. Aquí el fondo es full-bleed y el dibujo va al 62%. -->
+  <rect width="64" height="64" fill="#0A0A0B"/>
+  <g transform="translate(32 32) scale(0.62) translate(-32 -32)">
+    <circle cx="32" cy="32" r="20" fill="none" stroke="#F5F5F2" stroke-width="4"/>
+    <path d="M12 32 H52" stroke="#F5F5F2" stroke-width="2.4" opacity="0.55"/>
+    <path d="M32 12 V52" stroke="#F5F5F2" stroke-width="2.4" opacity="0.55"/>
+    <ellipse cx="32" cy="32" rx="20" ry="8" fill="none" stroke="#F5F5F2" stroke-width="2.4" opacity="0.55"/>
+    <ellipse cx="32" cy="32" rx="8" ry="20" fill="none" stroke="#F5F5F2" stroke-width="2.4" opacity="0.55"/>
+    <circle cx="46" cy="20" r="6" fill="#14A276"/>
+  </g>
+</svg>

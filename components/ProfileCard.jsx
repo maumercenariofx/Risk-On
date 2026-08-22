@@ -39,7 +39,7 @@ export default function ProfileCard() {
               </span>
             ))}
           </div>
-          <div className="text-[10px] uppercase tracking-[1.5px] text-muted/70">
+          <div className="text-[11px] uppercase tracking-[1.5px] text-muted/70">
             <T es="↺ Pasa el cursor" en="↺ Hover to flip" />
           </div>
         </div>

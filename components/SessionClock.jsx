@@ -86,7 +86,7 @@ export default function SessionClock() {
                 display: "flex",
                 alignItems: "center",
                 gap: 4,
-                fontSize: 9.5,
+                fontSize: 11,
                 letterSpacing: 1.5,
                 color: s.isOpen ? "#8A8F98" : "#3E3E44",
                 borderBottom: "none", // anula el dotted de [data-tip]
@@ -99,7 +99,7 @@ export default function SessionClock() {
           );
         })}
       </div>
-      <div style={{ fontSize: 9.5, letterSpacing: 2, color: "#8A8A8E", textTransform: "uppercase" }}>
+      <div style={{ fontSize: 11, letterSpacing: 2, color: "#8A8A8E", textTransform: "uppercase" }}>
         {next.id} {verb} {t}
       </div>
     </div>

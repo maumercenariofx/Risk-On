@@ -31,7 +31,7 @@ export default function SourceTag({ source, asOf, style }) {
   return (
     <div
       style={{
-        fontFamily: "var(--font-mono)", fontSize: 9.5, letterSpacing: 1.2,
+        fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: 1.2,
         textTransform: "uppercase", color: "#8A8A8E", ...style,
       }}
     >

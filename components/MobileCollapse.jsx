@@ -26,7 +26,7 @@ export default function MobileCollapse({ es, en, children, defaultOpen = false }
         </span>
         <span className="flex items-center gap-2.5">
           {!open && (
-            <span className="font-mono text-[9px] uppercase tracking-[1.5px] text-muted">
+            <span className="font-mono text-[11px] uppercase tracking-[1.5px] text-muted">
               {lang === "en" ? "Show" : "Ver"} +
             </span>
           )}
@@ -34,7 +34,7 @@ export default function MobileCollapse({ es, en, children, defaultOpen = false }
             className={`flex h-6 w-6 items-center justify-center rounded-full border transition-all duration-300 ${
               open ? "rotate-180 border-bone/40 text-bone" : "border-edge text-muted"
             }`}
-            style={{ fontSize: 9.5, lineHeight: 1 }}
+            style={{ fontSize: 11, lineHeight: 1 }}
           >
             ▼
           </span>

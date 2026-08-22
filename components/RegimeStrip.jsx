@@ -51,7 +51,7 @@ export default function RegimeStrip({ history }) {
           display: "flex",
           justifyContent: "space-between",
           fontFamily: "var(--font-mono)",
-          fontSize: 9.5,
+          fontSize: 11,
           letterSpacing: 1.5,
           color: "#8A8A8E",
           textTransform: "uppercase",

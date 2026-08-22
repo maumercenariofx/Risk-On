@@ -35,7 +35,7 @@ export default function RatesSection() {
 
   return (
     <section className="reveal" style={{ animationDelay: "0.25s" }}>
-      <div style={{ fontSize: 10, letterSpacing: 3, textTransform: "uppercase", color: "#8A8A8E", marginBottom: 12 }}>
+      <div style={{ fontSize: 11, letterSpacing: 3, textTransform: "uppercase", color: "#8A8A8E", marginBottom: 12 }}>
         &mdash; <T es="Tasas de referencia" en="Reference rates" />
       </div>
       <div
@@ -45,7 +45,7 @@ export default function RatesSection() {
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: "16px 20px", marginBottom: 16 }}>
           {items.map((item, i) => (
             <div key={i}>
-              <div style={{ fontSize: 9.5, letterSpacing: 1.5, textTransform: "uppercase", color: "#8A8A8E", marginBottom: 5 }}>
+              <div style={{ fontSize: 11, letterSpacing: 1.5, textTransform: "uppercase", color: "#8A8A8E", marginBottom: 5 }}>
                 {item.label_es ? <T es={item.label_es} en={item.label_en} /> : item.label}
               </div>
               <div style={{
@@ -57,7 +57,7 @@ export default function RatesSection() {
                 {item.value}
               </div>
               {item.sub && (
-                <div style={{ fontSize: 9.5, color: "#8A8A8E", fontFamily: "var(--font-mono)", marginTop: 4 }}>
+                <div style={{ fontSize: 11, color: "#8A8A8E", fontFamily: "var(--font-mono)", marginTop: 4 }}>
                   {item.sub}
                 </div>
               )}
@@ -67,7 +67,7 @@ export default function RatesSection() {
         <div style={{ borderTop: "1px solid #141416", paddingTop: 14 }}>
           {spread != null && (
             <>
-              <div style={{ fontSize: 9.5, letterSpacing: 2, textTransform: "uppercase", color: "#8A8A8E", marginBottom: 6 }}>
+              <div style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "#8A8A8E", marginBottom: 6 }}>
                 <T es="¿Qué es el carry?" en="What is carry?" />
               </div>
               <p style={{ fontSize: 13, color: "#9CA3AF", lineHeight: 1.75, marginBottom: 10 }}>

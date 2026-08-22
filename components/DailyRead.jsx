@@ -26,7 +26,7 @@ export default function DailyRead({ post }) {
             fontSize: 11, color: post.score >= 58 ? "#3FA77E" : post.score < 42 ? "#A32D2D" : "#8A8A8E",
           }}>
             {post.score}
-            <span style={{ fontSize: 9.5, letterSpacing: 2, color: "#8A8A8E" }}>
+            <span style={{ fontSize: 11, letterSpacing: 2, color: "#8A8A8E" }}>
               <T es="OPINIÓN" en="EDITORIAL" />
             </span>
           </span>

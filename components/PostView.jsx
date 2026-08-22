@@ -51,7 +51,7 @@ function ShareBar({ post, lang }) {
 
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 10, paddingTop: 4 }}>
-      <span style={{ fontSize: 9.5, letterSpacing: 2, textTransform: "uppercase", color: "#8A8A8E" }}>
+      <span style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "#8A8A8E" }}>
         <T es="Compartir" en="Share" />
       </span>
       <a
@@ -60,7 +60,7 @@ function ShareBar({ post, lang }) {
         rel="noopener noreferrer"
         style={{
           display: "inline-flex", alignItems: "center", gap: 6,
-          fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: 1,
+          fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: 1,
           color: "#8A8A8E", border: "1px solid #2A2A2E", borderRadius: 6,
           padding: "5px 10px", textDecoration: "none",
           transition: "color .2s, border-color .2s",
@@ -77,7 +77,7 @@ function ShareBar({ post, lang }) {
         onClick={copy}
         style={{
           display: "inline-flex", alignItems: "center", gap: 6,
-          fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: 1,
+          fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: 1,
           color: copied ? "#3FA77E" : "#8A8A8E",
           border: `1px solid ${copied ? "#3FA77E33" : "#2A2A2E"}`,
           borderRadius: 6, padding: "5px 10px", background: "none", cursor: "pointer",
@@ -99,7 +99,7 @@ function WhatHappenedCard({ fwd, lang }) {
     v == null ? "#5A5A62" : (invert ? v < 0 : v > 0) ? "#3FA77E" : "#C0392B";
   const cell = (label, v, invert) => (
     <div>
-      <div style={{ fontFamily: "var(--font-mono)", fontSize: 9.5, letterSpacing: 1.2, textTransform: "uppercase", color: "#8A8A8E", marginBottom: 4 }}>
+      <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: 1.2, textTransform: "uppercase", color: "#8A8A8E", marginBottom: 4 }}>
         {label}
       </div>
       <div style={{ fontFamily: "var(--font-mono)", fontSize: 15, fontWeight: 600, fontVariantNumeric: "tabular-nums", color: col(v, invert) }}>
@@ -109,7 +109,7 @@ function WhatHappenedCard({ fwd, lang }) {
   );
   return (
     <div className="reveal card-spot rounded-xl border border-edge p-4" style={{ background: "rgba(11,11,12,0.92)" }}>
-      <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: 2, textTransform: "uppercase", color: "#8A8A8E", marginBottom: 10 }}>
+      <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "#8A8A8E", marginBottom: 10 }}>
         <T es="¿Qué pasó después de este view?" en="What happened after this view?" />
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))", gap: 12 }}>

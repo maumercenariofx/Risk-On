@@ -38,7 +38,7 @@ export default function Footer() {
 
           {/* Links */}
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            <span className="text-[10px] uppercase tracking-[2.5px] text-muted/40">
+            <span className="text-[11px] uppercase tracking-[2.5px] text-muted/40">
               <T es="Secciones" en="Sections" />
             </span>
             {NAV.map((l) => (
@@ -50,7 +50,7 @@ export default function Footer() {
 
           {/* Social */}
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            <span className="text-[10px] uppercase tracking-[2.5px] text-muted/40">
+            <span className="text-[11px] uppercase tracking-[2.5px] text-muted/40">
               <T es="Síguenos" en="Follow" />
             </span>
             <a

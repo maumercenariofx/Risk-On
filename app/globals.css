@@ -194,6 +194,34 @@ html.io .reveal.in-view {
   animation-play-state: paused;
   filter: brightness(1.8);
 }
+/* Pausa explícita (botón). El :hover de arriba sirve en escritorio, pero en
+   táctil no existe y WCAG 2.2.2 pide un control real (auditoría 2026-08-21). */
+.ticker-track.is-paused { animation-play-state: paused; }
+
+.ticker-pause {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  transform: translateY(-50%);
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* 24×24 mínimo: WCAG 2.5.8 (objetivo táctil). */
+  width: 26px;
+  height: 26px;
+  border: 1px solid #1E1E22;
+  border-radius: 4px;
+  background: #000;
+  color: #8A8A8E;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1;
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s;
+}
+.ticker-pause:hover { color: #F5F5F2; border-color: #62626A; }
+.ticker-pause:focus-visible { outline: 2px solid rgba(255,255,255,0.5); outline-offset: 2px; }
 
 /* Score pulse — antes parpadeaba a 0.18 (leía como glitch); ahora es una
    respiración suave y lenta */

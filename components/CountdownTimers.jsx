@@ -35,7 +35,7 @@ function Unit({ value, label }) {
       }}>
         {pad(value)}
       </div>
-      <div style={{ fontSize: 9.5, letterSpacing: 2, textTransform: "uppercase", color: "#8A8A8E", marginTop: 4 }}>
+      <div style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "#8A8A8E", marginTop: 4 }}>
         {label}
       </div>
     </div>
@@ -62,7 +62,7 @@ function Countdown({ isoDate, label_es, label_en }) {
         borderRadius: 12, padding: "16px 18px", flex: "1 1 200px",
       }}
     >
-      <div style={{ fontSize: 9.5, letterSpacing: 2.5, textTransform: "uppercase", color: "#8A8A8E", marginBottom: 14 }}>
+      <div style={{ fontSize: 11, letterSpacing: 2.5, textTransform: "uppercase", color: "#8A8A8E", marginBottom: 14 }}>
         <T es={label_es} en={label_en} />
       </div>
       {!isoDate ? (
@@ -100,7 +100,7 @@ export default function CountdownTimers() {
 
   return (
     <section className="reveal" style={{ animationDelay: "0.2s" }}>
-      <div style={{ fontSize: 10, letterSpacing: 3, textTransform: "uppercase", color: "#8A8A8E", marginBottom: 12 }}>
+      <div style={{ fontSize: 11, letterSpacing: 3, textTransform: "uppercase", color: "#8A8A8E", marginBottom: 12 }}>
         &mdash; <T es="Próximas decisiones de política monetaria" en="Next monetary policy decisions" />
       </div>
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>

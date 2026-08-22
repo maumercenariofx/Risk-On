@@ -42,7 +42,7 @@ export default function PosturaRecord({ data }) {
           </span>
         )}
         {data.byBias && Object.keys(data.byBias).length > 1 && (
-          <span style={{ fontFamily: "var(--font-mono)", fontSize: 10.5, color: "#9CA3AF" }}>
+          <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "#9CA3AF" }}>
             {Object.entries(data.byBias).map(([b, s], i) => (
               <span key={b}>
                 {i > 0 && " · "}
@@ -71,13 +71,13 @@ export default function PosturaRecord({ data }) {
                   </td>
                   <td style={{ padding: "10px 10px 10px 0", whiteSpace: "nowrap" }}>
                     <span style={{
-                      fontSize: 9.5, letterSpacing: 1.5, fontFamily: "var(--font-mono)",
+                      fontSize: 11, letterSpacing: 1.5, fontFamily: "var(--font-mono)",
                       color: b.color, border: `1px solid ${b.color}44`,
                       borderRadius: 20, padding: "3px 9px",
                     }}>{lang === "en" ? b.en : b.es}</span>
                     {r.prior && r.prior !== r.bias && (
                       <span title={lang === "en" ? `quant prior was ${r.prior}` : `el prior cuant era ${r.prior}`}
-                        style={{ marginLeft: 6, fontSize: 9, fontFamily: "var(--font-mono)", color: "#6A6A70", letterSpacing: 0.5 }}>
+                        style={{ marginLeft: 6, fontSize: 11, fontFamily: "var(--font-mono)", color: "#6A6A70", letterSpacing: 0.5 }}>
                         ≠<T es=" prior" en=" prior" />
                       </span>
                     )}

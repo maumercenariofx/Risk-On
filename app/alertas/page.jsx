@@ -16,7 +16,7 @@ export default function AlertasPage() {
         <div
           style={{
             fontFamily: "var(--font-mono)",
-            fontSize: 9.5,
+            fontSize: 11,
             letterSpacing: 2,
             color: "#8A8A8E",
             textTransform: "uppercase",

@@ -33,13 +33,18 @@ export const metadata = {
     siteName: "Risk On",
     locale: "es_MX",
     type: "website",
-    images: ["/riskon-logo.png"],
+    // Tarjeta generada en app/api/og/route.js con el marcador público en vivo.
+    images: [{ url: "https://riskon.lat/api/og", width: 1200, height: 630, alt: "Risk On — marcador público de posturas" }],
   },
   twitter: {
-    card: "summary",
+    // "summary" mostraba una miniatura cuadrada del logo mientras las notas de
+    // /archive ya usaban summary_large_image: la portada se compartía peor que
+    // sus propios artículos. Con app/api/og/route.js la home ya tiene
+    // tarjeta grande propia (auditoría 2026-08-21).
+    card: "summary_large_image",
+    images: ["https://riskon.lat/api/og"],
     title: "Risk On — Take risks or stay average",
     description: "FX y mercados explicados para todos. ¿Cuanto risk hay hoy?",
-    images: ["/riskon-logo.png"],
   },
   alternates: {
     types: { "application/rss+xml": "https://riskon.lat/feed.xml" },
@@ -72,6 +77,11 @@ export default function RootLayout({ children }) {
   return (
     <html lang="es" className={`${fraunces.variable} ${GeistSans.variable} ${GeistMono.variable}`}>
       <head>
+        {/* apple-touch-icon a mano: en cuanto existe app/icon.svg, Next da
+            prioridad a la convención de archivo y DESCARTA metadata.icons, así
+            que el `apple` declarado allá nunca llegaba al head. iOS no lee SVG
+            para este rel, de ahí la ruta que lo genera en PNG. */}
+        <link rel="apple-touch-icon" sizes="180x180" href="/api/og/apple" />
         {/* html.io ANTES del primer paint → el reveal por scroll no parpadea.
             Sin IO o con reduced-motion se queda el fallback (animar al montar). */}
         <script

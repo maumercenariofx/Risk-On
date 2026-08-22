@@ -88,7 +88,7 @@ function Card({ project, index, isActive, onActivate, isHoverDevice }) {
       {/* Tag */}
       <div style={{
         fontFamily: "var(--font-mono, monospace)",
-        fontSize: 9.5, letterSpacing: 2.5, textTransform: "uppercase",
+        fontSize: 11, letterSpacing: 2.5, textTransform: "uppercase",
         color: "#8A8A8E", marginBottom: 10, textAlign: "center",
       }}>
         {project.tags}
@@ -126,7 +126,7 @@ function Card({ project, index, isActive, onActivate, isHoverDevice }) {
               onFocus={() => onActivate(index)}
               style={{
                 fontFamily: "var(--font-mono, monospace)",
-                fontSize: 9.5, letterSpacing: 2.5, textTransform: "uppercase",
+                fontSize: 11, letterSpacing: 2.5, textTransform: "uppercase",
                 color: "#F5F5F2",
                 borderBottom: "1px solid rgba(245,245,242,0.35)",
                 paddingBottom: 2, textDecoration: "none",
@@ -158,7 +158,7 @@ function Card({ project, index, isActive, onActivate, isHoverDevice }) {
       }}>
         <span style={{
           fontFamily: "var(--font-mono, monospace)",
-          fontSize: 9.5, letterSpacing: 2, textTransform: "uppercase",
+          fontSize: 11, letterSpacing: 2, textTransform: "uppercase",
           color: "#8A8A8E",
         }}>
           {hint}
@@ -193,7 +193,7 @@ export default function ProjectCards() {
   return (
     <section className="reveal" ref={containerRef} style={{ animationDelay: "0.2s" }}>
       <div style={{
-        fontSize: 10, letterSpacing: 3, textTransform: "uppercase",
+        fontSize: 11, letterSpacing: 3, textTransform: "uppercase",
         color: "#8A8A8E", marginBottom: 14,
       }}>
         &mdash; <span lang="es">Casos</span>

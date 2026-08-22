@@ -217,7 +217,7 @@ export default function TapeWidget({ score }) {
           ref={labelRef}
           style={{
             fontFamily: "var(--font-mono)",
-            fontSize: 9.5,
+            fontSize: 11,
             letterSpacing: 1,
             textTransform: "uppercase",
             color: "#9CA3AF",
