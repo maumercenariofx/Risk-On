@@ -15,7 +15,6 @@ to results.md. Format: `- [ ] (pending|in_progress) task - short note`.
 ## Higiene del entorno local
 - [ ] (pending) Decidir qué hacer con `C:\Users\mauri\Documents\risk-o-meter` — carpeta completamente vacía, candidata a borrar.
 - [ ] (pending) Decidir qué hacer con `C:\Users\mauri\Documents\Risk-On-backup-2026-07-14.git` — respaldo bare de git de hace un mes; el remoto de GitHub ya cumple esa función.
-- [ ] (pending) Decidir qué hacer con `C:\Users\mauri\Risk On` — carpeta vacía que no es el proyecto; el repo real vive en `Documents\Risk-On`.
 - [ ] (pending) Hábito: hacer `git pull` antes de trabajar. El bot commitea a diario desde Actions, así que el clon local se queda atrás rápido (estaba 35 commits atrás el 2026-08-20).
 
 ## Pendientes de arquitectura
