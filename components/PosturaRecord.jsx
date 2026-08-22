@@ -91,7 +91,7 @@ export default function PosturaRecord({ data }) {
                   </td>
                   <td style={{ padding: "10px 0 10px 0", whiteSpace: "nowrap", fontFamily: "var(--font-mono)", fontSize: 11 }}>
                     {r.verdict == null ? (
-                      <span style={{ color: "#4A4A50" }}>
+                      <span style={{ color: "#8A8A8E" }}>
                         ⏳ {r.days > 0
                           ? (lang === "en" ? `day ${r.days}/5` : `día ${r.days}/5`)
                           : <T es="en curso" en="pending" />}
@@ -111,6 +111,16 @@ export default function PosturaRecord({ data }) {
           </tbody>
         </table>
       </div>
+
+      {/* Compliance: este es el bloque de mayor exposición del sitio — publica
+          sesgo direccional con condición de invalidación — y era el ÚNICO sin
+          aviso, porque components/Disclaimer.jsx nunca se importó (2026-08-21). */}
+      <p style={{ fontSize: 11.5, color: "#8A8A8E", lineHeight: 1.6, margin: "12px 0 0" }}>
+        <T
+          es="Esto es una postura de mercado con fines informativos, no asesoría de inversión ni recomendación de operar. No incluye niveles de entrada o salida, instrumentos ni tamaños de posición. Operar con divisas implica riesgo."
+          en="This is a market stance published for information only — not investment advice or a recommendation to trade. It carries no entry or exit levels, instruments, or position sizes. Trading currencies involves risk."
+        />
+      </p>
 
       <p style={{ fontSize: 11.5, color: "#6A6A70", lineHeight: 1.6, margin: "12px 0 0" }}>
         <T

@@ -25,8 +25,12 @@ export const metadata = {
 export default async function IndicePage() {
   const points = getAllPostsMeta()
     .filter((p) => p.score != null && !isNaN(Number(p.score)))
-    .map(({ slug, score, title_es, title_en, postura_bias, postura_condicion }) => ({
-      slug, score: Number(score), title_es, title_en, postura_bias, postura_condicion,
+    // prior_bias se descartaba aquí, así que forwardReturns.js siempre recibía
+    // prior: null y la marca "≠ prior" que PosturaRecord le promete al lector
+    // no podía aparecer JAMÁS — ofrecíamos una auditoría que no funcionaba
+    // (2026-08-21).
+    .map(({ slug, score, title_es, title_en, postura_bias, postura_condicion, prior_bias }) => ({
+      slug, score: Number(score), title_es, title_en, postura_bias, postura_condicion, prior_bias,
     }))
     .sort((a, b) => (a.slug < b.slug ? -1 : 1));
 

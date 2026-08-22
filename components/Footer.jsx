@@ -66,12 +66,23 @@ export default function Footer() {
 
         </div>
 
+        {/* Legal — vivía en components/Disclaimer.jsx, que NUNCA se importó en
+            ningún lado: el único aviso del repo no se renderizaba, y encima
+            estaba en #3A3A40 (1.86:1) y solo en español. Se trae aquí, bilingüe
+            y legible (auditoría 2026-08-21). */}
+        <p className="mt-8 border-t border-edge pt-5 text-xs leading-relaxed text-muted" style={{ maxWidth: 620 }}>
+          <T
+            es="Contenido informativo y educativo. Opiniones propias, no constituyen asesoría de inversión ni recomendación de operar. Datos de mercado con posible retraso. Operar con divisas y derivados implica riesgo."
+            en="Informational and educational content. Personal opinions; not investment advice or a recommendation to trade. Market data may be delayed. Trading currencies and derivatives involves risk."
+          />
+        </p>
+
         {/* Bottom bar */}
-        <div className="mt-8 flex flex-wrap items-center justify-between gap-2 border-t border-edge pt-5">
-          <span className="text-xs text-muted/40">
+        <div className="mt-5 flex flex-wrap items-center justify-between gap-2 pt-1">
+          <span className="text-xs text-muted/70">
             © {new Date().getFullYear()} Risk On
           </span>
-          <span className="text-xs text-muted/40 italic">
+          <span className="text-xs text-muted/70 italic">
             Take risks or stay average
           </span>
         </div>
