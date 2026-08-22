@@ -12,6 +12,7 @@ import { stripBold, boldToHtml } from "../../../lib/mdInline";
 import { alertAdmin } from "../../../lib/alertAdmin";
 import { clean, personalizeGreeting, getSubscribers } from "../../../lib/subscribers";
 import { gatherWeek } from "../../../lib/weeklyRecap";
+import { riskBand } from "../../../lib/riskScore";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -26,14 +27,20 @@ const C = {
   up: "#0A7D3C", down: "#C0392B",
 };
 
-// Mismas 4 bandas del diario (colores de lib/riskScore vía send-daily).
-const RISK_STATES = [
-  { label: "RISK-OFF",     color: "#3A5A8F", min: 0,  max: 25  },
-  { label: "DEFENSIVE",    color: "#B8860B", min: 26, max: 50  },
-  { label: "CONSTRUCTIVE", color: "#2A8576", min: 51, max: 75  },
-  { label: "RISK-ON",      color: "#00A37F", min: 76, max: 100 },
-];
-const bandOf = (score) => RISK_STATES.find((s) => score >= s.min && score <= s.max) ?? RISK_STATES[2];
+// El comentario que estaba aquí decía "Mismas 4 bandas del diario" y era FALSO:
+// estos cortes eran 25/50/75 y los de lib/riskScore.js son 32/49/67. Ahora los
+// cortes salen de la única fuente y aquí solo queda el color, que sí es propio
+// del correo por el fondo crema (auditoría 2026-08-21).
+const BAND_COLOR_EMAIL = {
+  "RISK-OFF":     "#3A5A8F",
+  "DEFENSIVE":    "#B8860B",
+  "CONSTRUCTIVE": "#2A8576",
+  "RISK-ON":      "#00A37F",
+};
+const bandOf = (score) => {
+  const b = riskBand(Number(score));
+  return { label: b.key, color: BAND_COLOR_EMAIL[b.key] ?? "#6B6B6B" };
+};
 
 // Lee el recap: fs (mismo deploy) → contents API con token → raw (último).
 async function readRecap(slug) {

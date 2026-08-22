@@ -3,6 +3,7 @@ import { getAllPostsMeta } from "../../../lib/posts";
 import { fetchLiveData, generateDailyView, buildMarkdown, publishToGitHub, publishFileToGitHub, checkSentMarker, REPO } from "../../../lib/dailyView";
 import { stripBold, boldToHtml } from "../../../lib/mdInline";
 import { posturaRecord } from "../../../lib/forwardReturns";
+import { riskBand } from "../../../lib/riskScore";
 import { alertAdmin } from "../../../lib/alertAdmin";
 import { clean, cleanName, personalizeGreeting, probeSheet, getSubscribers } from "../../../lib/subscribers";
 
@@ -27,12 +28,20 @@ const TICKERS = [
   { name: "Bitcoin",         symbol: "BTC-USD",  kind: "index" },
 ];
 
-const RISK_STATES = [
-  { label: "RISK-OFF",     color: "#3A5A8F", min: 0,  max: 25  },
-  { label: "DEFENSIVE",    color: "#B8860B", min: 26, max: 50  },
-  { label: "CONSTRUCTIVE", color: "#2A8576", min: 51, max: 75  },
-  { label: "RISK-ON",      color: "#00A37F", min: 76, max: 100 },
-];
+// Los CORTES los manda lib/riskScore.js — única fuente. Aquí solo vive el COLOR,
+// porque el correo va sobre papel crema (#FAF8F3) y los verdes del sitio, hechos
+// para fondo negro, no alcanzan contraste sobre claro.
+//
+// Antes esta constante tenía sus propios cortes (25/50/75) contra los 32/49/67
+// del sitio: un score de 30 salía DEFENSIVE en el correo y RISK-OFF en la web el
+// MISMO día, y un 70 salía CONSTRUCTIVE aquí y RISK-ON allá. El producto se
+// contradecía a sí mismo en su dato insignia (auditoría 2026-08-21).
+const BAND_COLOR_EMAIL = {
+  "RISK-OFF":     "#3A5A8F",
+  "DEFENSIVE":    "#B8860B",
+  "CONSTRUCTIVE": "#2A8576",
+  "RISK-ON":      "#00A37F",
+};
 
 const C = {
   bg: "#FAF8F3", card: "#FFFFFF", border: "#E8E3D9", masthead: "#14141A",
@@ -44,7 +53,8 @@ const YAHOO_UA =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
 
 function riskStateFromScore(score) {
-  return RISK_STATES.find((s) => score >= s.min && score <= s.max) ?? RISK_STATES[2];
+  const b = riskBand(Number(score));
+  return { label: b.key, color: BAND_COLOR_EMAIL[b.key] ?? C.muted };
 }
 
 // Token reemplazable: el saludo se renderiza una vez en la plantilla y se

@@ -42,14 +42,20 @@ export async function POST(request) {
   }
 
   // ── Datos vivos: mismo score que la landing y el correo ────────────────────
-  const [market, rates] = await Promise.all([
+  // `curve` faltaba: sin ese sub-score, computeRiskScore hace `continue` sobre la
+  // señal y wsum baja de 100 a 93, así que el score de las alertas iba
+  // renormalizado sobre 8 señales de 9 — sistemáticamente distinto del publicado,
+  // y podía disparar un cruce de banda que la web no mostraba (2026-08-21).
+  // RiskGauge.jsx:199 ya llamaba con {market, rates, curve}; aquí faltaba.
+  const [market, rates, curve] = await Promise.all([
     fetch(`${SITE}/api/market?live=1`, { cache: "no-store" }).then((r) => r.json()).catch(() => null),
     fetch(`${SITE}/api/rates`, { cache: "no-store" }).then((r) => r.json()).catch(() => null),
+    fetch(`${SITE}/api/curve`, { cache: "no-store" }).then((r) => r.json()).catch(() => null),
   ]);
   const spot = market?.usdmxnSpot ?? market?.usdmxn;
   if (spot == null) return Response.json({ error: "no spot" }, { status: 502 });
 
-  const scoreInfo = computeRiskScore({ market, rates });
+  const scoreInfo = computeRiskScore({ market, rates, curve });
   const score = scoreInfo?.score ?? null;
   const banda = score != null ? riskBand(score).key : null;
   const spotStr = Number(spot).toFixed(4);
