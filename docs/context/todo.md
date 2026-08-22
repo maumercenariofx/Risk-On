@@ -6,8 +6,6 @@ to results.md. Format: `- [ ] (pending|in_progress) task - short note`.
 <!-- Soft cap ~2.5k tokens (bytes / 4). -->
 
 ## Fase 1 — una sola verdad (auditoría 2026-08-21)
-- [ ] (pending) Persistir veredicto y banda en el front-matter al publicar, en vez de recalcularlos. Mata de un golpe la reclasificación retroactiva (`app/indice/page.jsx:16` + `forwardReturns.js:147`) y la fuga del marcador por la ventana `range=6mo` de `forwardReturns.js:14`.
-- [ ] (pending) Unificar la ventana de soporte/resistencia: `api/market/route.js:148` usa 10 días y `api/ta/route.js:90` usa 20, ambos rotulados "Soporte / Resistencia".
 
 ## README desactualizado (verificado 2026-08-20 contra el código)
 - [ ] (pending) Corregir las fuentes de datos en `README.md` — dice "Frankfurter para FX, Stooq para VIX/índices"; `app/api/market/route.js` usa Yahoo Finance como fuente dominante y Frankfurter solo parcialmente. Stooq ya no aparece.

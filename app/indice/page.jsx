@@ -29,8 +29,9 @@ export default async function IndicePage() {
     // prior: null y la marca "≠ prior" que PosturaRecord le promete al lector
     // no podía aparecer JAMÁS — ofrecíamos una auditoría que no funcionaba
     // (2026-08-21).
-    .map(({ slug, score, title_es, title_en, postura_bias, postura_condicion, prior_bias }) => ({
+    .map(({ slug, score, title_es, title_en, postura_bias, postura_condicion, prior_bias, band }) => ({
       slug, score: Number(score), title_es, title_en, postura_bias, postura_condicion, prior_bias,
+      band, // banda congelada al publicar; sin ella forwardReturns recalcula
     }))
     .sort((a, b) => (a.slug < b.slug ? -1 : 1));
 

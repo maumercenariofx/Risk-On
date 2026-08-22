@@ -5,6 +5,8 @@
 // regularMarketPrice + chartPreviousClose (de ahí derivamos el % de cambio).
 // FX: Frankfurter (gratis, sin clave).
 
+import { levels } from "../../../lib/technicals";
+
 export const revalidate = 60;
 
 const YAHOO_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
@@ -143,16 +145,11 @@ function resolvePrevClose(dChart, hourly, boundarySec, tol, label) {
   return { prevClose: null, verified: false };
 }
 
-// Soporte y resistencia: rolling high/low de los últimos `period` candles.
-// Da niveles técnicos actualizados sin depender de inputs manuales.
-function rollingLevels(highs, lows, period = 10) {
-  if (!highs?.length || !lows?.length || highs.length < 2) return null;
-  const n = Math.min(period, highs.length);
-  return {
-    support:    Math.round(Math.min(...lows.slice(-n))  * 10000) / 10000,
-    resistance: Math.round(Math.max(...highs.slice(-n)) * 10000) / 10000,
-  };
-}
+// rollingLevels() vivía aquí y era una copia byte a byte de levels() en
+// lib/technicals.js salvo por la ventana por defecto — de ahí que el correo
+// publicara niveles de 10 días y /analisis de 20 bajo la MISMA etiqueta
+// (auditoría 2026-08-21). Ahora hay una sola implementación, con la ventana
+// canónica en technicals.LEVELS_PERIOD.
 
 async function fxRate(base, quote, { live = false } = {}) {
   try {
@@ -227,7 +224,7 @@ export async function GET(request) {
   const { prevClose: eurmxnPrevClose, verified: eurmxnPrevVerified } =
     resolvePrevClose(c.eurmxnChart, eurmxnHourly, boundarySec, 0.04, "EUR/MXN");
 
-  const mxnLevels = rollingLevels(c.usdmxnChart?.highs, c.usdmxnChart?.lows);
+  const mxnLevels = levels(c.usdmxnChart?.highs, c.usdmxnChart?.lows);
 
   // Último cierre diario (mismo campo que usa /api/history) redondeado igual,
   // para que las tarjetas y el ticker muestren el mismo número que la gráfica

@@ -112,3 +112,27 @@ jobs:
           X_ACCESS_SECRET: ${{ secrets.X_ACCESS_SECRET }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: node scripts/post-x-action.mjs
+
+      # Libro mayor de veredictos (public/data/postura-ledger.json). Va AL FINAL
+      # y con continue-on-error a propósito: el correo ya salió, y un fallo aquí
+      # no puede tocar el camino de las 7am. El script solo AÑADE veredictos de
+      # posturas que ya maduraron sus 5 días hábiles; una entrada con veredicto
+      # nunca se recalcula, así que el marcador deja de auto-podarse cuando un
+      # slug sale de la ventana de 6 meses de Yahoo (auditoría 2026-08-21).
+      - name: Congelar veredictos del marcador (best-effort)
+        if: ${{ (github.event.inputs.dry_run || '0') != '1' }}
+        continue-on-error: true
+        run: |
+          git config user.name "riskon-bot"
+          git config user.email "view@riskon.lat"
+          # send-daily escribe sent/<slug>.json vía la contents API de GitHub, o
+          # sea que a esta altura el remoto ya avanzó y el clon local está atrás.
+          git pull --rebase origin main
+          node scripts/update-ledger.mjs
+          git add public/data/postura-ledger.json
+          if git diff --cached --quiet; then
+            echo "Ledger sin cambios"
+          else
+            git commit -m "auto: veredictos del marcador $(TZ=America/Mexico_City date +%F)"
+            git push origin main
+          fi

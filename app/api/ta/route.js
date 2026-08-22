@@ -87,7 +87,7 @@ export async function GET(request) {
   const bbV = bollinger(closes);
 
   const piv = pivots(highs[n - 2], lows[n - 2], closes[n - 2]);
-  const lvl = levels(highs, lows, 20);
+  const lvl = levels(highs, lows); // ventana canónica: technicals.LEVELS_PERIOD
 
   const v = verdict({ price, ema20, ema50, ema200, macd: macdV, rsi: rsiV });
 
