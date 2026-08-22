@@ -5,7 +5,6 @@ to results.md. Format: `- [ ] (pending|in_progress) task - short note`.
 
 <!-- Soft cap ~2.5k tokens (bytes / 4). -->
 
-## Fase 1 — una sola verdad (auditoría 2026-08-21)
 
 ## README desactualizado (verificado 2026-08-20 contra el código)
 - [ ] (pending) Corregir las fuentes de datos en `README.md` — dice "Frankfurter para FX, Stooq para VIX/índices"; `app/api/market/route.js` usa Yahoo Finance como fuente dominante y Frankfurter solo parcialmente. Stooq ya no aparece.
