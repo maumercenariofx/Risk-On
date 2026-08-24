@@ -365,6 +365,9 @@ Nunca borres una entrada; si una regla se corrige, añade una entrada nueva que 
 
 <!-- Formato: `[YYYY-MM-DD] error observado → regla que lo previene` -->
 
+- `[2026-08-24]` El view atribuyó a **Powell** un discurso dovish en Jackson Hole "el viernes pasado" y montó encima el titular, el hook y el respaldo de la postura. Tres afirmaciones falsas: Powell no es chair desde el 22-may-2026 (es Kevin Warsh), Jackson Hole es del 27 al 29 y no había ocurrido, y el pricing de recorte citado era el de septiembre de 2025. El pulso web recicló una nota de agosto de 2025 con su dateline copiado literal. Salió a 48 destinatarios. → REGLA: ningún nombre de funcionario, evento o cifra de mercado se escribe si no está en el digest o en un pulso con fecha verificada; ante la duda se omite. El chair de la Fed es **Kevin Warsh** desde el 22-may-2026.
+- `[2026-08-24]` La regla de CABOS SUELTOS obligó a dar el veredicto del evento que el view anterior marcó como juez, y con el pulso contaminado el veredicto se **fabricó** sobre algo que ocurriría tres días después. → REGLA: antes de dar un veredicto, compara la fecha del evento contra hoy y contra el calendario del digest. Si está por delante, se escribe como pendiente. "Todavía no se sabe" siempre es una salida válida; inventar el resultado no lo es nunca.
+
 ---
 
 ## 8. Lo que hoy NO es un problema (no lo "arregles")
