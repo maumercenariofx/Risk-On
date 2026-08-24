@@ -38,3 +38,4 @@ docs/context/archive/memory/<YYYY-MM-DD>.md, then compact in place. -->
 - La referencia temporal al view anterior se calcula en código (`prevViewRef`), no se deja al modelo: el 2026-07-13 el artículo dijo "Ayer señalamos..." cuando "ayer" fue domingo.
 - Regla de compliance del producto: postura y sesgo direccional sí, enmarcados como opinión de mercado; recomendaciones operativas concretas (precios de entrada/salida, instrumentos, tamaños de posición) están prohibidas.
 - Prohibido afirmar cuánto subió o bajó el par vs el cierre previo cuando ese cierre no es verificable — la regla está codificada, no es criterio del redactor.
+- El pulso web pasa por una guarda determinística antes de llegar al redactor (`sanitizePulse`): fecha de fuente, coherencia día-de-semana/fecha y contraste contra el spot verificado. Nació el 24-ago-2026, cuando una nota de 2025 llegó intacta al correo.
