@@ -25,14 +25,35 @@ Cada vez que cambies algo en GitHub, Vercel actualiza el sitio solo.
 
 ---
 
-## ✍️ Cómo publicar tu comentario diario (lo más fácil)
+## ✍️ Cómo se publica el view diario
 
-Cada edición es un archivo de texto en la carpeta `/content`. Para publicar una nueva:
+**Ya no se escribe a mano.** Un workflow de GitHub Actions lo genera cada día
+hábil antes de las 7:00 CDMX, lo commitea a `content/<YYYY-MM-DD>.md` y lo
+envía por correo. Crear ese archivo a mano rompería la guarda de idempotencia
+(`content/<slug>.md` existe → no se regenera) y dejaría al lector sin view.
 
-1. En GitHub, entra a la carpeta `content`.
-2. "Add file → Create new file".
-3. Nómbralo con la fecha: `2026-06-04.md`
-4. Pega esta plantilla y edítala:
+    6:50  cronjob.org → /api/trigger-gen → workflow_dispatch   [disparo primario]
+    6:52  Actions: generar → commit/push → send-daily → post en X
+    7:00  cronjob.org → /api/send-daily?resend=1                [respaldo 1]
+    7:10  Vercel cron → /api/send-daily?resend=1                [respaldo 2]
+
+Lo que SÍ escribes tú:
+
+- `notas/<YYYY-MM-DD>.txt` — una línea tuya, opcional. El generador la recoge
+  a las 6:52 y el correo la renderiza en su propio bloque, "De la libreta".
+  Ver `notas/README.md`.
+- `docs/references/views-editorial.md` — el manual editorial que el redactor
+  lee cada mañana, con el registro de errores ya cometidos.
+
+Para probar un cambio del generador sin tocar el correo real:
+
+    gh workflow run gen-daily.yml -f dry_run=1
+
+genera y muestra el view completo sin escribir, sin commitear y sin enviar
+(funciona también en fin de semana, a propósito).
+
+<details>
+<summary>Formato del front-matter, por si necesitas leerlo</summary>
 
 ```markdown
 ---
@@ -48,9 +69,12 @@ Aquí va tu comentario del día. Escribe normal.
 Puedes usar **negritas** y separar en párrafos.
 ```
 
-5. Commit. En segundos aparece en el Archivo y en la portada. Eso es todo.
+</details>
 
-> El `score` (0-100) es tu lectura del índice Risk On de ese día. Define el color y la etiqueta automáticamente.
+> El `score` (0-100) NO es una lectura editorial: lo calcula `lib/riskScore.js`
+> de forma determinística y el redactor tiene instrucción explícita de
+> explicarlo y jamás de cambiarlo. Desde el 21-ago-2026 el front-matter guarda
+> también la `band`, congelada al publicar.
 
 ---
 
@@ -70,9 +94,18 @@ Vive en `lib/riskScore.js` (9 señales). Hasta el 21-ago-2026 este README descri
 | Curva 2s10s | 7% | Pendiente de la curva US |
 | Oro | 5% | Refugio |
 
-Los pesos y rangos son editables ahí mismo. Los datos llegan de APIs gratuitas vía `app/api/market/route.js` (Frankfurter para FX, Stooq para VIX/índices), con valores de respaldo si una fuente falla.
+Los pesos NO deberían editarse a la ligera: entraron en un solo commit, nunca se
+optimizaron contra el resultado, y esa es la principal defensa del índice contra
+el sobreajuste. Si los cambias, hay que re-correr el backtest en el mismo commit.
 
-> La vol implícita del USD/MXN no está en fuentes gratis directas; ajústala manual en `route.js` (campo `mxnVol`) o conéctala a tu fuente cuando tengas una.
+Los datos llegan vía `app/api/market/route.js`, con **Yahoo Finance** como fuente
+dominante (v8 chart) y Frankfurter solo para algunos pares FX. Stooq ya no se
+usa. Hay valores de respaldo si una fuente falla — y ese es justamente un punto
+débil conocido: son constantes que entran al histórico sin bandera.
+
+> `mxnVol` ya no se ajusta a mano: se calcula con `rollingVol()` sobre la serie
+> de cierres del USD/MXN. Es volatilidad REALIZADA, no implícita — la implícita
+> no está en fuentes gratuitas y el índice no la usa.
 
 ---
 
@@ -88,4 +121,14 @@ Abre http://localhost:3000
 
 ## ⚖️ Nota de compliance
 
-Todo el contenido es informativo/educativo y opinión personal. El sitio no usa correos ni canales institucionales, no pone precios, y no invita a operar — solo lee la temperatura del mercado. Revisa las políticas de tu empleador antes de publicar.
+Todo el contenido es informativo/educativo y opinión personal. **El producto
+central hoy ES un correo diario con suscriptores** (Resend, lista en un Google
+Sheet), más un canal de alertas en beta — así que la frase original de que "el
+sitio no usa correos" dejó de ser cierta hace tiempo.
+
+Lo que se mantiene: no se publican precios de entrada o salida, ni instrumentos
+puntuales, ni tamaños de posición. Se publica sesgo y postura general, enmarcados
+como opinión de mercado. El aviso legal va en el pie de cada página y dentro del
+marcador de posturas.
+
+Revisa las políticas de tu empleador antes de publicar.
