@@ -361,7 +361,7 @@
       "band": null,
       "band_cuts": null,
       "condicion": "Si el par sostiene arriba de 17.15 con el MOVE rompiendo 80, me vuelvo neutral.",
-      "spot_t0": 17.030000686645508,
+      "spot_t0": null,
       "mxn5": null,
       "verdict": null,
       "evaluated_at": null
@@ -374,7 +374,7 @@
       "band": null,
       "band_cuts": null,
       "condicion": "Un cierre arriba de 17.10 con el 10Y rompiendo 4.75% me vuelve neutral.",
-      "spot_t0": 17.059829711914062,
+      "spot_t0": null,
       "mxn5": null,
       "verdict": null,
       "evaluated_at": null
@@ -387,7 +387,7 @@
       "band": null,
       "band_cuts": null,
       "condicion": "Un cierre sostenido arriba de 17.10 con el 10Y rompiendo 4.75% me vuelve neutral.",
-      "spot_t0": 16.951000213623047,
+      "spot_t0": null,
       "mxn5": null,
       "verdict": null,
       "evaluated_at": null
@@ -400,7 +400,7 @@
       "band": null,
       "band_cuts": null,
       "condicion": "Me vuelvo neutral si el USD/MXN cierra sostenido arriba de 17.16 o el 10Y perfora 4.75%.",
-      "spot_t0": 16.94540023803711,
+      "spot_t0": null,
       "mxn5": null,
       "verdict": null,
       "evaluated_at": null
@@ -413,7 +413,7 @@
       "band": "CONSTRUCTIVE",
       "band_cuts": "32/49/67/100",
       "condicion": "Giro a neutral si el USD/MXN cierra sostenido arriba de 17.16 o el 10Y perfora 4.75%.",
-      "spot_t0": 16.95199966430664,
+      "spot_t0": null,
       "mxn5": null,
       "verdict": null,
       "evaluated_at": null

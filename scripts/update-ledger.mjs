@@ -135,7 +135,12 @@ const main = async () => {
       band: p.band ?? null,
       band_cuts: p.band_cuts ?? null,
       condicion: p.postura_condicion ?? "",
-      spot_t0: mxn.bySlug[p.slug] ?? null,
+      // El precio de entrada solo se estampa CUANDO SE RESUELVE. Mientras la
+      // postura sigue abierta, la última barra diaria de Yahoo se mueve
+      // intradía, así que reescribirla en cada corrida cambiaba el archivo sin
+      // que cambiara nada real: el 24-ago produjo TRES commits (12:54, 13:38,
+      // 13:57) y tres redeploys, uno por cada corrida del workflow.
+      spot_t0: verdict == null ? null : (mxn.bySlug[p.slug] ?? null),
       mxn5: mxn5 == null ? null : +mxn5.toFixed(4),
       verdict,
       evaluated_at: verdict == null ? null : new Date().toISOString(),
