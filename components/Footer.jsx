@@ -5,6 +5,7 @@ import { T } from "./Lang";
 const NAV = [
   { href: "/archive", es: "Archivo", en: "Archive" },
   { href: "/learn",   es: "Aprende", en: "Learn"   },
+  { href: "/metodologia", es: "Metodología", en: "Methodology" },
   { href: "/about",   es: "Contacto", en: "Contact" },
 ];
 

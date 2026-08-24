@@ -135,7 +135,7 @@ async function handler(request) {
       weekday: "long", year: "numeric", month: "long", day: "numeric", timeZone: "UTC",
     });
     const L = en
-      ? { tag: "WEEKLY RECAP", cta: "See the public scoreboard →", unsub: "Unsubscribe",
+      ? { tag: "WEEKLY RECAP", cta: "See the public scoreboard →", unsub: "Unsubscribe", permalink: "Read this recap on the site →",
           greeting: "Happy Friday!", week: "THE WEEK, DAY BY DAY", fxWeek: "USD/MXN · THE WEEK",
           open: "Monday close", close: "Friday close", range: "Weekly range", scoreArc: "Score",
           posturas: "LATEST STANCES RESOLVED", val: "VALIDATED", inval: "MISSED",
@@ -143,7 +143,7 @@ async function handler(request) {
           explore: "EXPLORE", markets: "Markets", learn: "Learn",
           advisory: "Book advisory", advisoryCta: "📅 Book a 1-on-1 advisory",
           footerTag: "WEEKLY RECAP" }
-      : { tag: "RECAP SEMANAL", cta: "Ver el marcador público →", unsub: "Darse de baja",
+      : { tag: "RECAP SEMANAL", cta: "Ver el marcador público →", unsub: "Darse de baja", permalink: "Leer este recap en el sitio →",
           greeting: "¡Feliz viernes!", week: "LA SEMANA, DÍA A DÍA", fxWeek: "USD/MXN · LA SEMANA",
           open: "Cierre del lunes", close: "Cierre del viernes", range: "Rango semanal", scoreArc: "Score",
           posturas: "ÚLTIMAS POSTURAS RESUELTAS", val: "VALIDADA", inval: "FALLÓ",
@@ -294,6 +294,13 @@ async function handler(request) {
         <table role="presentation" cellpadding="0" cellspacing="0" style="margin:28px 0 30px"><tr><td class="em-btn" style="background:${C.text};border-radius:4px">
           <a href="${SITE}/indice" class="em-btn-txt" style="display:inline-block;padding:13px 26px;font-family:${sans};font-size:14px;font-weight:600;color:${C.bone};text-decoration:none">${L.cta}</a>
         </td></tr></table>
+
+        <!-- Enlace permanente. Hasta el 2026-08-24 el recap vivía SOLO en el
+             correo: no había a dónde apuntar para compartirlo ni para volver a
+             leerlo. Ahora /recap/<slug> existe. -->
+        <div class="em-faint" style="font-family:${sans};font-size:12px;color:${C.faint};margin:-16px 0 30px">
+          <a href="${SITE}/recap/${slug}" class="em-faint" style="color:${C.faint};text-decoration:underline">${L.permalink}</a>
+        </div>
 
         <!-- Nav (idéntico al diario) -->
         <div class="em-border" style="border-top:1px solid ${C.border};padding-top:24px;text-align:center">

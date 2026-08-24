@@ -1,20 +1,38 @@
 // app/feed.xml/route.js
 // RSS 2.0 de los views diarios — para lectores de feeds y agregadores.
 // Se regenera con cada deploy (el cron diario redeploya al publicar).
-import { getAllPostsMeta } from "../../lib/posts";
+import { getAllPostsMeta, getAllRecapsMeta } from "../../lib/posts";
 
 const SITE = "https://riskon.lat";
 const esc = (s) =>
   String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
 export async function GET() {
-  const posts = getAllPostsMeta().slice(0, 30);
-  const items = posts.map((p) => `    <item>
-      <title>${esc(p.title_es)}</title>
-      <link>${SITE}/archive/${p.slug}</link>
-      <guid isPermaLink="true">${SITE}/archive/${p.slug}</guid>
-      <pubDate>${new Date(`${p.slug}T13:00:00Z`).toUTCString()}</pubDate>
-      <description>${esc(p.summary_es)} (Risk On score: ${esc(p.score)}/100)</description>
+  // Views diarios + recaps semanales, mezclados por fecha. Los recaps
+  // llevaban meses fuera del feed por no tener URL (auditoría 2026-08-21).
+  const posts = getAllPostsMeta().slice(0, 30).map((p) => ({
+    title: p.title_es,
+    url: `${SITE}/archive/${p.slug}`,
+    ts: new Date(`${p.slug}T13:00:00Z`),
+    desc: `${esc(p.summary_es)} (Risk On score: ${esc(p.score)}/100)`,
+  }));
+  const recaps = getAllRecapsMeta().slice(0, 12).map((r) => ({
+    title: `[Recap semanal] ${r.title_es}`,
+    url: `${SITE}/recap/${r.slug}`,
+    // 22:00 UTC = después del cierre del viernes: el recap va DESPUÉS del view
+    // de ese mismo día en el orden del feed.
+    ts: new Date(`${r.slug}T22:00:00Z`),
+    desc: esc(r.summary_es ?? r.title_es ?? ""),
+  }));
+  const items = [...posts, ...recaps]
+    .sort((a, b) => b.ts - a.ts)
+    .slice(0, 40)
+    .map((p) => `    <item>
+      <title>${esc(p.title)}</title>
+      <link>${p.url}</link>
+      <guid isPermaLink="true">${p.url}</guid>
+      <pubDate>${p.ts.toUTCString()}</pubDate>
+      <description>${p.desc}</description>
     </item>`).join("\n");
 
   const xml = `<?xml version="1.0" encoding="UTF-8"?>

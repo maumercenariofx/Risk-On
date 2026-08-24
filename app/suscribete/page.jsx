@@ -24,8 +24,8 @@ const PERKS = [
   {
     es_t: "El Índice Risk On del día",
     en_t: "The day's Risk On Index",
-    es_d: "Un score 0-100 con 9 señales de mercado (VIX, USD/MXN, S&P, carry…). Metodología pública, sin ediciones retroactivas.",
-    en_d: "A 0-100 score built from 9 market signals (VIX, USD/MXN, S&P, carry…). Public methodology, never edited after the fact.",
+    es_d: "Un score 0-100 con 9 señales de mercado (VIX, USD/MXN, S&P, carry…). Metodología pública en /metodologia, sin ediciones retroactivas.",
+    en_d: "A 0-100 score built from 9 market signals (VIX, USD/MXN, S&P, carry…). Public methodology at /metodologia, never edited after the fact.",
   },
   {
     es_t: "Niveles accionables de USD/MXN",

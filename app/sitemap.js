@@ -1,12 +1,12 @@
 // app/sitemap.js
 // Sitemap dinámico: rutas fijas + cada view del archivo + cada caso educativo.
-import { getAllPostsMeta } from "../lib/posts";
+import { getAllPostsMeta, getAllRecapSlugs } from "../lib/posts";
 import { getAllCaseSlugs } from "../lib/cases";
 
 const SITE = "https://riskon.lat";
 
 export default function sitemap() {
-  const fixed = ["", "/archive", "/markets", "/analisis", "/learn", "/about", "/indice", "/suscribete"].map(
+  const fixed = ["", "/archive", "/markets", "/analisis", "/learn", "/about", "/indice", "/metodologia", "/suscribete"].map(
     (p) => ({
       url: `${SITE}${p}`,
       changeFrequency: p === "" || p === "/archive" ? "daily" : "weekly",
@@ -27,5 +27,15 @@ export default function sitemap() {
     priority: 0.5,
   }));
 
-  return [...fixed, ...posts, ...cases];
+  // Los recaps semanales llevaban desde julio sin entrar aquí porque no
+  // tenían URL (auditoría 2026-08-21). Prioridad 0.65: por encima de un view
+  // diario, porque son evergreen y cierran el arco de la semana.
+  const recaps = getAllRecapSlugs().map((slug) => ({
+    url: `${SITE}/recap/${slug}`,
+    lastModified: new Date(`${slug}T22:00:00Z`),
+    changeFrequency: "monthly",
+    priority: 0.65,
+  }));
+
+  return [...fixed, ...posts, ...recaps, ...cases];
 }
