@@ -15,9 +15,11 @@ export default function ProfileCard() {
               MM
             </div>
             <div>
-              <h1 className="text-xl font-medium tracking-tight text-bone">
+              {/* h2, no h1: /about ya tiene su propio h1 y este componente se monta
+                  dentro de esa página — dos h1 rompen la jerarquía (2026-08-24). */}
+              <h2 className="text-xl font-medium tracking-tight text-bone">
                 Mauricio Mercenario Nieto
-              </h1>
+              </h2>
               <div className="text-sm font-medium tracking-wide text-muted">
                 <T
                   es="Especialista FX · Transaccional, Mercados Globales"

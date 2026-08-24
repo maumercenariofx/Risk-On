@@ -22,7 +22,9 @@ export default function RegimeStrip({ history }) {
 
   return (
     <div style={{ marginTop: 14 }}>
-      <div style={{ display: "flex", gap: 3, alignItems: "center" }}>
+      {/* alignItems flex-end: las celdas crecen desde una línea base común,
+          así el perfil de la tira se lee como un gráfico y no como un mosaico. */}
+      <div style={{ display: "flex", gap: 3, alignItems: "flex-end", height: 20 }}>
         {history.map((h) => {
           const b = riskBand(h.score);
           return (
@@ -34,8 +36,12 @@ export default function RegimeStrip({ history }) {
               aria-label={`${fmt(h.slug)}: ${h.score} ${b.key}`}
               style={{
                 flex: 1,
-                height: 12,
-                minWidth: 4,
+                // La ALTURA codifica el score además del color: quien no
+                // distingue CONSTRUCTIVE de RISK-ON (ΔE 4.4 en deuteranopía)
+                // sigue leyendo la tira por su perfil (auditoría 2026-08-21).
+                height: 6 + Math.round((Math.max(0, Math.min(100, h.score)) / 100) * 14),
+                alignSelf: "flex-end",
+                minWidth: 6,
                 borderRadius: 3,
                 background: b.color,
                 borderBottom: "none", // anula el dotted de [data-tip]

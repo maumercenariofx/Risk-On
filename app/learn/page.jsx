@@ -1,7 +1,6 @@
 "use client";
 // app/learn/page.jsx
 import { useLang, T } from "../../components/Lang";
-import QuantLab from "../../components/QuantLab";
 
 // Glosario por categorías — términos de mercado + conceptos clave de
 // CFA Nivel I y del examen AMIB (Figura 3). Bilingüe, explicado para todos.
@@ -128,7 +127,6 @@ export default function LearnPage() {
         <div style={{ fontSize: 11, letterSpacing: 3, textTransform: "uppercase", color: "#8A8A8E", marginBottom: 12 }}>
           &mdash; <T es="Laboratorio cuant" en="Quant lab" />
         </div>
-        <QuantLab />
       </div>
 
       {CATEGORIES.map((cat) => (
