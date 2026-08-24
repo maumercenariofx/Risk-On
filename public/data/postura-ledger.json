@@ -413,7 +413,7 @@
       "band": "CONSTRUCTIVE",
       "band_cuts": "32/49/67/100",
       "condicion": "Giro a neutral si el USD/MXN cierra sostenido arriba de 17.16 o el 10Y perfora 4.75%.",
-      "spot_t0": 16.934289932250977,
+      "spot_t0": 16.94860076904297,
       "mxn5": null,
       "verdict": null,
       "evaluated_at": null
