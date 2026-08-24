@@ -8,6 +8,7 @@
 import { useLang, T } from "./Lang";
 import { BANDS } from "../lib/riskScore";
 import { cardStyle, sectionLabel } from "../lib/chartHelpers";
+import { wilson } from "../lib/stats";
 
 // Backtest 5y (actualizado 2026-07-30 con carry y curva HISTÓRICOS reales —
 // antes constantes; reproducible con scripts/research-posturas.mjs): días por
@@ -62,6 +63,7 @@ export default function BandEvidence() {
                 "USD/MXN +5d",
                 "USD/MXN +10d",
                 lang === "en" ? "Peso gained (5d)" : "Peso ganó (5d)",
+                lang === "en" ? "95% CI" : "IC 95%",
               ].map((h, i) => (
                 <th key={h} style={{
                   ...sectionLabel, fontSize: 11, padding: "0 8px 8px 0",
@@ -91,6 +93,11 @@ export default function BandEvidence() {
                   )}
                   {r.revision ? <span style={{ marginLeft: 6, fontSize: 11, letterSpacing: 1.5 }}>†</span> : null}
                 </td>
+                {/* El IC es lo que separa una muestra de 22 días de una de 658.
+                    Sin él, las cuatro filas se leían con el mismo peso. */}
+                <td style={{ padding: "9px 0", textAlign: "right", fontFamily: "var(--font-mono)", fontSize: 11.5, color: "#8A8A8E", fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}>
+                  {(() => { if (r.revision) return "—"; const ci = wilson(Math.round(r.n * r.hit / 100), r.n); return ci ? `[${ci.lo.toFixed(0)}–${ci.hi.toFixed(0)}]` : "—"; })()}
+                </td>
               </tr>
             ))}
           </tbody>
@@ -101,6 +108,16 @@ export default function BandEvidence() {
         <T
           es={`† Retiramos el 76% de RISK-OFF. Una auditoría del 21-ago-2026 encontró que el script del backtest etiqueta la serie del peso sin corregir la zona horaria de la fuente, así que toda la muestra iba corrida una sesión. Con la corrección, esa cifra cae a 58.3% (n=36) y deja de ser distinguible de un volado — y de la base de ${BASE_HIT}%. Preferimos decirlo a dejarlo puesto. La fila vuelve cuando el backtest se re-corra sobre datos congelados y realineados.`}
           en={`† We've pulled the 76% RISK-OFF figure. An Aug 21, 2026 audit found the backtest script labels the peso series without correcting for the source's timezone, so the whole sample was off by one session. Corrected, that figure drops to 58.3% (n=36) and stops being distinguishable from a coin flip — or from the ${BASE_HIT}% base. We'd rather say so than leave it up. The row returns once the backtest is re-run on frozen, realigned data.`}
+        />
+      </p>
+      {/* La mitad reciente. lib/posturaPrior.js la documenta internamente desde
+          siempre y el público solo veía los números del sample completo — que
+          son los mejores. Publicar la mitad favorable y guardarse la otra es
+          exactamente lo que define una reputación (auditoría 2026-08-21). */}
+      <p style={{ fontSize: 12, color: "#9CA3AF", lineHeight: 1.65, margin: "12px 0 0" }}>
+        <T
+          es="La mitad reciente es PEOR, y también va aquí: la base pro-peso del par baja de 57% a 54%, y el estiramiento de 62% a 59%. El backtest se calculó por mitades desde el principio; durante meses solo publicamos la mitad que favorecía. Ya no."
+          en="The recent half is WORSE, and it belongs here too: the pair's pro-peso base drops from 57% to 54%, and the stretch signal from 62% to 59%. The backtest was computed in halves from the start; for months we only published the favorable half. Not anymore."
         />
       </p>
       <p style={{ fontSize: 12, color: "#9CA3AF", lineHeight: 1.65, margin: "10px 0 0" }}>
