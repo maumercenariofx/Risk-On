@@ -5,12 +5,18 @@ import { createContext, useContext, useState, useEffect } from "react";
 
 const LangContext = createContext({ lang: "es", setLang: () => {} });
 
-export function LangProvider({ children }) {
+// `force`: fija el idioma e ignora localStorage y navigator. Lo usan las rutas
+// /en/*, que existen para que Google indexe el corpus en inglés — ahí el
+// contenido ES inglés por definición y el toggle no debe poder cambiarlo
+// (auditoría 2026-08-21: 59 views con body_en completo, ~25,700 palabras,
+// invisibles porque vivían en una sola URL con un toggle de cliente).
+export function LangProvider({ children, force = null }) {
   // Arranca en ES: el <html lang> del SSR es "es" y la audiencia declarada es
   // México. Estaba en "en" y todo visitante nuevo veía el sitio en inglés
   // mientras Google indexaba contenido EN bajo lang="es" (auditoría 2026-08-21).
-  const [lang, setLang] = useState("es");
+  const [lang, setLang] = useState(force ?? "es");
   useEffect(() => {
+    if (force) return; // ruta con idioma fijo: ni localStorage ni navigator mandan
     const saved = typeof window !== "undefined" && window.localStorage?.getItem("riskon-lang");
     if (saved === "en" || saved === "es") { setLang(saved); return; }
     // Sin preferencia guardada: respetamos el idioma del navegador. Solo un
@@ -24,6 +30,7 @@ export function LangProvider({ children }) {
     try { document.documentElement.lang = lang; } catch {}
   }, [lang]);
   const set = (l) => {
+    if (force) return; // no-op donde el idioma es parte de la URL
     setLang(l);
     try { window.localStorage.setItem("riskon-lang", l); } catch {}
   };

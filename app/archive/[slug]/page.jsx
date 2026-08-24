@@ -21,7 +21,16 @@ export async function generateMetadata({ params }) {
   return {
     title,
     description,
-    alternates: { canonical: `/archive/${params.slug}` },
+    alternates: {
+      canonical: `/archive/${params.slug}`,
+      // Recíproco con /en/archive/<slug>. hreflang solo funciona si AMBAS
+      // versiones se declaran mutuamente (auditoría 2026-08-21).
+      languages: {
+        "es-MX": `/archive/${params.slug}`,
+        "en": `/en/archive/${params.slug}`,
+        "x-default": `/archive/${params.slug}`,
+      },
+    },
     // Sin images explícitas: Next inyecta la OG dinámica de opengraph-image.jsx
     // (score + banda del día); X/Twitter cae al og:image.
     openGraph: { title, description, url, type: "article" },

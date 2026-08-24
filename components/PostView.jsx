@@ -130,6 +130,13 @@ function WhatHappenedCard({ fwd, lang }) {
 
 export default function PostView({ post, prev, next, fwd = null }) {
   const { lang } = useLang();
+  // Enlace visible entre versiones. El hreflang sirve a Google; el lector
+  // necesita un link. Se deriva del idioma activo: en /en/archive el provider
+  // va forzado a "en", así que este bloque apunta a la versión en español y
+  // viceversa (auditoría 2026-08-21).
+  const otra = lang === "en"
+    ? { href: `/archive/${post.slug}`, txt: "Leer en español", code: "ES" }
+    : { href: `/en/archive/${post.slug}`, txt: "Read in English", code: "EN" };
   return (
     <article className="space-y-5 pt-4">
       {typeof post.score === "number" && <ReadingProgress color={riskBand(post.score).color} />}
@@ -137,7 +144,17 @@ export default function PostView({ post, prev, next, fwd = null }) {
         ← <T es="Inicio" en="Home" />
       </Link>
       <div className="reveal">
-        <div className="text-xs text-muted">{post.date}</div>
+        <div className="flex flex-wrap items-baseline justify-between gap-3">
+          <div className="text-xs text-muted">{post.date}</div>
+          <a
+            href={otra.href}
+            hrefLang={lang === "en" ? "es-MX" : "en"}
+            className="text-xs text-muted transition-colors hover:text-bone"
+            style={{ fontFamily: "var(--font-mono)", letterSpacing: 1 }}
+          >
+            {otra.code} · {otra.txt} →
+          </a>
+        </div>
         <h1 className="mt-1 font-serif text-2xl font-medium leading-tight text-bone">
           {lang === "en" ? post.title_en : post.title_es}
         </h1>

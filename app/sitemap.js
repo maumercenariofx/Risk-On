@@ -14,12 +14,31 @@ export default function sitemap() {
     })
   );
 
-  const posts = getAllPostsMeta().map((p) => ({
-    url: `${SITE}/archive/${p.slug}`,
-    lastModified: new Date(`${p.slug}T13:00:00Z`),
-    changeFrequency: "monthly",
-    priority: 0.6,
-  }));
+  // Cada view entra DOS veces, una por idioma, con sus alternates. Los 59
+  // body_en (~25,700 palabras) llevaban meses sin poder indexarse porque solo
+  // existía una URL (auditoría 2026-08-21).
+  const alternates = (slug) => ({
+    languages: {
+      "es-MX": `${SITE}/archive/${slug}`,
+      en: `${SITE}/en/archive/${slug}`,
+    },
+  });
+  const posts = getAllPostsMeta().flatMap((p) => [
+    {
+      url: `${SITE}/archive/${p.slug}`,
+      lastModified: new Date(`${p.slug}T13:00:00Z`),
+      changeFrequency: "monthly",
+      priority: 0.6,
+      alternates: alternates(p.slug),
+    },
+    {
+      url: `${SITE}/en/archive/${p.slug}`,
+      lastModified: new Date(`${p.slug}T13:00:00Z`),
+      changeFrequency: "monthly",
+      priority: 0.5,
+      alternates: alternates(p.slug),
+    },
+  ]);
 
   const cases = getAllCaseSlugs().map((slug) => ({
     url: `${SITE}/casos/${slug}`,
