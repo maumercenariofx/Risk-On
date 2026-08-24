@@ -439,6 +439,7 @@ async function handler(request) {
     unsub: "Unsubscribe", footerTag: "DAILY PREMARKET",
     strip30: "Last 30 days", yesterday: "yesterday", today: "today",
     postura: "TODAY'S STANCE", record: "Track record", recordOf: "stances validated",
+    libreta: "FROM THE NOTEBOOK",
     recordLink: "see the public scoreboard →",
     agenda: "TODAY'S CALENDAR (CDMX)", agendaEmpty: "No high-impact data today",
     agendaNext: "Next up",
@@ -459,6 +460,7 @@ async function handler(request) {
     unsub: "Darse de baja", footerTag: "PREMARKET DIARIO",
     strip30: "Últimos 30 días", yesterday: "ayer", today: "hoy",
     postura: "POSTURA DEL DÍA", record: "Marcador", recordOf: "posturas validadas",
+    libreta: "DE LA LIBRETA",
     recordLink: "ver el marcador público →",
     agenda: "AGENDA DE HOY (CDMX)", agendaEmpty: "Sin datos de alto impacto hoy",
     agendaNext: "Próximo",
@@ -515,6 +517,20 @@ async function handler(request) {
               <div style="margin-bottom:${condicion ? "8px" : "0"}"><span style="display:inline-block;padding:4px 10px;border-radius:3px;background:${bias.color};color:#FFFFFF;font-family:${sans};font-size:12px;font-weight:700;letter-spacing:1px">${en ? bias.en : bias.es}</span></div>
               ${condicion ? `<div class="em-body" style="font-family:${serif};font-size:14px;font-style:italic;color:#3a3a3a;line-height:1.55">${condicion}</div>` : ""}
               ${record?.resolved ? `<div class="em-muted" style="font-family:${sans};font-size:12px;color:${C.muted};margin-top:10px">${L.record}: <strong class="em-text" style="color:${C.text}">${record.hits}/${record.resolved}</strong> ${L.recordOf} · <a href="${SITE}/indice" class="em-muted" style="color:${C.muted};text-decoration:underline">${L.recordLink}</a></div>` : ""}
+            </td></tr>
+          </table>` : "";
+
+  // ── La libreta: la línea de Mauricio ────────────────────────────────────────
+  // Bloque visualmente distinto del análisis a propósito: el lector tiene que
+  // notar que aquí habla una persona, no el redactor. Si no hay nota, no hay
+  // bloque — degradar con gracia, como todo lo demás del pipeline.
+  const notaHumana = stripBold(post.nota_humana ?? "").trim();
+  const notaHtml = notaHumana ? `
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid ${C.border};border-bottom:1px solid ${C.border};margin-bottom:28px">
+            <tr><td style="padding:16px 4px">
+              <div class="em-faint" style="font-family:${sans};font-size:11px;letter-spacing:2px;color:${C.faint};font-weight:700;margin-bottom:9px">${L.libreta}</div>
+              <div class="em-body" style="font-family:${serif};font-size:15px;color:#3a3a3a;line-height:1.6">${notaHumana}</div>
+              <div class="em-faint" style="font-family:${sans};font-size:12px;color:${C.faint};margin-top:8px">— Mauricio</div>
             </td></tr>
           </table>` : "";
 
@@ -627,6 +643,7 @@ async function handler(request) {
 
           <!-- Postura del día + récord -->
           ${posturaHtml}
+          ${notaHtml}
 
           <!-- Article CTA -->
           <table role="presentation" cellpadding="0" cellspacing="0" style="margin-bottom:34px">
