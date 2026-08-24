@@ -53,6 +53,7 @@ export default function Nav() {
     { href: "/analisis", es: "Análisis", en: "Analysis" },
     { href: "/indice", es: "Índice", en: "Index" },
     { href: "/learn", es: "Aprende", en: "Learn" },
+    { href: "/alertas", es: "Alertas", en: "Alerts" },
     { href: "/about", es: "Contacto", en: "Contact" },
   ];
 

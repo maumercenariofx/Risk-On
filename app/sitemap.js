@@ -6,7 +6,7 @@ import { getAllCaseSlugs } from "../lib/cases";
 const SITE = "https://riskon.lat";
 
 export default function sitemap() {
-  const fixed = ["", "/archive", "/markets", "/analisis", "/learn", "/about", "/indice", "/metodologia", "/suscribete"].map(
+  const fixed = ["", "/archive", "/markets", "/analisis", "/learn", "/about", "/indice", "/metodologia", "/alertas", "/suscribete"].map(
     (p) => ({
       url: `${SITE}${p}`,
       changeFrequency: p === "" || p === "/archive" ? "daily" : "weekly",

@@ -177,7 +177,7 @@ export default function SubscribeForm() {
                 className="w-full rounded-md border border-line bg-transparent px-3 py-2 text-sm text-bone outline-none placeholder:text-muted focus:border-bone/50"
               />
               <p className="pt-1 text-xs text-muted">
-                <T es="WhatsApp (opcional): estamos preparando alertas intradía de niveles clave — deja tu número y estarás en la lista de acceso anticipado."
+                <T es="WhatsApp (opcional): las alertas intradía de niveles clave ya funcionan en beta abierta — deja tu número y te damos acceso."
                    en="WhatsApp (optional): we're building intraday key-level alerts — leave your number to join the early-access list." />
               </p>
               <input

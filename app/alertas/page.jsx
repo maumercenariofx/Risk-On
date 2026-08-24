@@ -25,11 +25,20 @@ export default function AlertasPage() {
         >
           Risk-On Pro
         </div>
-        <h1 className="font-serif text-3xl font-medium text-bone">Alertas en tiempo real</h1>
+        <h1 className="font-serif text-3xl font-medium text-bone">Alertas cuando el mercado cruza tu nivel</h1>
         <p className="mt-3 text-sm leading-relaxed text-muted">
           El motor vigila el mercado cada pocos minutos en horario FX: si el índice Risk On
           cruza de banda o el USD/MXN toca uno de tus niveles, te llega la alerta al
           instante — WhatsApp primero, correo de respaldo.
+        </p>
+        {/* Honestidad sobre el estado real: la tabla `pro` inscribe con status
+            "trial" y en todo el repo no hay cobro, ni precio, ni integración de
+            pago. Presentarlo como tier de pago sin decir esto sería vender algo
+            que no existe (auditoría 2026-08-21). */}
+        <p className="mt-3 text-xs leading-relaxed text-muted">
+          Beta abierta y sin costo mientras la afinamos. Si algún día se cobra, se
+          avisa antes y con el precio a la vista. Las alertas son informativas: no
+          son recomendación de operar.
         </p>
       </header>
       <div className="reveal">
