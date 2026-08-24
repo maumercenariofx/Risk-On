@@ -18,10 +18,17 @@ const outFile = path.join(process.cwd(), "content", `${slug}.md`);
 const dryRun = process.env.DRY_RUN === "1";
 
 // Sáb/dom no hay view (el cron ya es L-V; esto cubre un dispatch manual).
+// EXCEPCIÓN solo para pruebas: con DRY_RUN=1 sí genera en fin de semana. El
+// camino programado no cambia — un cambio en la generación no se puede validar
+// si el único día para probarlo es el día en que sale el correo de verdad
+// (auditoría 2026-08-21: la Fase 3 tocó el prompt un domingo).
 const dow = new Date(`${slug}T12:00:00Z`).getUTCDay();
-if (dow === 0 || dow === 6) {
+if ((dow === 0 || dow === 6) && !dryRun) {
   console.log(`[gen] ${slug} es fin de semana — nada que generar.`);
   process.exit(0);
+}
+if ((dow === 0 || dow === 6) && dryRun) {
+  console.log(`[gen] ${slug} es fin de semana pero DRY_RUN=1 — genero igual para probar el cableado (mercado cerrado: los datos serán del último cierre).`);
 }
 
 if (!dryRun && fs.existsSync(outFile)) {
