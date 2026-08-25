@@ -361,10 +361,10 @@
       "band": null,
       "band_cuts": null,
       "condicion": "Si el par sostiene arriba de 17.15 con el MOVE rompiendo 80, me vuelvo neutral.",
-      "spot_t0": null,
-      "mxn5": null,
-      "verdict": null,
-      "evaluated_at": null
+      "spot_t0": 17.030000686645508,
+      "mxn5": -0.5755,
+      "verdict": true,
+      "evaluated_at": "2026-08-25T12:54:16.416Z"
     },
     "2026-08-19": {
       "slug": "2026-08-19",
@@ -410,6 +410,19 @@
       "bias": "pro-peso",
       "prior": "pro-peso",
       "score": 54,
+      "band": "CONSTRUCTIVE",
+      "band_cuts": "32/49/67/100",
+      "condicion": "Giro a neutral si el USD/MXN cierra sostenido arriba de 17.16 o el 10Y perfora 4.75%.",
+      "spot_t0": null,
+      "mxn5": null,
+      "verdict": null,
+      "evaluated_at": null
+    },
+    "2026-08-25": {
+      "slug": "2026-08-25",
+      "bias": "pro-peso",
+      "prior": "pro-peso",
+      "score": 60,
       "band": "CONSTRUCTIVE",
       "band_cuts": "32/49/67/100",
       "condicion": "Giro a neutral si el USD/MXN cierra sostenido arriba de 17.16 o el 10Y perfora 4.75%.",
