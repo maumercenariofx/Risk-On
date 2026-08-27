@@ -387,10 +387,10 @@
       "band": null,
       "band_cuts": null,
       "condicion": "Un cierre sostenido arriba de 17.10 con el 10Y rompiendo 4.75% me vuelve neutral.",
-      "spot_t0": null,
-      "mxn5": null,
-      "verdict": null,
-      "evaluated_at": null
+      "spot_t0": 16.951000213623047,
+      "mxn5": 0.1559,
+      "verdict": false,
+      "evaluated_at": "2026-08-27T12:54:06.087Z"
     },
     "2026-08-21": {
       "slug": "2026-08-21",
@@ -436,6 +436,19 @@
       "bias": "pro-peso",
       "prior": "pro-peso",
       "score": 56,
+      "band": "CONSTRUCTIVE",
+      "band_cuts": "32/49/67/100",
+      "condicion": "Giro a neutral si el USD/MXN cierra sostenido arriba de 17.16 o el 10Y perfora 4.75%.",
+      "spot_t0": null,
+      "mxn5": null,
+      "verdict": null,
+      "evaluated_at": null
+    },
+    "2026-08-27": {
+      "slug": "2026-08-27",
+      "bias": "pro-peso",
+      "prior": "pro-peso",
+      "score": 57,
       "band": "CONSTRUCTIVE",
       "band_cuts": "32/49/67/100",
       "condicion": "Giro a neutral si el USD/MXN cierra sostenido arriba de 17.16 o el 10Y perfora 4.75%.",
