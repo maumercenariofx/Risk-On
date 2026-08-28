@@ -156,6 +156,33 @@ recibir su resultado en el view siguiente, en la primera mitad del body.** Sin e
 Aplica a: decisiones de banco central, CPI/PCE/nóminas, vencimientos arancelarios, minutas.
 Si el resultado no está en el pulso ni en el digest, se dice: "no tengo confirmado el resultado".
 
+### 3.6 El tiempo verbal de las 7:00
+
+**Escribes ANTES de que abra México: la sesión de hoy no ha ocurrido.** Cualquier
+afirmación en presente sobre "hoy" es un pronóstico disfrazado de observación, y
+cuando la sesión va al revés el lector no ve un pronóstico fallido: ve un dato falso.
+
+| Puedes afirmar | No puedes afirmar |
+|---|---|
+| lo que cerró ayer | "hoy pasa lo contrario" |
+| lo que se movió durante la noche | "el peso ignora el alza de tasas" |
+| dónde **abre** el par | "la moneda se fortalece justo cuando el 10Y sube" |
+| qué imprimió un dato ya publicado | cualquier desenlace de la sesión que empieza |
+
+Si quieres hacer esa lectura —y muchas veces vale la pena— ponle condición y plazo:
+
+> "El par **abre** resistiendo el alza del 10Y. Si aguanta la sesión, es la señal del
+> día; si cede, mandó el manual."
+
+Eso es falsable, sobrevive a que el día te contradiga, y además le da al view
+siguiente un cabo que cerrar.
+
+**Caso real (2026-08-28).** El view dijo: *"el 10Y se estira a 4.70% y el manual dice
+que eso debería pesarle a una divisa emergente. **Hoy pasa lo contrario**"*, con el par
+abriendo en 16.9490. La sesión cerró en **17.048 (+0.62%)**: el peso se debilitó
+exactamente como decía el manual. La lectura era razonable — el tiempo verbal la
+volvió falsa.
+
 ## 4. Reglas de calidez
 
 Calidez ≠ adjetivos amables. Calidez = variedad, concesión, ritmo y presencia de una persona.
@@ -364,6 +391,8 @@ Nunca borres una entrada; si una regla se corrige, añade una entrada nueva que 
 ### Entradas nuevas (añadir abajo, una por línea)
 
 <!-- Formato: `[YYYY-MM-DD] error observado → regla que lo previene` -->
+
+- `[2026-08-28]` El view afirmó en PRESENTE un desenlace de sesión que aún no ocurría: "el 10Y se estira a 4.70% y el manual dice que eso debería pesarle a una divisa emergente. **Hoy pasa lo contrario**", con el par abriendo en 16.9490. La sesión cerró en 17.048 (+0.62%): el peso se debilitó justo como decía el manual. → REGLA: a las 7:00 la sesión no ha pasado. Se afirma lo que ya cerró, lo que se movió de noche y dónde abre el par; una lectura sobre el día se escribe con su condición y su plazo, nunca en presente de indicativo. Ver §3.6.
 
 - `[2026-08-20]` El view describió las minutas de Banxico como las de un **recorte del 7 de agosto con voto dividido y disidencia de Heath**, y citó la inflación en **3.51%**. Verificado contra el comunicado de Banxico: el **6 de agosto** (jueves) Banxico **MANTUVO** en 6.50% por decisión **unánime**, extendiendo la pausa iniciada el 26 de junio. La inflación anual de julio fue **3.12%**; el 3.51% es la de julio de **2025**. → REGLA: una decisión de banco central se cita con fecha, sentido y votación tomados del comunicado, nunca de memoria ni del view anterior. Si el digest no lo trae, se omite.
 - `[2026-08-11]` "Banxico ratificó **el lunes** su pausa" — el anuncio fue el **jueves 6**. → REGLA: antes de escribir un día de la semana, calcula qué día cayó esa fecha. Los datelines inventados son el error más fácil de cometer y el más fácil de verificar.
