@@ -82,15 +82,26 @@ El prompt de sistema canónico vive en `lib/dailyView.js` (const `SYSTEM`, ~lín
 | Curva 2s10s | 7% | Pendiente de la curva US |
 | Oro | 5% | Refugio |
 
-`lib/posturaPrior.js` — prior cuantitativo de la postura, respaldado por `scripts/research-posturas.mjs` (backtest 5 años, ~1,180 días, señales reales). Hallazgos que fijan la regla:
-- ~~Banda **RISK-OFF → pro-peso acierta 76%** (n=38)~~ **RETIRADO 21-ago-2026.** El backtest etiquetaba las barras sin `meta.gmtoffset`, así que la serie `MXN=X` (Europe/London) iba corrida un día. Corregido y re-corrido: **58%, n=36**, contra una base pro-peso de 56.9% — indistinguible de un volado (random-entry p=0.51). No lo cites como edge.
-- **Estiramiento** (spot − MA20)/ATR14 > +1 → pro-peso **61%, n=308** tras la corrección de fechas. Es el único componente que sobrevive, y apenas: contra la base pro-peso queda al filo del 5% nominal y muere con cualquier corrección por multiple testing.
-- **El compuesto predice menos que el estiramiento solo** (IC 5d del score +0.029 vs −0.14 del estiramiento). `carry` (10%) y `curve` (7%) tienen IC de −0.013 y +0.007: 17% del peso es ruido.
-- **NEUTRAL es trampa** bajo la regla del marcador (~21%): solo se justifica como tesis de rango explícita.
-- **PRO-DÓLAR** exige catalizador del día, no estadística (43% base).
-- El score es un **NOWCAST**: nunca usarlo como pronóstico direccional lineal.
+`lib/posturaPrior.js` — **desde el 28-ago-2026 el prior NO emite dirección.** Reporta contexto y deja la decisión al catalizador del día. Antes de proponer "reactivarlo", lee esto.
 
-> Si cambias `computeStretch` o los rangos del índice, **tienes que cambiar el backtest en el mismo commit**. Las definiciones están acopladas a propósito y el código lo advierte.
+La fuente ya no es `scripts/research-posturas.mjs` (5 años, descarga en vivo, irreproducible) sino `data/backtest/history.csv`: **5,422 días congelados, 2005-2026, con SHA256**, construidos sobre `DEXMXUS` de FRED — fecha de sesión inequívoca, sin el problema de `gmtoffset`. Se regenera con `scripts/build-history.mjs` y se valida con `scripts/validate/`.
+
+Sobre esos 21 años, **ninguna regla supera a "siempre pro-peso"**:
+
+| | 21 años | 2021-26 | 2014-20 |
+|---|---|---|---|
+| base pro-peso | **53.0%** | 57.4% | **49.2%** |
+| estiramiento > +1 → peso | 53.6% (n=1839) | 62.4% | 51.9% |
+| estiramiento < −1 → **dólar** | **47.0%** (n=2292) | 44.9% | 47.7% |
+| banda RISK-OFF → peso | 58.8% (n=160) | 64.0% | 56.4% |
+
+- **El 57% era del régimen**, no una constante. Entre 2014 y 2020 la base fue 49.2% y el peso pasó de 13 a 20. Cualquier cifra de esa familia se cita con su tramo o no se cita.
+- **El estiramiento no es reversión.** Su lado simétrico (< −1 → pro-dólar) PIERDE, 47%. Lo que parecía reversión era la deriva del par.
+- **RISK-OFF es el mejor indicio y aun así no es distinguible**: IC95 [51.0, 66.1] contiene la base de 53.0%.
+- Walk-forward de 17 ventanas (purga 5d, embargo 10d): **Sharpe OOS 0.11**, gana en 6 de 17, y elige 12 configuraciones distintas en 17 — firma de ruido, no de un óptimo estable.
+- El score sigue siendo un **NOWCAST**: describe el régimen de hoy, no pronostica dirección.
+
+> Si cambias `computeStretch` o los rangos del índice, **tienes que re-correr `scripts/validate/` en el mismo commit**. Y si vuelves a poner una cifra de acierto en el prompt o en la UI, tiene que llevar su n, su intervalo y su tramo.
 
 ## Agent Orchestration
 This `CLAUDE.md` is the **orchestrator**. It does not do specialized domain work directly — it routes each task to the right agent, integrates results, and makes the call when agents disagree. Agent designs live in `docs/agents/`, one file per agent, read ON DEMAND — never bulk-read the folder.
