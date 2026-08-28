@@ -489,8 +489,6 @@
       "spot_t0": null,
       "mxn5": null,
       "verdict": null,
-      "mxn5_fred": null,
-      "verdict_fred": null,
       "evaluated_at": null
     },
     "2026-08-25": {
@@ -504,8 +502,6 @@
       "spot_t0": null,
       "mxn5": null,
       "verdict": null,
-      "mxn5_fred": null,
-      "verdict_fred": null,
       "evaluated_at": null
     },
     "2026-08-26": {
@@ -519,8 +515,6 @@
       "spot_t0": null,
       "mxn5": null,
       "verdict": null,
-      "mxn5_fred": null,
-      "verdict_fred": null,
       "evaluated_at": null
     },
     "2026-08-27": {
@@ -534,8 +528,6 @@
       "spot_t0": null,
       "mxn5": null,
       "verdict": null,
-      "mxn5_fred": null,
-      "verdict_fred": null,
       "evaluated_at": null
     },
     "2026-08-28": {
@@ -549,8 +541,6 @@
       "spot_t0": null,
       "mxn5": null,
       "verdict": null,
-      "mxn5_fred": null,
-      "verdict_fred": null,
       "evaluated_at": null
     }
   }
