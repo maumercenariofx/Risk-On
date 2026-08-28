@@ -137,6 +137,61 @@ export default function PosturaRecord({ data }) {
         </div>
       )}
 
+      {/* ── De dónde salen estos números ──────────────────────────────────
+          El veredicto es una prueba de SIGNO, y medimos que el signo del
+          movimiento a 5 días cambia en el 27% de las posturas según qué serie
+          de USD/MXN uses. Con esa sensibilidad, publicar un porcentaje sin
+          decir su fuente no es defendible — así que van las dos cifras
+          (2026-08-28, scripts/validate/04-fuentes.mjs). */}
+      {data.contraste && data.source && (
+        <div style={{
+          border: "1px solid rgba(255,255,255,0.07)", borderRadius: 6,
+          padding: "12px 14px", margin: "0 0 14px",
+        }}>
+          <div style={{ ...sectionLabel, fontSize: 11, marginBottom: 8 }}>
+            <T es="De qué fuente depende este número" en="Which source this number depends on" />
+          </div>
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ borderCollapse: "collapse", width: "100%", minWidth: 380 }}>
+              <tbody>
+                {[
+                  { k: "p", label: data.source.primary?.label, h: data.contraste.primaria, oficial: true },
+                  { k: "c", label: data.source.crosscheck?.label, h: data.contraste.contraste, oficial: false },
+                ].map((r) => (
+                  <tr key={r.k} style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}>
+                    <td style={{ padding: "8px 10px 8px 0", fontSize: 12.5, color: r.oficial ? "#F5F5F2" : "#9CA3AF", lineHeight: 1.45 }}>
+                      {r.label}
+                      {r.oficial && (
+                        <span style={{ marginLeft: 7, fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: 1, color: "#8A8A8E" }}>
+                          <T es="OFICIAL" en="OFFICIAL" />
+                        </span>
+                      )}
+                    </td>
+                    <td style={{ padding: "8px 10px 8px 0", textAlign: "right", fontFamily: "var(--font-mono)", fontSize: 12, color: "#9CA3AF", fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}>
+                      {r.h}/{data.contraste.n}
+                    </td>
+                    <td style={{ padding: "8px 0", textAlign: "right", fontFamily: "var(--font-mono)", fontSize: 12, color: r.oficial ? "#F5F5F2" : "#9CA3AF", fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}>
+                      {((100 * r.h) / data.contraste.n).toFixed(1)}%
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p style={{ fontSize: 11.5, color: "#8A8A8E", lineHeight: 1.6, margin: "10px 0 0" }}>
+            <T
+              es={`Sobre las mismas ${data.contraste.n} posturas, el veredicto cambia en ${data.contraste.difieren} de ellas (${((100 * data.contraste.difieren) / data.contraste.n).toFixed(0)}%) según qué serie de USD/MXN se use. No es un error de nadie: las dos series cotizan a horas distintas del día y la diferencia entre ellas es del mismo tamaño que el movimiento que estamos midiendo. Un veredicto de signo a 5 días es sensible a esa elección, y preferimos que lo sepas.`}
+              en={`Across the same ${data.contraste.n} stances, the verdict flips on ${data.contraste.difieren} of them (${((100 * data.contraste.difieren) / data.contraste.n).toFixed(0)}%) depending on which USD/MXN series you use. Neither is wrong: the two series print at different times of day, and the gap between them is the same size as the move we're measuring. A 5-day sign verdict is sensitive to that choice, and we'd rather you knew.`}
+            />
+          </p>
+          {data.source.note && (
+            <p style={{ fontSize: 11.5, color: "#8A8A8E", lineHeight: 1.6, margin: "8px 0 0" }}>
+              <T es={data.source.note} en="The official verdict uses the primary source, unchanged since the scoreboard began (Jul 2026): switching it would rewrite already-published verdicts. The cross-check is stored alongside." />
+            </p>
+          )}
+        </div>
+      )}
+
       <div style={{ overflowX: "auto" }}>
         <table className="w-full" style={{ borderCollapse: "collapse", minWidth: 420 }}>
           <tbody>
