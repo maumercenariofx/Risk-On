@@ -525,10 +525,10 @@
       "band": "CONSTRUCTIVE",
       "band_cuts": "32/49/67/100",
       "condicion": "Giro a neutral si el USD/MXN cierra sostenido arriba de 17.16 o el 10Y perfora 4.75%.",
-      "spot_t0": null,
-      "mxn5": null,
-      "verdict": null,
-      "evaluated_at": null
+      "spot_t0": 16.94300079345703,
+      "mxn5": 0.2774,
+      "verdict": false,
+      "evaluated_at": "2026-09-03T13:03:22.159Z"
     },
     "2026-08-28": {
       "slug": "2026-08-28",
@@ -574,6 +574,19 @@
       "bias": "neutral",
       "prior": null,
       "score": 53,
+      "band": "CONSTRUCTIVE",
+      "band_cuts": "32/49/67/100",
+      "condicion": "Giro a pro-dólar si el par cierra arriba de 17.07 con el 10Y de vuelta sobre 4.80%; a pro-peso si cierra debajo de 16.88.",
+      "spot_t0": null,
+      "mxn5": null,
+      "verdict": null,
+      "evaluated_at": null
+    },
+    "2026-09-03": {
+      "slug": "2026-09-03",
+      "bias": "neutral",
+      "prior": null,
+      "score": 57,
       "band": "CONSTRUCTIVE",
       "band_cuts": "32/49/67/100",
       "condicion": "Giro a pro-dólar si el par cierra arriba de 17.07 con el 10Y de vuelta sobre 4.80%; a pro-peso si cierra debajo de 16.88.",
