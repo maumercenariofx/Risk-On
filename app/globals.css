@@ -146,6 +146,11 @@ html.io .reveal.in-view {
   transform: none;
 }
 
+/* Home V2 (2026-09-03): barras de empuje por señal. Crecen desde el punto
+   neutro al montar; la marca del publicado se desliza con ellas. */
+.drivers-bar { transition: width .9s cubic-bezier(0.2, 0.7, 0.3, 1), left .9s cubic-bezier(0.2, 0.7, 0.3, 1); }
+.drivers-tick { transition: left .9s cubic-bezier(0.2, 0.7, 0.3, 1); }
+
 /* Accesibilidad: sin movimiento para quien lo pide el sistema */
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
@@ -158,6 +163,7 @@ html.io .reveal.in-view {
   .ticker-track, .tron-glow, .score-blink { animation: none; }
   .flip-inner, .needle, .card-glass { transition: none; }
   .flip:hover .flip-inner { transform: none; }
+  .drivers-bar, .drivers-tick { transition: none; }
 }
 
 /* Tarjeta volteable */
