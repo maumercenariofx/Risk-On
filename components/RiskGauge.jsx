@@ -1,15 +1,14 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLang, T } from "./Lang";
-import { SIGNALS, computeRiskScore, riskBand } from "../lib/riskScore";
+import { computeRiskScore, riskBand } from "../lib/riskScore";
 import { RISK_COUNTRIES, COUNTRY_UNIVERSE } from "../lib/quantForms";
 import RiskSphere from "./RiskSphere";
-import MarketsClient from "./MarketsClient";
-import DailyRead from "./DailyRead";
-import Collapse from "./Collapse";
 import SessionClock from "./SessionClock";
 import RegimeStrip from "./RegimeStrip";
 import IntradaySpark from "./IntradaySpark";
+import ScoreDrivers from "./ScoreDrivers";
+import Link from "next/link";
 
 // Frescura del dato, frase completa según idioma (antes mezclaba "Data ahora ago").
 function dataFreshness(isoStr, lang) {
@@ -32,6 +31,56 @@ function newsAge(pubDate, lang) {
   if (hrs < 1) return lang === "en" ? "now" : "ahora";
   if (hrs < 24) return `${hrs}h`;
   return `${Math.round(hrs / 24)}d`;
+}
+
+// ── Ancla del día (Home V2, 2026-09-03) ──────────────────────────────────────
+// El número grande es el score EN VIVO. El publicado es el que fue al correo y
+// el que se califica en /indice; aquí se enseña como referencia debajo del
+// vivo. Fechas en CDMX y calculadas en el cliente: la Home se prerenderiza al
+// desplegar, así que "hoy" tiene que decidirlo el navegador (fin de semana).
+const CDMX = "America/Mexico_City";
+
+function todayCDMX() {
+  return new Date().toLocaleDateString("en-CA", { timeZone: CDMX }); // YYYY-MM-DD
+}
+
+function cdmxTime(iso) {
+  if (!iso) return null;
+  const t = new Date(iso);
+  if (isNaN(t)) return null;
+  return t.toLocaleTimeString("es-MX", { timeZone: CDMX, hour: "2-digit", minute: "2-digit", hour12: false });
+}
+
+function shortDate(ymd, lang) {
+  const t = new Date(`${ymd}T12:00:00Z`);
+  if (isNaN(t)) return ymd;
+  return t.toLocaleDateString(lang === "en" ? "en-US" : "es-MX", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
+}
+
+// Devuelve { isToday, es, en } para la línea de ancla y para ScoreDrivers.
+function publishedAnchor(published, lang) {
+  if (!published || !Number.isFinite(Number(published.score))) return null;
+  const isToday = published.date === todayCDMX();
+  const time = cdmxTime(published.sentAt);
+  const band = riskBand(Number(published.score));
+  if (isToday) {
+    const when = time ? `${time}` : "";
+    return {
+      isToday,
+      es: `Publicado${when ? " " + when : " hoy"} · ${published.score} ${band.es}`,
+      en: `Published${when ? " " + when : " today"} · ${published.score} ${band.en}`,
+      short_es: `publicado${when ? " " + when : ""}`,
+      short_en: `published${when ? " " + when : ""}`,
+    };
+  }
+  const d = shortDate(published.date, lang);
+  return {
+    isToday,
+    es: `Último view · ${d} · ${published.score} ${band.es}`,
+    en: `Last view · ${d} · ${published.score} ${band.en}`,
+    short_es: `view ${d}`,
+    short_en: `view ${d}`,
+  };
 }
 
 function accent(score) {
@@ -75,14 +124,12 @@ function ScoreSparkline({ history, color }) {
   );
 }
 
-export default function RiskGauge({ post, prevScore = null, scoreHistory = null, ticker = null }) {
+export default function RiskGauge({ post, prevScore = null, scoreHistory = null, ticker = null, published = null, regimeAge = null, range7 = null }) {
   const { lang } = useLang();
   const [data, setData]         = useState(null); // /api/market
   const [rates, setRates]       = useState(null); // /api/rates
   const [curve, setCurve]       = useState(null); // /api/curve
   const [display, setDisplay]   = useState(0);
-  const [sel, setSel]           = useState("vix");
-  const [methOpen, setMethOpen] = useState(false);
   const [newsCountry, setNewsCountry] = useState(null);
   const [news, setNews]               = useState([]);
   const [newsLoading, setNewsLoading] = useState(false);
@@ -201,7 +248,6 @@ export default function RiskGauge({ post, prevScore = null, scoreHistory = null,
   );
   const score = result?.score ?? 0;
   const label = riskBand(score);
-  const d = useMemo(() => ({ market: data, rates, curve }), [data, rates, curve]);
 
   useEffect(() => {
     if (!result) return;
@@ -224,7 +270,8 @@ export default function RiskGauge({ post, prevScore = null, scoreHistory = null,
   }, [result, score]);
 
   const accentColor = accent(score);
-  const selSig = SIGNALS.find((s) => s.key === sel) ?? SIGNALS[0];
+  const anchor = publishedAnchor(published, lang);
+  const intraday = anchor?.isToday && result ? score - Number(published.score) : null;
 
   // Halo atmosférico del color de la banda del día — el globo entero
   // comunica el estado del mercado. Mismo patrón de retry que setCountries.
@@ -347,9 +394,17 @@ export default function RiskGauge({ post, prevScore = null, scoreHistory = null,
             letterSpacing: 2,
             color: "#8A8A8E",
             marginTop: 14,
-            lineHeight: 1,
+            lineHeight: 1.6,
+            textTransform: "none",
           }}>
-            <T es="Inteligencia macro diaria · MXN" en="Daily macro intelligence · MXN" />
+            <div style={{ textTransform: "uppercase" }}>
+              <T es="9 señales · un régimen · antes de las 7:00" en="9 signals · one regime · before 7:00" />
+            </div>
+            {/* Producto al frente, autor pegado a la evidencia (Home V2). El
+                wrapper tiene pointer-events: none; el link los recupera. */}
+            <Link href="/indice" style={{ pointerEvents: "auto", letterSpacing: 1, color: "#8A8A8E" }} className="hover:text-bone">
+              <T es="Research de Mauricio Mercenario · marcador público →" en="Research by Mauricio Mercenario · public scorecard →" />
+            </Link>
           </div>
         </div>
 
@@ -459,6 +514,15 @@ export default function RiskGauge({ post, prevScore = null, scoreHistory = null,
               <div style={{ color: "#8A8A8E" }}>
                 <T es={label.es} en={label.en} />
               </div>
+              {anchor && (
+                <div style={{
+                  fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: 1.5, fontWeight: 400,
+                  textTransform: "uppercase", color: "#8A8A8E", marginTop: 10, lineHeight: 1,
+                }}>
+                  <span style={{ display: "inline-block", width: 1.5, height: 10, background: "#F5F5F2", verticalAlign: "middle", marginRight: 7 }} />
+                  <T es={anchor.es} en={anchor.en} />
+                </div>
+              )}
               <div style={{
                 fontSize: 11, letterSpacing: 2.5, fontWeight: 400,
                 color: "#2A2A30", marginTop: 6, lineHeight: 1,
@@ -534,7 +598,7 @@ export default function RiskGauge({ post, prevScore = null, scoreHistory = null,
           </div>
 
           {/* Contexto diario: cambio vs el view de ayer + tendencia 30 días */}
-          {(prevScore != null || scoreHistory) && (
+          {(prevScore != null || scoreHistory || intraday != null || regimeAge || range7) && (
             <div style={{
               display: "flex", alignItems: "center", justifyContent: "space-between",
               gap: 14, marginTop: 12, flexWrap: "wrap",
@@ -559,6 +623,27 @@ export default function RiskGauge({ post, prevScore = null, scoreHistory = null,
                   </span>
                 );
               })()}
+              {intraday != null && intraday !== 0 && (
+                <span style={{
+                  fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: 1,
+                  color: intraday > 0 ? "#3FA77E" : "#C0392B",
+                  border: `1px solid ${intraday > 0 ? "#3FA77E33" : "#C0392B33"}`,
+                  borderRadius: 20, padding: "4px 11px",
+                }}>
+                  {intraday > 0 ? "▲" : "▼"} {intraday > 0 ? "+" : ""}{intraday}{" "}
+                  <span style={{ color: "#8A8A8E" }}><T es="intradía" en="intraday" /> ({published.score})</span>
+                </span>
+              )}
+              {regimeAge > 0 && (
+                <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: 1, color: "#8A8A8E", border: "1px solid #1E1E22", borderRadius: 20, padding: "4px 11px" }}>
+                  <T es="Régimen" en="Regime" /> · {regimeAge} {regimeAge === 1 ? "view" : "views"}
+                </span>
+              )}
+              {range7 && (
+                <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: 1, color: "#8A8A8E", border: "1px solid #1E1E22", borderRadius: 20, padding: "4px 11px" }}>
+                  {range7.n}v · {range7.min}–{range7.max}
+                </span>
+              )}
               {scoreHistory && scoreHistory.length >= 5 && (
                 <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <ScoreSparkline history={scoreHistory} color={accentColor} />
@@ -719,123 +804,14 @@ export default function RiskGauge({ post, prevScore = null, scoreHistory = null,
         );
       })()}
 
-      {/* ── Component cards (9 señales) — desplegable: quitaban mucho espacio
-          siempre visibles; el score del hero ya cuenta la historia ── */}
-      {result && data && (
-        <Collapse
-          es="Componentes del índice · 9 señales"
-          en="Index components · 9 signals"
-          hint_es="Ver desglose"
-          hint_en="See breakdown"
-        >
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 10 }}>
-            {SIGNALS.map((s) => {
-              const compScore = result.components[s.key];
-              if (compScore == null) return null;
-              const ca = accent(compScore);
-              return (
-                <button
-                  key={s.key}
-                  onClick={() => setSel(s.key)}
-                  style={{
-                    background: "rgba(11,11,12,0.92)", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)",
-                    textAlign: "left", cursor: "pointer",
-                    padding: "12px 13px", borderRadius: 10,
-                    border: `1px solid ${sel === s.key ? "#3A3A3E" : "#1E1E20"}`,
-                    color: "#F5F5F2", transition: "border-color .2s",
-                  }}
-                >
-                  <div style={{ fontSize: 11, color: "#8A8A8E", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 5 }}>
-                    {s.label}
-                    {s.sub && (
-                      <span style={{ opacity: 0.65 }}>
-                        {" "}·{" "}<T es={s.sub.es} en={s.sub.en} />
-                      </span>
-                    )}
-                  </div>
-                  <div style={{ fontFamily: "var(--font-mono)", fontSize: 22, fontWeight: 500, lineHeight: 1, color: "#F5F5F2", marginBottom: 8 }}>
-                    {s.value(d)}
-                  </div>
-                  <div style={{ height: 1.5, background: "#1E1E20", borderRadius: 1, marginBottom: 5 }}>
-                    <div style={{ height: "100%", borderRadius: 1, width: `${compScore}%`, background: ca, transition: "width 1.2s ease-out" }} />
-                  </div>
-                  <div style={{ fontSize: 11, fontFamily: "var(--font-mono)", color: ca, letterSpacing: 0.5 }}>
-                    {compScore}/100
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-
-          <div style={{
-            marginTop: 10, background: "rgba(11,11,12,0.92)",
-            backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)",
-            border: "1px solid #1E1E20", borderRadius: 10, padding: "12px 14px",
-            fontSize: 13, lineHeight: 1.7, color: "#8A8A8E",
-          }}>
-            <T es={selSig.detail.es} en={selSig.detail.en} />
-          </div>
-
-          <button
-            onClick={() => setMethOpen((o) => !o)}
-            style={{
-              marginTop: 12, background: "none", border: "none", cursor: "pointer",
-              fontSize: 11, letterSpacing: 2, textTransform: "uppercase",
-              color: methOpen ? "#8A8A8E" : "#4A4A50",
-              display: "flex", alignItems: "center", gap: 6,
-              transition: "color .2s", padding: 0,
-            }}
-          >
-            <span style={{ fontSize: 11 }}>{methOpen ? "▲" : "▼"}</span>
-            <T es="¿Cómo se calcula este índice?" en="How is this index calculated?" />
-          </button>
-
-          {methOpen && (
-            <div style={{
-              marginTop: 10, background: "rgba(11,11,12,0.92)",
-              backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)",
-              border: "1px solid #1E1E20", borderRadius: 10, padding: "18px 18px",
-            }}>
-              <p style={{ fontSize: 12, color: "#8A8A8E", lineHeight: 1.75, marginBottom: 12 }}>
-                <T
-                  es="El índice Risk On resume en un número (0–100) el apetito global por riesgo con énfasis en México. Combina 9 señales de mercado ponderadas; es el MISMO número, determinístico, que ves en cada nota diaria y en el correo — sin cajas negras ni IA inventando el valor."
-                  en="The Risk On index summarizes global risk appetite — with a Mexico focus — in a single number (0–100). It combines 9 weighted market signals; it's the SAME deterministic number you see in every daily note and email — no black boxes, no AI making up the value."
-                />
-              </p>
-              <p style={{ fontSize: 12, color: "#8A8A8E", lineHeight: 1.75, marginBottom: 16 }}>
-                <T
-                  es="Cada señal se normaliza a 0–100 con un z-score robusto contra su desviación rodante (~60 días): el rango se ensancha en pánico y se encoge en calma, y un mapeo logístico evita que los extremos se 'topen' en 0 o 100 — así sigue siendo sensible en días de euforia o miedo. Las señales lentas (carry, curva) usan rangos de referencia fijos. La metodología se valida con backtests de 5 años y las bandas están calibradas sobre la distribución histórica."
-                  en="Each signal is normalized to 0–100 with a robust z-score against its rolling deviation (~60 days): the range widens in panic and narrows in calm, and a logistic mapping keeps extremes from pinning at 0 or 100 — so it stays sensitive on days of fear or euphoria. Slow signals (carry, curve) use fixed reference ranges. The methodology is validated with 5-year backtests and the bands are calibrated to the historical distribution."
-                />
-              </p>
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {SIGNALS.map((s) => (
-                  <div key={s.key} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "#6A6A70", width: 76, flexShrink: 0 }}>{s.label}</div>
-                    <div style={{ flex: 1, height: 3, background: "#1E1E20", borderRadius: 2 }}>
-                      <div style={{ height: "100%", width: `${s.w * 4}%`, background: "#3A3A44", borderRadius: 2 }} />
-                    </div>
-                    <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "#8A8A8E", width: 30, textAlign: "right", flexShrink: 0 }}>{s.w}%</div>
-                    <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "#8A8A8E", width: 78, textAlign: "right", flexShrink: 0 }}>{s.range}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </Collapse>
-      )}
-
-      {/* ── Pre-market ── */}
-      {post && (
-        <div style={{ marginTop: 28 }}>
-          <DailyRead post={post} />
-        </div>
-      )}
-
-      {/* ── Markets embed ── */}
-      <div style={{ marginTop: 28, padding: "8px 0" }}>
-        <MarketsClient embed />
-      </div>
+      {/* ── Qué mueve el score (Home V2, 2026-09-03): sustituye al desplegable
+          de 9 tarjetas. Vivo si hay resultado; si /api/market falló, enseña el
+          publicado y lo dice. Nunca ceros. ── */}
+      <ScoreDrivers
+        live={result?.breakdown ?? null}
+        published={published?.signals ?? null}
+        anchor={anchor ? { es: anchor.short_es, en: anchor.short_en } : null}
+      />
 
     </section>
   );
