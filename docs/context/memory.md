@@ -39,3 +39,6 @@ docs/context/archive/memory/<YYYY-MM-DD>.md, then compact in place. -->
 - Regla de compliance del producto: postura y sesgo direccional sí, enmarcados como opinión de mercado; recomendaciones operativas concretas (precios de entrada/salida, instrumentos, tamaños de posición) están prohibidas.
 - Prohibido afirmar cuánto subió o bajó el par vs el cierre previo cuando ese cierre no es verificable — la regla está codificada, no es criterio del redactor.
 - El pulso web pasa por una guarda determinística antes de llegar al redactor (`sanitizePulse`): fecha de fuente, coherencia día-de-semana/fecha y contraste contra el spot verificado. Nació el 24-ago-2026, cuando una nota de 2025 llegó intacta al correo.
+
+## UI / Producto
+- El hero del Home muestra el score EN VIVO (recalculado en el cliente con /api/market) y el PUBLICADO como ancla debajo; el vivo es la razón de volver a las 11, el publicado es el que se califica. Decisión de Mauricio, 2026-09-03. No los intercambies.
