@@ -124,7 +124,7 @@ function ScoreSparkline({ history, color }) {
   );
 }
 
-export default function RiskGauge({ post, prevScore = null, scoreHistory = null, ticker = null, published = null, regimeAge = null, range7 = null }) {
+export default function RiskGauge({ prevScore = null, scoreHistory = null, ticker = null, published = null, regimeAge = null, range7 = null }) {
   const { lang } = useLang();
   const [data, setData]         = useState(null); // /api/market
   const [rates, setRates]       = useState(null); // /api/rates
@@ -196,8 +196,11 @@ export default function RiskGauge({ post, prevScore = null, scoreHistory = null,
   }, [newsCountry, lang]);
 
   useEffect(() => {
+    // F2 (Home V2, 2026-09-03): el fallback duro necesita distinguirse del dato
+    // real de /api/market — si no, "result" existe con números constantes y el
+    // chip de Δ intradía compara una constante contra el score calificado.
     fetch("/api/market").then((r) => r.json()).then(setData)
-      .catch(() => setData({ vix: 13.4, move: 98, dxy: 104.3, mxnVol: 9.1, us10y: 4.3 }));
+      .catch(() => setData({ vix: 13.4, move: 98, dxy: 104.3, mxnVol: 9.1, us10y: 4.3, _fallback: true }));
     fetch("/api/rates").then((r) => r.json()).then(setRates).catch(() => setRates(null));
     fetch("/api/curve").then((r) => r.json()).then(setCurve).catch(() => setCurve(null));
     fetch("/api/country-risk").then((r) => r.json()).then((d) => setCScores(d.scores || null)).catch(() => {});
@@ -270,8 +273,12 @@ export default function RiskGauge({ post, prevScore = null, scoreHistory = null,
   }, [result, score]);
 
   const accentColor = accent(score);
+  // F2: si /api/market cayó, `data` es el objeto de respaldo marcado con
+  // `_fallback` — no es una lectura real, así que no puede alimentar el Δ
+  // intradía ni pasar como dato "en vivo" a ScoreDrivers.
+  const liveIsReal = !!data && !data._fallback;
   const anchor = publishedAnchor(published, lang);
-  const intraday = anchor?.isToday && result ? score - Number(published.score) : null;
+  const intraday = liveIsReal && anchor?.isToday && result ? score - Number(published.score) : null;
 
   // Halo atmosférico del color de la banda del día — el globo entero
   // comunica el estado del mercado. Mismo patrón de retry que setCountries.
@@ -623,25 +630,30 @@ export default function RiskGauge({ post, prevScore = null, scoreHistory = null,
                   </span>
                 );
               })()}
-              {intraday != null && intraday !== 0 && (
+              {/* F7 (Home V2, 2026-09-03): la tabla de estados del spec lista el
+                  Δ intradía sin condición — "0 intradía" también es información
+                  ("no se ha movido desde la publicación"), antes se ocultaba. */}
+              {intraday != null && (
                 <span style={{
                   fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: 1,
-                  color: intraday > 0 ? "#3FA77E" : "#C0392B",
-                  border: `1px solid ${intraday > 0 ? "#3FA77E33" : "#C0392B33"}`,
+                  color: intraday === 0 ? "#8A8A8E" : intraday > 0 ? "#3FA77E" : "#C0392B",
+                  border: `1px solid ${intraday === 0 ? "#8A8A8E33" : intraday > 0 ? "#3FA77E33" : "#C0392B33"}`,
                   borderRadius: 20, padding: "4px 11px",
                 }}>
-                  {intraday > 0 ? "▲" : "▼"} {intraday > 0 ? "+" : ""}{intraday}{" "}
+                  {intraday === 0 ? "●" : intraday > 0 ? "▲" : "▼"} {intraday === 0 ? "0" : `${intraday > 0 ? "+" : ""}${intraday}`}{" "}
                   <span style={{ color: "#8A8A8E" }}><T es="intradía" en="intraday" /> ({published.score})</span>
                 </span>
               )}
               {regimeAge > 0 && (
                 <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: 1, color: "#8A8A8E", border: "1px solid #1E1E22", borderRadius: 20, padding: "4px 11px" }}>
-                  <T es="Régimen" en="Regime" /> · {regimeAge} {regimeAge === 1 ? "view" : "views"}
+                  {/* F3: "view/views" es texto plano de jerga de casa — pasa por <T> igual (misma palabra ES/EN) por regla del proyecto, no por traducción. */}
+                  <T es="Régimen" en="Regime" /> · {regimeAge} <T es={regimeAge === 1 ? "view" : "views"} en={regimeAge === 1 ? "view" : "views"} />
                 </span>
               )}
               {range7 && (
                 <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: 1, color: "#8A8A8E", border: "1px solid #1E1E22", borderRadius: 20, padding: "4px 11px" }}>
-                  {range7.n}v · {range7.min}–{range7.max}
+                  {/* F8: el chip era críptico sin etiqueta ("7v · 42–61"). */}
+                  <T es="Rango" en="Range" /> {range7.n}v · {range7.min}–{range7.max}
                 </span>
               )}
               {scoreHistory && scoreHistory.length >= 5 && (
@@ -808,7 +820,7 @@ export default function RiskGauge({ post, prevScore = null, scoreHistory = null,
           de 9 tarjetas. Vivo si hay resultado; si /api/market falló, enseña el
           publicado y lo dice. Nunca ceros. ── */}
       <ScoreDrivers
-        live={result?.breakdown ?? null}
+        live={liveIsReal ? (result?.breakdown ?? null) : null}
         published={published?.signals ?? null}
         anchor={anchor ? { es: anchor.short_es, en: anchor.short_en } : null}
       />

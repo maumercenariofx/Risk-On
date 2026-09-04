@@ -41,7 +41,10 @@ export default async function Home() {
   const published = posts[0] && Number.isFinite(Number(posts[0].score))
     ? {
         slug: posts[0].slug,
-        date: posts[0].date,
+        // F9 (Home V2, 2026-09-03): blindado a String — si el front-matter
+        // trae la fecha sin comillas, js-yaml la parsea como Date y
+        // shortDate() de RiskGauge la metería tal cual en JSX.
+        date: String(posts[0].date).slice(0, 10),
         score: Number(posts[0].score),
         band: bandOf(posts[0]),
         signals: Array.isArray(posts[0].signals) ? posts[0].signals : null,
@@ -57,7 +60,6 @@ export default async function Home() {
       {/* 1-3 · Score vivo, ancla publicada, termómetro, strip y drivers.
           El ticker vive DENTRO del gauge, justo bajo el hero a pantalla completa. */}
       <RiskGauge
-        post={latest}
         prevScore={prevScore}
         scoreHistory={scoreHistory}
         ticker={<Ticker />}
