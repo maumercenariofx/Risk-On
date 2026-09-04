@@ -24,6 +24,7 @@ const PAGES = [
   { es: "Análisis técnico", en: "Technical analysis", href: "/analisis" },
   { es: "Índice · track record", en: "Index · track record", href: "/indice" },
   { es: "Aprende", en: "Learn", href: "/learn" },
+  { es: "Alertas", en: "Alerts", href: "/alertas" },
   { es: "Contacto", en: "Contact", href: "/about" },
   { es: "Suscríbete al Pre-Market", en: "Subscribe to the Pre-Market", href: "/suscribete" },
   { es: "Las 4 bandas del índice", en: "The index's 4 bands", href: "/#bandas", hard: true },

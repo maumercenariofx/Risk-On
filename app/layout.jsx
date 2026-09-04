@@ -23,12 +23,12 @@ const fraunces = Fraunces({
 
 export const metadata = {
   metadataBase: new URL("https://riskon.lat"),
-  title: "Risk On — Take risks or stay average",
+  title: "Risk On — ¿Cuánto riesgo hay hoy? Índice diario para MXN",
   description:
-    "FX y mercados explicados para todos. El indice Risk On te dice cuanto riesgo hay hoy. Por Mauricio Mercenario.",
+    "Índice Risk On: 9 señales, un régimen, publicado antes de las 7:00 CDMX y calificado en público contra el USD/MXN. Research de Mauricio Mercenario.",
   openGraph: {
-    title: "Risk On — Take risks or stay average",
-    description: "FX y mercados explicados para todos. ¿Cuanto risk hay hoy?",
+    title: "Risk On — ¿Cuánto riesgo hay hoy?",
+    description: "9 señales, un régimen, antes de las 7:00. Calificado en público contra el USD/MXN.",
     url: "https://riskon.lat",
     siteName: "Risk On",
     locale: "es_MX",
@@ -43,8 +43,8 @@ export const metadata = {
     // tarjeta grande propia (auditoría 2026-08-21).
     card: "summary_large_image",
     images: ["https://riskon.lat/api/og"],
-    title: "Risk On — Take risks or stay average",
-    description: "FX y mercados explicados para todos. ¿Cuanto risk hay hoy?",
+    title: "Risk On — ¿Cuánto riesgo hay hoy?",
+    description: "9 señales, un régimen, antes de las 7:00. Calificado en público contra el USD/MXN.",
   },
   alternates: {
     types: { "application/rss+xml": "https://riskon.lat/feed.xml" },

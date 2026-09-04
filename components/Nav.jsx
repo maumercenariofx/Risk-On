@@ -46,15 +46,14 @@ export default function Nav() {
     setTimeout(go, 800);
   };
 
+  // Home V2 (2026-09-03): cinco destinos + Suscríbete. Análisis, Alertas y
+  // Contacto bajan al footer y al ⌘K — el nav de 8 obligaba a decidir demasiado.
   const links = [
-    { href: "/", es: "Inicio", en: "Home" },
-    { href: "/archive", es: "Archivo", en: "Archive" },
+    { href: "/", es: "Hoy", en: "Today" },
     { href: "/markets", es: "Mercados", en: "Markets" },
-    { href: "/analisis", es: "Análisis", en: "Analysis" },
     { href: "/indice", es: "Índice", en: "Index" },
+    { href: "/archive", es: "Archivo", en: "Archive" },
     { href: "/learn", es: "Aprende", en: "Learn" },
-    { href: "/alertas", es: "Alertas", en: "Alerts" },
-    { href: "/about", es: "Contacto", en: "Contact" },
   ];
 
   return (
@@ -67,7 +66,7 @@ export default function Nav() {
         <Link href="/" className="flex flex-col leading-tight" onClick={() => setOpen(false)}>
           <span className="font-serif text-2xl font-medium tracking-tight text-bone">Risk On</span>
           <span className="text-[11px] tracking-wide text-muted">
-            <T es="Views diarios de Mauricio Mercenario" en="Daily views by Mauricio Mercenario" />
+            <T es="Índice de riesgo y view diario · Mauricio Mercenario" en="Risk index and daily view · Mauricio Mercenario" />
           </span>
         </Link>
 
