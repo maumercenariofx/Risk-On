@@ -22,3 +22,11 @@ to results.md. Format: `- [ ] (pending|in_progress) task - short note`.
 ## Pendientes de arquitectura
 - [ ] (pending) Añadir `docs/references/` reales conforme se necesiten y cablearlos como reglas de una línea en `CLAUDE.md`.
 - [ ] (pending) Evaluar si vale definir agentes en `docs/agents/` (candidatos naturales: un agente "redactor/editorial" dueño del tono, y uno "quant" dueño del índice y los backtests).
+
+## Home V2 — diferidos de la revisión final (2026-09-03)
+- [ ] (pending) `ScoreDrivers`: orden por unión estricta de labels (hoy elige publicado O vivo; si el publicado trae <9 señales por dato ausente a las 6:52, la fila viva de esa señal no se dibuja). Fix de una línea: `Array.from(new Set([...pub, ...live]))`.
+- [ ] (pending) `regimeAge`: guardia "N+" cuando la edad == posts.length (sería el inicio del archivo, no del régimen). Hoy 26 de 67.
+- [ ] (pending) `HALF_SCALE=10` en `ScoreDrivers` asume Σw=100; con señales faltantes un push puede exceder 10 y la barra se clampa sin aviso.
+- [ ] (pending) `npm test` no corre en CI. Añadir un workflow aparte (nunca en gen-daily).
+- [ ] (pending) Accesibilidad: la marca del publicado en `ScoreDrivers` solo tiene `title`; candidato a texto visually-hidden con el valor.
+- [ ] (pending) Decisión de Mauricio: el hero muestra "PUBLICADO 07:02" bajo "ANTES DE LAS 7:00" cuando el correo sale tarde (sentAt real del 3-sep = 13:02Z). Es dato honesto; ¿se deja, se cambia la promesa, o se arregla el retraso del envío?
