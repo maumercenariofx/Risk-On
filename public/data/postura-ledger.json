@@ -551,10 +551,10 @@
       "band": "CONSTRUCTIVE",
       "band_cuts": "32/49/67/100",
       "condicion": "Giro a neutral si el 10Y cierra sostenido arriba de 4.75% o el USD/MXN supera 17.16.",
-      "spot_t0": null,
-      "mxn5": null,
-      "verdict": null,
-      "evaluated_at": null
+      "spot_t0": 17.030649185180664,
+      "mxn5": -0.6882,
+      "verdict": true,
+      "evaluated_at": "2026-09-07T12:55:19.705Z"
     },
     "2026-09-01": {
       "slug": "2026-09-01",
@@ -603,6 +603,19 @@
       "band": "CONSTRUCTIVE",
       "band_cuts": "32/49/67/100",
       "condicion": "Suelto el sesgo pro-peso si el par recupera 17.04 con el 10Y sostenido sobre 4.80%; se confirma con un cierre debajo de 16.88.",
+      "spot_t0": null,
+      "mxn5": null,
+      "verdict": null,
+      "evaluated_at": null
+    },
+    "2026-09-07": {
+      "slug": "2026-09-07",
+      "bias": "pro-peso",
+      "prior": null,
+      "score": 56,
+      "band": "CONSTRUCTIVE",
+      "band_cuts": "32/49/67/100",
+      "condicion": "Suelto el sesgo pro-peso si el par recupera 17.0435 con el 10Y de vuelta sostenido sobre 4.80%; un cierre debajo de 16.8487 confirma la fortaleza.",
       "spot_t0": null,
       "mxn5": null,
       "verdict": null,
