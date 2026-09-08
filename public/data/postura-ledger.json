@@ -564,10 +564,10 @@
       "band": "CONSTRUCTIVE",
       "band_cuts": "32/49/67/100",
       "condicion": "Se rompe hacia el peso si el par cierra debajo de 16.88; vuelvo a mirar al dólar si supera 17.07 con el 10Y firme arriba de 4.80%.",
-      "spot_t0": null,
-      "mxn5": null,
-      "verdict": null,
-      "evaluated_at": null
+      "spot_t0": 16.998910903930664,
+      "mxn5": -0.2619,
+      "verdict": true,
+      "evaluated_at": "2026-09-08T12:54:47.704Z"
     },
     "2026-09-02": {
       "slug": "2026-09-02",
@@ -616,6 +616,19 @@
       "band": "CONSTRUCTIVE",
       "band_cuts": "32/49/67/100",
       "condicion": "Suelto el sesgo pro-peso si el par recupera 17.0435 con el 10Y de vuelta sostenido sobre 4.80%; un cierre debajo de 16.8487 confirma la fortaleza.",
+      "spot_t0": null,
+      "mxn5": null,
+      "verdict": null,
+      "evaluated_at": null
+    },
+    "2026-09-08": {
+      "slug": "2026-09-08",
+      "bias": "pro-peso",
+      "prior": null,
+      "score": 52,
+      "band": "CONSTRUCTIVE",
+      "band_cuts": "32/49/67/100",
+      "condicion": "Suelto el sesgo pro-peso si el par recupera 17.0435 con el 10Y sostenido arriba de 4.80%; un cierre bajo 16.8487 confirma la fortaleza.",
       "spot_t0": null,
       "mxn5": null,
       "verdict": null,
