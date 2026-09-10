@@ -30,3 +30,7 @@ to results.md. Format: `- [ ] (pending|in_progress) task - short note`.
 - [ ] (pending) `npm test` no corre en CI. Añadir un workflow aparte (nunca en gen-daily).
 - [ ] (pending) Accesibilidad: la marca del publicado en `ScoreDrivers` solo tiene `title`; candidato a texto visually-hidden con el valor.
 - [ ] (pending) Decisión de Mauricio: el hero muestra "PUBLICADO 07:02" bajo "ANTES DE LAS 7:00" cuando el correo sale tarde (sentAt real del 3-sep = 13:02Z). Es dato honesto; ¿se deja, se cambia la promesa, o se arregla el retraso del envío?
+
+## Operación — hallazgos del 2026-09-10
+- [ ] (pending) X (`@risk_on_views`) responde `402 credits depleted` desde al menos el 7-sep (4 runs seguidos). Es cuenta, no código: recargar créditos en el developer console de X o aceptar que no hay post. Y como el paso es `continue-on-error`, nadie se enteró: falta una alerta cuando X falla ≥2 días seguidos.
+- [ ] (pending) Margen del envío: el disparo es a las 6:50 y el gen tarda 3.5-4 min, así que el correo sale 6:53-6:55 con ~5 min de holgura. El 2-sep salió 7:05 y el 3-sep 7:02. Decisión de Mauricio: mover el disparo de cronjob.org a 6:40 (mismo view, datos igual de frescos, 15 min de margen) o cambiar la promesa "antes de las 7:00".

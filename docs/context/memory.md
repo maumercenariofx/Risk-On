@@ -42,3 +42,4 @@ docs/context/archive/memory/<YYYY-MM-DD>.md, then compact in place. -->
 
 ## UI / Producto
 - El hero del Home muestra el score EN VIVO (recalculado en el cliente con /api/market) y el PUBLICADO como ancla debajo; el vivo es la razón de volver a las 11, el publicado es el que se califica. Decisión de Mauricio, 2026-09-03. No los intercambies.
+- `vercel.json` ya NO dispara `/api/gen-daily` (quitado 2026-09-10): en Vercel no hay `CLAUDE_CODE_OAUTH_TOKEN` ni caben los 60s, así que un cron ahí solo produce una alerta falsa diaria y gasto de API key. La generación es exclusiva de Actions; Vercel solo conserva el respaldo de `send-daily` a las 7:10.
