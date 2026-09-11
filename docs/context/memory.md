@@ -43,3 +43,10 @@ docs/context/archive/memory/<YYYY-MM-DD>.md, then compact in place. -->
 ## UI / Producto
 - El hero del Home muestra el score EN VIVO (recalculado en el cliente con /api/market) y el PUBLICADO como ancla debajo; el vivo es la razón de volver a las 11, el publicado es el que se califica. Decisión de Mauricio, 2026-09-03. No los intercambies.
 - `vercel.json` ya NO dispara `/api/gen-daily` (quitado 2026-09-10): en Vercel no hay `CLAUDE_CODE_OAUTH_TOKEN` ni caben los 60s, así que un cron ahí solo produce una alerta falsa diaria y gasto de API key. La generación es exclusiva de Actions; Vercel solo conserva el respaldo de `send-daily` a las 7:10.
+- La baja por GET nunca es inmediata, con o sin firma (2026-09-11): los escáneres de enlaces de los correos corporativos abren con GET. El GET confirma y solo el POST registra; el POST sin firma se sigue aceptando, porque rechazar un one-click de RFC 8058 manda al lector al botón de spam. La firma vive en `lib/unsubscribe.js`, una sola fuente para quien firma y quien verifica.
+- Los pasos best-effort de GitHub Actions avisan por `/api/ops-alert` (Bearer `CRON_SECRET` → `alertAdmin`), porque `RESEND_API_KEY` solo vive en Vercel. Hoy lo usa el post de X al segundo día hábil seguido sin publicar.
+- El lente COT entra al prompt del redactor solo si hay reporte nuevo para el lector o si ningún view de los últimos 3 lo citó (`cotParaLente` en `lib/dailyView.js`). Mismo patrón que el veto temático: la anti-monotonía se decide en código, no en el prompt.
+- Los avisos de estilo del redactor se miden en el log sin disparar reintento (`avisosSuaves`): cada reintento cuesta ~150 s y el correo sale con ~5 min de margen. Solo las reglas duras del validador reintentan.
+- `npm test` corre en `.github/workflows/test.yml`, aparte de gen-daily e ignorando los commits del bot. Un test roto nunca puede tocar el camino del correo.
+- `posturaRecord` devuelve las filas más reciente primero con `sort` explícito, sin depender del orden de entrada (2026-09-11).
+- El contraste FRED del ledger pide DEXMXUS con un User-Agent propio y timeout de 20 s; con el UA de navegador FRED no respondía desde Actions.

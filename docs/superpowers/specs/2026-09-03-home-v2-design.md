@@ -6,6 +6,18 @@ confidence, régimen intradía, labels en inglés, Academy, rutas nuevas) porque
 o ya existe en el repo o contradice lo que el propio backtest demostró. Lo que
 sobrevive es una sola tesis: **el índice es el producto y el Home no lo dice**.
 
+## Revisión 2026-09-11 (posterior a la aprobación)
+
+Tras la revisión del 10-sep, Mauricio pidió terminar la lista completa, y tres
+puntos del KEEP cambiaron:
+- **Orden**: DailyRead (El Pre-Market + `#subscribe`) sube justo debajo de
+  RiskGauge, antes de DailyWatch. El negocio es el correo y el formulario era
+  el bloque 9.
+- **Ticker**: sin AAPL, TSLA, NVDA ni ETH; se queda lo que mueve al peso.
+- **Países en alerta**: México va fijo como primer chip y el globo ilumina la
+  misma selección (México + los 4 más calientes).
+El resto del documento describe el diseño tal como se aprobó el 2026-09-03.
+
 ## Decisiones de producto (Mauricio, 2026-09-03)
 
 1. **Producto al frente, autor pegado a la evidencia.** No se invierte la
