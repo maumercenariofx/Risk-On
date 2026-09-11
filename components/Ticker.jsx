@@ -5,6 +5,12 @@ import { useLang } from "./Lang";
 
 // Cada item del ticker es un link: pares FX → /markets con el par abierto;
 // lo demás → /analisis con la lectura técnica del símbolo.
+//
+// 2026-09-11: fuera AAPL, TSLA, NVDA y ETH. Ninguno entra al índice
+// (lib/riskScore.js) ni al digest del view (lib/dailyView.js): eran acciones
+// sueltas y una segunda cripto en la cinta de un producto sobre el peso. Se
+// queda con índices de EE.UU. y México, el par y sus referencias FX, BTC,
+// crudo, oro y el 10Y.
 const HREF = {
   "S&P 500": "/analisis?symbol=%5EGSPC",
   "NASDAQ":  "/analisis?symbol=%5EIXIC",
@@ -12,11 +18,7 @@ const HREF = {
   "USD/MXN": "/markets?pair=USDMXN",
   "EUR/USD": "/markets?pair=EURUSD",
   "USD/JPY": "/markets?pair=USDJPY",
-  "AAPL":    "/analisis?symbol=AAPL",
-  "TSLA":    "/analisis?symbol=TSLA",
-  "NVDA":    "/analisis?symbol=NVDA",
   "BTC":     "/analisis?symbol=BTC-USD",
-  "ETH":     "/analisis?symbol=ETH-USD",
   "WTI":     "/analisis?symbol=CL%3DF",
   "Gold":    "/analisis?symbol=GC%3DF",
   "US 10Y":  "/analisis?symbol=%5ETNX",
@@ -26,8 +28,8 @@ const HREF = {
 // valores con meses de antigüedad como si fueran en vivo). Mientras carga o si
 // el feed falla, cada instrumento muestra "—".
 const NAMES = [
-  "S&P 500", "NASDAQ", "IPC", "USD/MXN", "EUR/USD", "AAPL", "TSLA",
-  "NVDA", "BTC", "ETH", "WTI", "Gold", "USD/JPY", "US 10Y",
+  "S&P 500", "NASDAQ", "IPC", "USD/MXN", "EUR/USD",
+  "BTC", "WTI", "Gold", "USD/JPY", "US 10Y",
 ];
 const EMPTY = NAMES.map((n) => [n, "—", 2, ""]);
 
@@ -50,11 +52,7 @@ export default function Ticker() {
           ["IPC",     fmt(d.ipc,  0),   dir(d.ipcChg),   chg(d.ipcChg)],
           ["USD/MXN", fmt(d.usdmxn, 4), dir(d.usdmxnChg), chg(d.usdmxnChg)],
           ["EUR/USD", fmt(d.eurusd, 4), dir(d.eurusdChg), chg(d.eurusdChg)],
-          ["AAPL",    fmt(d.aapl, 2),   dir(d.aaplChg),  chg(d.aaplChg)],
-          ["TSLA",    fmt(d.tsla, 2),   dir(d.tslaChg),  chg(d.tslaChg)],
-          ["NVDA",    fmt(d.nvda, 2),   dir(d.nvdaChg),  chg(d.nvdaChg)],
           ["BTC",     fmt(d.btc,  0),   dir(d.btcChg),   chg(d.btcChg)],
-          ["ETH",     fmt(d.eth,  0),   dir(d.ethChg),   chg(d.ethChg)],
           ["WTI",     fmt(d.wti,  2),   dir(d.wtiChg),   chg(d.wtiChg)],
           ["Gold",    fmt(d.gold, 0),   dir(d.goldChg),  chg(d.goldChg)],
           ["USD/JPY", fmt(d.usdjpy, 2), dir(d.usdjpyChg), chg(d.usdjpyChg)],
@@ -76,8 +74,8 @@ export default function Ticker() {
   // IntradaySpark, PosturaRecord y BandEvidence ("Verde = peso más fuerte"), y
   // el ticker era el único que decía lo contrario: mostraba el mismo movimiento
   // en verde a centímetros del spark que lo pintaba en rojo (auditoría
-  // 2026-08-21). Para todo lo demás (índices, acciones, cripto) arriba = verde,
-  // que es la convención universal.
+  // 2026-08-21). Para todo lo demás (índices, cripto, materias primas, tasas)
+  // arriba = verde, que es la convención universal.
   const PESO_PAIRS = new Set(["USD/MXN", "EUR/MXN", "CHF/MXN"]);
   const color = (dir, name) => {
     if (dir === 2) return "#8A8A8E";
