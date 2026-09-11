@@ -37,3 +37,10 @@ test("avisos: un view limpio no reporta nada", () => {
   const v = { body_es: "**a** y **b** y **c**\n\nLa raya sigue en 17.04.", body_en: "one **bold** figure" };
   assert.deepEqual(avisosSuaves(v), []);
 });
+
+test("avisos: cuenta la antítesis «X, no Y» que el prompt prohíbe", () => {
+  const v = { body_es: "**a** y **b** y **c**. Es el catalizador que decide, no el termómetro de riesgo.\n\nLa raya sigue en 17.04.", body_en: "one **bold** figure" };
+  const avisos = avisosSuaves(v);
+  assert.equal(avisos.length, 1);
+  assert.match(avisos[0], /×1/);
+});
