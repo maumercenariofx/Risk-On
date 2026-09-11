@@ -617,7 +617,7 @@ export default function RiskGauge({ prevScore = null, scoreHistory = null, ticke
           </div>
 
           {/* Contexto diario: cambio vs el view de ayer + tendencia 30 días */}
-          {(prevScore != null || scoreHistory || intraday != null || regimeAge || range7) && (
+          {(prevScore != null || scoreHistory || intraday != null || regimeAge?.n > 0 || range7) && (
             <div style={{
               display: "flex", alignItems: "center", justifyContent: "space-between",
               gap: 14, marginTop: 12, flexWrap: "wrap",
@@ -656,12 +656,21 @@ export default function RiskGauge({ prevScore = null, scoreHistory = null, ticke
                   <span style={{ color: "#8A8A8E" }}><T es="intradía" en="intraday" /> ({published.score})</span>
                 </span>
               )}
-              {regimeAge > 0 && (
-                <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: 1, color: "#8A8A8E", border: "1px solid #1E1E22", borderRadius: 20, padding: "4px 11px" }}>
-                  {/* F3: "view/views" es texto plano de jerga de casa — pasa por <T> igual (misma palabra ES/EN) por regla del proyecto, no por traducción. */}
-                  <T es="Régimen" en="Regime" /> · {regimeAge} <T es={regimeAge === 1 ? "view" : "views"} en={regimeAge === 1 ? "view" : "views"} />
-                </span>
-              )}
+              {regimeAge?.n > 0 && (() => {
+                // "N+" (2026-09-11): si la racha llega al primer view del
+                // archivo, n es cota inferior — el régimen puede venir de antes.
+                const { n, atLeast } = regimeAge;
+                const unit = n === 1 && !atLeast ? "view" : "views";
+                return (
+                  <span
+                    title={atLeast ? (lang === "en" ? "The archive starts here: the regime may be older" : "El archivo empieza aquí: el régimen puede venir de antes") : undefined}
+                    style={{ fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: 1, color: "#8A8A8E", border: "1px solid #1E1E22", borderRadius: 20, padding: "4px 11px" }}
+                  >
+                    {/* F3: "view/views" es texto plano de jerga de casa — pasa por <T> igual (misma palabra ES/EN) por regla del proyecto, no por traducción. */}
+                    <T es="Régimen" en="Regime" /> · {n}{atLeast ? "+" : ""} <T es={unit} en={unit} />
+                  </span>
+                );
+              })()}
               {range7 && (
                 <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: 1, color: "#8A8A8E", border: "1px solid #1E1E22", borderRadius: 20, padding: "4px 11px" }}>
                   {/* F8: el chip era críptico sin etiqueta ("7v · 42–61"). */}

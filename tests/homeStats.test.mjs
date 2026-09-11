@@ -20,9 +20,21 @@ test("regimeAge: cuenta views consecutivos en la banda del más reciente", () =>
     { score: 45, band: "DEFENSIVE" },
     { score: 58, band: "CONSTRUCTIVE" }, // ya no cuenta: hubo un DEFENSIVE antes
   ];
-  assert.equal(regimeAge(posts), 3);
-  assert.equal(regimeAge([]), 0);
-  assert.equal(regimeAge([{ score: 45, band: "DEFENSIVE" }]), 1);
+  assert.deepEqual(regimeAge(posts), { n: 3, atLeast: false });
+  assert.deepEqual(regimeAge([]), { n: 0, atLeast: false });
+  assert.deepEqual(regimeAge([{ score: "x" }, { score: 45 }]), { n: 0, atLeast: false }); // sin banda en el head
+});
+
+test("regimeAge: si la racha llega al primer view del archivo es cota inferior (N+)", () => {
+  // Toda la historia disponible en la misma banda: el régimen puede venir de
+  // antes del archivo, así que su edad es "al menos n".
+  const posts = [
+    { score: 57, band: "CONSTRUCTIVE" },
+    { score: 53 },                       // sin band → riskBand(53) = CONSTRUCTIVE
+    { score: 60, band: "CONSTRUCTIVE" },
+  ];
+  assert.deepEqual(regimeAge(posts), { n: 3, atLeast: true });
+  assert.deepEqual(regimeAge([{ score: 45, band: "DEFENSIVE" }]), { n: 1, atLeast: true });
 });
 
 test("range7: min/max de los 7 más recientes, null si n<3", () => {
