@@ -118,6 +118,15 @@ export default function MetodologiaView({ signals, bands }) {
             en="It is a NOWCAST: it describes TODAY's risk regime. It is not a directional forecast of USD/MXN, and for months we let it read like one. The composite's correlation with the pair's 5-day return is +0.029 with a t of 0.4 — indistinguishable from chance."
           />
         </p>
+        {/* Volatilidad (scripts/validate/05-bandas-nowcast.mjs, 2026-09-11): la
+            pregunta que quedaba abierta tras descartar la dirección. Se publica
+            con su n, su intervalo y su tramo, como toda cifra de la casa. */}
+        <p style={{ fontSize: 13, color: "#C0C0BC", lineHeight: 1.75, margin: "0 0 12px" }}>
+          <T
+            es="Tampoco anticipa la volatilidad. Sobre 21 años (n = 5,363 días) la banda sí ordena la volatilidad del par en los 20 días siguientes: 17.1% anualizada tras un día RISK-OFF contra 8.3% tras uno RISK-ON. Pero esa información ya viene en la volatilidad de los 20 días previos, y fuera de muestra, de 2014 a 2026 (n = 3,139 días), sumarle la banda reduce el error del pronóstico en +0.7%, con un intervalo de 95% de −7.9% a +5.4% que contiene el cero. Describe el régimen; no lo adelanta."
+            en="It does not anticipate volatility either. Over 21 years (n = 5,363 days) the band does rank the pair's volatility over the next 20 days: 17.1% annualized after a RISK-OFF day versus 8.3% after a RISK-ON day. But that information is already in the prior 20 days' volatility, and out of sample, from 2014 to 2026 (n = 3,139 days), adding the band cuts the forecast error by +0.7%, with a 95% interval from −7.9% to +5.4% that contains zero. It describes the regime; it does not get ahead of it."
+          />
+        </p>
         <p style={{ fontSize: 12, color: "#9CA3AF", lineHeight: 1.65, margin: 0 }}>
           <T
             es="El desglose señal por señal, con lo que aporta cada una y lo que no, está en el track record."
