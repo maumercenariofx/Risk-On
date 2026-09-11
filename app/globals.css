@@ -266,6 +266,16 @@ a { color: inherit; }
 .hero-full {
   height: max(560px, 100vh);
   margin-top: -94px; /* nav real 70px + pt-6 de main 24px */
+  /* 2026-09-11: la entrada del globo (.hero-canvas → heroCanvasIn) arranca en
+     scale(1.12) con fill-mode `both`, así que mientras dura el delay y el
+     inicio de la animación el canvas mide 1.12 × el viewport: a 375 px son
+     420 px, de −22.5 a 397.5 (medido en producción: −22 / 398 / 420), y el
+     documento se ensanchaba a 399 px — en el teléfono la página se dibujaba
+     alejada. `html { overflow-x: hidden }` solo lo escondía. `clip` (no
+     `hidden`) recorta únicamente el eje X, sin crear un scroll container ni
+     tocar el eje Y; lo que se recorta caía fuera de la pantalla, así que el
+     globo se ve igual en desktop y en móvil. */
+  overflow-x: clip;
 }
 @supports (height: 100svh) {
   .hero-full { height: max(560px, 100svh); }
