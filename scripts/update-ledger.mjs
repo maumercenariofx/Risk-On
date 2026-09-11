@@ -83,8 +83,13 @@ async function dailyCloses(symbol, range = "2y") {
 // desde julio y cambiarla reescribiría veredictos ya publicados— y DEXMXUS se
 // guarda al lado como contraste.
 async function fredCloses() {
+  // UA propio y timeout corto (2026-09-11). Con el UA de navegador de Yahoo,
+  // FRED no respondía desde GitHub Actions: "fetch failed" tras ~70 s en cada
+  // corrida desde que existe el contraste (28-ago), así que ninguna entrada
+  // nueva lo recibió. Desde una IP residencial responde en 0.5 s.
   const res = await fetch("https://fred.stlouisfed.org/graph/fredgraph.csv?id=DEXMXUS", {
-    headers: { "User-Agent": YAHOO_UA },
+    headers: { "User-Agent": "riskon-ledger/1.0 (+https://riskon.lat)" },
+    signal: AbortSignal.timeout(20000),
   });
   if (!res.ok) throw new Error(`FRED DEXMXUS: HTTP ${res.status}`);
   const dates = [], bySlug = {};
@@ -152,7 +157,11 @@ const main = async () => {
   // simplemente no lo muestra. Nunca bloquea el veredicto primario.
   let fred = null;
   try { fred = await fredCloses(); }
-  catch (e) { console.error(`[ledger] contraste FRED no disponible: ${e?.message ?? e}`); }
+  catch (e) {
+    // La causa de red (e.cause.code) es la que dice QUÉ falló; "fetch failed"
+    // a secas escondió el problema tres semanas.
+    console.error(`[ledger] contraste FRED no disponible: ${e?.message ?? e}${e?.cause?.code ? ` (${e.cause.code})` : ""}`);
+  }
 
   let added = 0, resolved = 0, pending = 0, frozen = 0, backfilled = 0;
 
@@ -165,7 +174,10 @@ const main = async () => {
       // ÚNICA excepción, y no rompe la inmutabilidad: rellenar el contraste de
       // FRED en entradas viejas. Es un campo NUEVO que se añade al lado; el
       // veredicto, el mxn5 y el evaluated_at originales no se tocan.
-      if (fred && prev.mxn5_fred === undefined) {
+      // null también cuenta como pendiente: FRED publica DEXMXUS con rezago, y
+      // las entradas del 17 al 21-ago quedaron congeladas en null porque el
+      // relleno solo miraba undefined (2026-09-11).
+      if (fred && prev.mxn5_fred == null) {
         const f5 = fwd(fred, p.slug, HORIZON);
         prev.mxn5_fred = f5 == null ? null : +f5.toFixed(4);
         prev.verdict_fred = f5 == null ? null : judge(p.postura_bias, f5);
