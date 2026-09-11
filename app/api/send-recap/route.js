@@ -10,6 +10,7 @@ import html from "remark-html";
 import { checkSentMarker, publishFileToGitHub, REPO } from "../../../lib/dailyView";
 import { stripBold, boldToHtml } from "../../../lib/mdInline";
 import { alertAdmin } from "../../../lib/alertAdmin";
+import { unsubUrl } from "../../../lib/unsubscribe";
 import { clean, personalizeGreeting, getSubscribers } from "../../../lib/subscribers";
 import { gatherWeek } from "../../../lib/weeklyRecap";
 import { riskBand } from "../../../lib/riskScore";
@@ -204,8 +205,9 @@ async function handler(request) {
 
     // ── Posturas resueltas (las 3 más recientes) + marcador global ────────────
     let posturasHtml = "";
-    // Las 3 resueltas MÁS RECIENTES (record.rows viene ascendente — el
-    // resueltas de gatherWeek toma slice(0,5) del lado viejo, no sirve aquí).
+    // Las 3 resueltas MÁS RECIENTES. Desde el 2026-09-11 record.rows ya viene
+    // más reciente primero (antes llegaba ascendente); el sort se queda de
+    // cinturón porque este bloque sale en el correo.
     const resueltas = (wk?.record?.rows ?? [])
       .filter((r) => r.verdict != null)
       .sort((a, b) => String(b.slug).localeCompare(String(a.slug)))
@@ -359,7 +361,7 @@ async function handler(request) {
   // ?html=1 (solo con ?only=): devuelve el HTML sin enviar — QA visual.
   if (only && url.searchParams.get("html")) {
     const rendered = vEs.html
-      .split(UNSUB).join(`${SITE}/api/unsubscribe?email=test`)
+      .split(UNSUB).join(unsubUrl(SITE, recipients[0]?.email ?? "test"))
       .split(GREET_TOKEN).join(personalizeGreeting(vEs.greeting, recipients[0] ?? {}) ?? vEs.greeting);
     return new Response(rendered, { headers: { "Content-Type": "text/html; charset=utf-8" } });
   }
@@ -367,14 +369,14 @@ async function handler(request) {
   const from = '"Mauricio | Risk-On" <view@riskon.lat>';
   const payloads = recipients.map((sub) => {
     const v = sub.lang === "en" && vEn ? vEn : vEs;
-    const unsubUrl = `${SITE}/api/unsubscribe?email=${encodeURIComponent(sub.email)}`;
+    const unsubLink = unsubUrl(SITE, sub.email); // firmado (lib/unsubscribe.js)
     const greet = personalizeGreeting(v.greeting, sub) ?? v.greeting;
     return {
       from, to: sub.email, subject: v.subject,
-      html: v.html.split(UNSUB).join(unsubUrl).split(GREET_TOKEN).join(greet),
-      text: v.text.split(UNSUB).join(unsubUrl).split(GREET_TOKEN).join(greet),
+      html: v.html.split(UNSUB).join(unsubLink).split(GREET_TOKEN).join(greet),
+      text: v.text.split(UNSUB).join(unsubLink).split(GREET_TOKEN).join(greet),
       headers: {
-        "List-Unsubscribe": `<${unsubUrl}>, <mailto:view@riskon.lat?subject=unsubscribe>`,
+        "List-Unsubscribe": `<${unsubLink}>, <mailto:view@riskon.lat?subject=unsubscribe>`,
         "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
       },
     };

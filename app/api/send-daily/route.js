@@ -5,6 +5,7 @@ import { stripBold, boldToHtml } from "../../../lib/mdInline";
 import { posturaRecord } from "../../../lib/forwardReturns";
 import { riskBand } from "../../../lib/riskScore";
 import { alertAdmin } from "../../../lib/alertAdmin";
+import { unsubUrl } from "../../../lib/unsubscribe";
 import { clean, cleanName, personalizeGreeting, probeSheet, getSubscribers } from "../../../lib/subscribers";
 
 export const dynamic = "force-dynamic";
@@ -441,6 +442,7 @@ async function handler(request) {
     postura: "TODAY'S STANCE", record: "Track record", recordOf: "stances validated",
     libreta: "FROM THE NOTEBOOK",
     recordLink: "see the public scoreboard →",
+    recordBase: "always pro-peso on the same dates",
     agenda: "TODAY'S CALENDAR (CDMX)", agendaEmpty: "No high-impact data today",
     agendaNext: "Next up",
     shareLine: "Was this Pre-Market useful? Help us grow:",
@@ -462,6 +464,7 @@ async function handler(request) {
     postura: "POSTURA DEL DÍA", record: "Marcador", recordOf: "posturas validadas",
     libreta: "DE LA LIBRETA",
     recordLink: "ver el marcador público →",
+    recordBase: "«siempre pro-peso» en las mismas fechas",
     agenda: "AGENDA DE HOY (CDMX)", agendaEmpty: "Sin datos de alto impacto hoy",
     agendaNext: "Próximo",
     shareLine: "¿Te sirvió este Pre-Market? Ayúdanos a crecer:",
@@ -469,6 +472,14 @@ async function handler(request) {
   };
   const sans = "'Helvetica Neue',Arial,sans-serif";
   const serif = "Georgia,'Times New Roman',serif";
+
+  // La base ingenua junto al marcador (2026-09-11). El 10-sep el marcador era
+  // 28/40 y «pro-peso todos los días» daba 28/40 en las mismas fechas: sin la
+  // base, el correo vendía como criterio lo que era la deriva del par. /indice
+  // ya la publicaba; el correo, que es lo que más gente lee, no.
+  const recordBaseTxt = record?.benchmark?.n
+    ? ` · ${L.recordBase}: ${record.benchmark.hits}/${record.benchmark.n}`
+    : "";
 
   // Fila USD/MXN destacada al frente (EL dato de esta audiencia; % contra
   // cierre previo verificado por /api/market) + flechas ▲▼ en todos.
@@ -516,7 +527,7 @@ async function handler(request) {
               <div class="em-faint" style="font-family:${sans};font-size:11px;letter-spacing:2px;color:${C.faint};font-weight:700;margin-bottom:9px">🎯 ${L.postura}</div>
               <div style="margin-bottom:${condicion ? "8px" : "0"}"><span style="display:inline-block;padding:4px 10px;border-radius:3px;background:${bias.color};color:#FFFFFF;font-family:${sans};font-size:12px;font-weight:700;letter-spacing:1px">${en ? bias.en : bias.es}</span></div>
               ${condicion ? `<div class="em-body" style="font-family:${serif};font-size:14px;font-style:italic;color:#3a3a3a;line-height:1.55">${condicion}</div>` : ""}
-              ${record?.resolved ? `<div class="em-muted" style="font-family:${sans};font-size:12px;color:${C.muted};margin-top:10px">${L.record}: <strong class="em-text" style="color:${C.text}">${record.hits}/${record.resolved}</strong> ${L.recordOf} · <a href="${SITE}/indice" class="em-muted" style="color:${C.muted};text-decoration:underline">${L.recordLink}</a></div>` : ""}
+              ${record?.resolved ? `<div class="em-muted" style="font-family:${sans};font-size:12px;color:${C.muted};margin-top:10px">${L.record}: <strong class="em-text" style="color:${C.text}">${record.hits}/${record.resolved}</strong> ${L.recordOf}${recordBaseTxt} · <a href="${SITE}/indice" class="em-muted" style="color:${C.muted};text-decoration:underline">${L.recordLink}</a></div>` : ""}
             </td></tr>
           </table>` : "";
 
@@ -725,7 +736,7 @@ async function handler(request) {
     "",
     ...(bias ? [
       `${L.postura}: ${en ? bias.en : bias.es}${condicion ? ` — ${condicion}` : ""}`,
-      ...(record?.resolved ? [`${L.record}: ${record.hits}/${record.resolved} ${L.recordOf} · ${SITE}/indice`] : []),
+      ...(record?.resolved ? [`${L.record}: ${record.hits}/${record.resolved} ${L.recordOf}${recordBaseTxt} · ${SITE}/indice`] : []),
       "",
     ] : []),
     `${L.cta.replace(" →", "")}: ${articleUrl}`,
@@ -790,7 +801,7 @@ async function handler(request) {
   if (only && reqUrl.searchParams.get("html")) {
     const v = emailFor(recipients[0] ?? {});
     const rendered = v.html
-      .split(UNSUB).join(`${SITE}/api/unsubscribe?email=test`)
+      .split(UNSUB).join(unsubUrl(SITE, recipients[0]?.email ?? "test"))
       .split(GREET_TOKEN).join(personalizeGreeting(v.greeting, recipients[0] ?? {}) ?? "");
     return new Response(rendered, { headers: { "Content-Type": "text/html; charset=utf-8" } });
   }
@@ -820,15 +831,17 @@ async function handler(request) {
   const payloads = recipients.map((sub) => {
     const v = emailFor(sub);
     const email = sub.email;
-    const unsubUrl = `${SITE}/api/unsubscribe?email=${encodeURIComponent(email)}`;
+    // Enlace FIRMADO por destinatario (lib/unsubscribe.js, 2026-09-11); sin
+    // CRON_SECRET sale sin firma y el envío sigue igual.
+    const unsubLink = unsubUrl(SITE, email);
     // Saludo personalizado por destinatario (genérico si no llenó su nombre).
     const greet = personalizeGreeting(v.greeting, sub);
     return {
       from, to: email, subject: subjectOverride ?? v.subject,
-      html: v.html.split(UNSUB).join(unsubUrl).split(GREET_TOKEN).join(greet ?? ""),
-      text: v.text.split(UNSUB).join(unsubUrl).split(GREET_TOKEN).join(greet ?? ""),
+      html: v.html.split(UNSUB).join(unsubLink).split(GREET_TOKEN).join(greet ?? ""),
+      text: v.text.split(UNSUB).join(unsubLink).split(GREET_TOKEN).join(greet ?? ""),
       headers: {
-        "List-Unsubscribe": `<${unsubUrl}>, <mailto:view@riskon.lat?subject=unsubscribe>`,
+        "List-Unsubscribe": `<${unsubLink}>, <mailto:view@riskon.lat?subject=unsubscribe>`,
         "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
       },
     };
