@@ -236,12 +236,19 @@ export default function RiskGauge({ prevScore = null, scoreHistory = null, ticke
   // Radar dinámico: puntúa TODO el universo y muestra los 5 más calientes —
   // si un día explota Argentina o Japón, entra al radar solo. Sin feed en
   // vivo cae a los 5 clásicos con sus scores curados.
+  //
+  // México va FIJO como primer chip (2026-09-11): el radar enseñaba India,
+  // Chile, EE.UU., Colombia y Japón y ni rastro de México, en un producto
+  // sobre el peso. Mismo total de chips: México + los 4 más calientes SIN él.
+  // Su score sale de la misma fuente que los demás (/api/country-risk → "mx").
+  // Solo cambian los chips: el globo sigue iluminando el top-5 puro.
   const countriesByRisk = useMemo(() => {
     const pool = cScores ? COUNTRY_UNIVERSE : RISK_COUNTRIES;
-    return pool
+    const ranked = pool
       .map((c) => ({ ...c, live: cScores?.[c.id] ?? c.score }))
-      .sort((a, b) => b.live - a.live)
-      .slice(0, 5);
+      .sort((a, b) => b.live - a.live);
+    const mx = ranked.find((c) => c.id === "mx");
+    return mx ? [mx, ...ranked.filter((c) => c !== mx).slice(0, 4)] : ranked.slice(0, 5);
   }, [cScores]);
 
   // Mismo modelo que el view diario (lib/riskScore.js) → portada y nota coinciden.
@@ -470,9 +477,14 @@ export default function RiskGauge({ prevScore = null, scoreHistory = null, ticke
                     brillo y el parpadeo viven solo en el globo. */}
                 {countriesByRisk.map((c) => {
                   const col = tensionColor(c.live);
+                  // México (fijo, no rankeado): texto y fondo conservan el
+                  // color de SU nivel de tensión; solo el borde pasa a hueso
+                  // para distinguir "fijo" de "top de alertas" (2026-09-11).
+                  const pinned = c.id === "mx";
                   return (
                     <button
                       key={c.id}
+                      title={pinned ? (lang === "en" ? "Mexico is pinned; the rest are the top alerts" : "México va fijo; el resto es el top de alertas") : undefined}
                       onClick={() => {
                         // Fly-to cinematográfico: segundo click en el mismo chip regresa.
                         const closing = newsCountry === c.id;
@@ -495,7 +507,7 @@ export default function RiskGauge({ prevScore = null, scoreHistory = null, ticke
                         fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: 1, textTransform: "uppercase",
                         padding: "3px 8px", borderRadius: 5, cursor: "pointer",
                         background: newsCountry === c.id ? `${col}38` : `${col}1A`,
-                        border: `1px solid ${col}66`,
+                        border: pinned ? "1px solid #F5F5F2B3" : `1px solid ${col}66`,
                         color: col, transition: "background .2s, border-color .2s",
                       }}
                     >
