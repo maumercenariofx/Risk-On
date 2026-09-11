@@ -74,14 +74,16 @@ function Countdown({ isoDate, label_es, label_en }) {
           <T es="Reunión en curso o finalizada" en="Meeting ongoing or concluded" />
         </div>
       ) : (
+        // Las unidades iban fijas en español: en modo EN se leía DÍAS · SEG
+        // (2026-09-11). "hrs" y "min" valen igual en los dos idiomas.
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <Unit value={r?.d} label={r?.d === 1 ? "día" : "días"} />
+          <Unit value={r?.d} label={<T es={r?.d === 1 ? "día" : "días"} en={r?.d === 1 ? "day" : "days"} />} />
           <Colon />
           <Unit value={r?.h} label="hrs" />
           <Colon />
           <Unit value={r?.m} label="min" />
           <Colon />
-          <Unit value={r?.s} label="seg" />
+          <Unit value={r?.s} label={<T es="seg" en="sec" />} />
         </div>
       )}
     </div>

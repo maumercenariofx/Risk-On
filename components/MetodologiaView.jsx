@@ -5,6 +5,7 @@
 import Link from "next/link";
 import { useLang, T } from "./Lang";
 import { cardStyle, sectionLabel } from "../lib/chartHelpers";
+import { signalLabel } from "../lib/signalLabels";
 
 export default function MetodologiaView({ signals, bands }) {
   const { lang } = useLang();
@@ -48,7 +49,7 @@ export default function MetodologiaView({ signals, bands }) {
             <tbody>
               {signals.map((s) => (
                 <tr key={s.key} style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}>
-                  <td style={{ padding: "9px 8px 9px 0", fontSize: 12.5, color: "#F5F5F2" }}>{s.label}</td>
+                  <td style={{ padding: "9px 8px 9px 0", fontSize: 12.5, color: "#F5F5F2" }}>{signalLabel(s.label, lang)}</td>
                   <td style={{ padding: "9px 8px 9px 0", textAlign: "right", fontFamily: "var(--font-mono)", fontSize: 12, color: "#F5F5F2", fontVariantNumeric: "tabular-nums" }}>{s.w}%</td>
                   <td style={{ padding: "9px 0", fontFamily: "var(--font-mono)", fontSize: 11.5, color: "#8A8A8E" }}>{s.range ?? "—"}</td>
                 </tr>

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { riskBand } from "../lib/riskScore";
+import { useLang } from "./Lang";
 
 /*
   Mini-tape de progreso — el pariente gráfico del ReadingProgress de los views:
@@ -24,6 +25,11 @@ const CW = 150; // canvas CSS px
 const CH = 32;
 
 export default function TapeWidget({ score }) {
+  const { lang } = useLang();
+  // draw() vive dentro del efecto (deps [color]); el idioma le llega por ref
+  // para no re-crear listeners ni volver a pedir /api/history al cambiarlo.
+  const langRef = useRef(lang);
+  useEffect(() => { langRef.current = lang; }, [lang]);
   const wrapRef = useRef(null);
   const canvasRef = useRef(null);
   const labelRef = useRef(null);
@@ -123,9 +129,12 @@ export default function TapeWidget({ score }) {
       // el row superior sigue a la punta (o al scrub si hay cursor encima)
       const ri = si >= 0 ? si : Math.round(kf);
       if (priceRef.current) priceRef.current.textContent = prices[ri]?.toFixed(4) ?? "—";
+      // "HOY" iba fijo y se leía igual en modo EN (2026-09-11).
       if (labelRef.current)
         labelRef.current.textContent =
-          si >= 0 || p < 0.995 ? (labels?.[ri] ?? "USD/MXN · 6M") : "USD/MXN · HOY";
+          si >= 0 || p < 0.995
+            ? (labels?.[ri] ?? "USD/MXN · 6M")
+            : (langRef.current === "en" ? "USD/MXN · TODAY" : "USD/MXN · HOY");
     }
 
     function onScroll() {
@@ -184,7 +193,7 @@ export default function TapeWidget({ score }) {
     <a
       ref={wrapRef}
       href="/markets?pair=USDMXN"
-      aria-label="USD/MXN últimos 6 meses — ver en Markets"
+      aria-label={lang === "en" ? "USD/MXN, last 6 months — open in Markets" : "USD/MXN últimos 6 meses — ver en Markets"}
       style={{
         position: "fixed",
         bottom: 24,

@@ -1,12 +1,15 @@
 "use client";
 import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
-import { useLang } from "./Lang";
+import { useLang, T } from "./Lang";
 
 // ── Data — replace / extend as needed ────────────────────────────────────────
+// tags_es/tags_en (2026-09-11): las etiquetas iban solo en español y en modo
+// EN se leía "RIESGO · VIX · VOLATILIDAD" encima de un título en inglés.
 const PROJECTS = [
   {
-    tags: "FX · BANXICO · CARRY",
+    tags_es: "FX · BANXICO · CARRY",
+    tags_en: "FX · BANXICO · CARRY",
     title_es: "El peso en el ojo del huracán",
     title_en: "The Peso in the Eye of the Storm",
     desc_es:
@@ -16,7 +19,8 @@ const PROJECTS = [
     href: "/casos/fx-banxico-carry",
   },
   {
-    tags: "RIESGO · VIX · VOLATILIDAD",
+    tags_es: "RIESGO · VIX · VOLATILIDAD",
+    tags_en: "RISK · VIX · VOLATILITY",
     title_es: "Leer el miedo antes de que llegue",
     title_en: "Reading Fear Before It Arrives",
     desc_es:
@@ -26,7 +30,8 @@ const PROJECTS = [
     href: "/casos/vix-move-fear",
   },
   {
-    tags: "MACRO · FED · TASAS",
+    tags_es: "MACRO · FED · TASAS",
+    tags_en: "MACRO · FED · RATES",
     title_es: "El juego de las tasas",
     title_en: "The Rate Game",
     desc_es:
@@ -36,7 +41,8 @@ const PROJECTS = [
     href: "/casos/fed-rate-game",
   },
   {
-    tags: "DERIVADOS · OPCIONES · COBERTURA",
+    tags_es: "DERIVADOS · OPCIONES · COBERTURA",
+    tags_en: "DERIVATIVES · OPTIONS · HEDGING",
     title_es: "Cobertura sin miedo",
     title_en: "Hedging Without Fear",
     desc_es:
@@ -53,6 +59,7 @@ function Card({ project, index, isActive, onActivate, isHoverDevice }) {
 
   const title = lang === "en" ? project.title_en : project.title_es;
   const desc  = lang === "en" ? project.desc_en  : project.desc_es;
+  const tags  = lang === "en" ? project.tags_en  : project.tags_es;
   const hint  = isHoverDevice
     ? (lang === "en" ? "HOVER FOR MORE" : "HOVER PARA VER")
     : (lang === "en" ? "TAP FOR MORE"   : "TOCA PARA VER");
@@ -91,7 +98,7 @@ function Card({ project, index, isActive, onActivate, isHoverDevice }) {
         fontSize: 11, letterSpacing: 2.5, textTransform: "uppercase",
         color: "#8A8A8E", marginBottom: 10, textAlign: "center",
       }}>
-        {project.tags}
+        {tags}
       </div>
 
       {/* Title */}
@@ -196,7 +203,9 @@ export default function ProjectCards() {
         fontSize: 11, letterSpacing: 3, textTransform: "uppercase",
         color: "#8A8A8E", marginBottom: 14,
       }}>
-        &mdash; <span lang="es">Casos</span>
+        {/* Pasa por el toggle (2026-09-11): antes era <span lang="es">Casos</span>
+            fijo y así se leía también en modo EN. */}
+        &mdash; <T es="Casos" en="Cases" />
       </div>
 
       {/*

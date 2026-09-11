@@ -8,7 +8,8 @@
 // cruzaba dos bloques de explicación antes de la primera frase. El contenido
 // de cada bloque no cambia; ScoreGauge queda como el score compacto.
 import { useEffect, useState } from "react";
-import { T } from "./Lang";
+import { T, useLang } from "./Lang";
+import { signalLabel } from "../lib/signalLabels";
 
 const BANDS = [
   { max: 25,  label: "RISK-OFF",     color: "#5B7FB9" },
@@ -76,6 +77,7 @@ export default function ScoreGauge({ score = 50 }) {
 // Desglose de señales: misma card que el gauge, para que funcione suelto
 // debajo del cuerpo del view.
 export function ScoreBreakdown({ signals = [] }) {
+  const { lang } = useLang();
   const mounted = useMounted();
   const [hover, setHover] = useState(null);
   if (!signals.length) return null;
@@ -94,7 +96,7 @@ export function ScoreBreakdown({ signals = [] }) {
             onMouseLeave={() => setHover(null)}
           >
             <div className="mb-1 flex items-center justify-between text-[11px]">
-              <span className="text-bone/75">{s.label}</span>
+              <span className="text-bone/75">{signalLabel(s.label, lang)}</span>
               <span className="font-mono tabular-nums text-muted">
                 {hover === i ? <T es={`peso ${s.w}%`} en={`weight ${s.w}%`} /> : `${s.sub}`}
               </span>

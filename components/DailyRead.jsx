@@ -16,7 +16,9 @@ export default function DailyRead({ post }) {
     <section className="reveal" style={{ animationDelay: "0.2s" }}>
       <div className="mb-3 flex items-baseline gap-3 flex-wrap">
         <span className="font-serif text-3xl font-semibold tracking-tight text-bone">
-          El Pre-Market
+          {/* En EN el sitio ya dice "The Pre-Market" (badge, SubscribeForm,
+              ⌘K); este encabezado era el único fijo en español (2026-09-11). */}
+          <T es="El Pre-Market" en="The Pre-Market" />
         </span>
         <span className="text-xs text-muted">{post.date}</span>
         {post.score && (

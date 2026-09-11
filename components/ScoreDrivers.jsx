@@ -16,6 +16,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { T, t, useLang } from "./Lang";
 import { pushes } from "../lib/homeStats";
+import { signalLabel } from "../lib/signalLabels";
 
 const HALF_SCALE = 10;            // puntos que llenan media barra
 const POS = "#2FB89A";            // empuja a risk-on (verde de banda, no P&L)
@@ -130,7 +131,8 @@ export default function ScoreDrivers({ live = null, published = null, anchor = n
                 fontFamily: "var(--font-mono)", fontSize: 11, color: isLiveMissing ? LABEL_DIM : "#B4B4B8",
                 letterSpacing: 0.5, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
               }}>
-                {r.label}
+                {/* r.label sigue siendo la llave vivo↔publicado; solo se traduce al pintar. */}
+                {signalLabel(r.label, lang)}
               </div>
               <div style={{ position: "relative", height: 10 }}>
                 {/* eje neutro */}
