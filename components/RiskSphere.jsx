@@ -842,10 +842,17 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
       vio.observe(container);
 
       const onResize = () => {
-        camera.aspect = container.clientWidth / container.clientHeight;
+        // Guardia de tamaño cero (2026-09-11). El 2026-09-10, con el canvas en
+        // tamaño cero, la consola se llenó de GL_INVALID_FRAMEBUFFER_OPERATION
+        // y de "computeBoundingSphere(): Computed radius is NaN". Sin área, el
+        // aspect sale 0 o NaN (0/0) y setSize(0, 0) deja el framebuffer vacío:
+        // se conserva el último tamaño bueno hasta que vuelva a haber área.
+        const w = container.clientWidth, h = container.clientHeight;
+        if (!w || !h) return;
+        camera.aspect = w / h;
         camera.updateProjectionMatrix();
-        renderer.setSize(container.clientWidth, container.clientHeight);
-        composer?.setSize(container.clientWidth, container.clientHeight);
+        renderer.setSize(w, h);
+        composer?.setSize(w, h);
         const newScale = Math.min(BASE_SCALE, (visibleHW * camera.aspect * 0.85) / (2 * R));
         group.scale.set(newScale, newScale, newScale);
         updatePixelsPerUnit();
