@@ -6,6 +6,12 @@
 // ni del cron de Vercel Hobby (lag de 40-100 min).
 // Responde en <1s — cabe holgado en el límite de Vercel.
 // Requiere GITHUB_TOKEN con permiso "Actions: write" en el repo.
+//
+// 2026-09-11: también dispara el RECAP con ?wf=recap. El recap se promete a las
+// 16:00 CDMX y sus crons de Actions (22:00 y 22:30 UTC) llegan tarde SIEMPRE:
+// salió 16:31 (14-ago), 16:32 (21-ago), 21:38 (28-ago) y 17:55 (4-sep). Con
+// ?wf=recap, cronjob.org lo dispara puntual igual que el view diario. La guarda
+// del marcador solo aplica al view; el recap tiene la suya en send-recap.
 import { REPO, checkSentMarker } from "../../../lib/dailyView";
 import { alertAdmin } from "../../../lib/alertAdmin";
 
@@ -18,14 +24,19 @@ async function handler(request) {
   }
 
   const slug = new Date().toLocaleDateString("sv-SE", { timeZone: "America/Mexico_City" });
-  const force = new URL(request.url).searchParams.get("force"); // prueba: salta la guarda
+  const url = new URL(request.url);
+  const force = url.searchParams.get("force"); // prueba: salta la guarda
+  // Lista blanca: nadie con el secreto puede despachar un workflow arbitrario.
+  const WORKFLOWS = { daily: "gen-daily.yml", recap: "recap-weekly.yml" };
+  const wf = WORKFLOWS[url.searchParams.get("wf") ?? "daily"];
+  if (!wf) return Response.json({ error: "workflow desconocido" }, { status: 400 });
 
   // Si el correo de hoy YA salió, ni molestamos a Actions. Con "unknown"
   // (GitHub caído) despachamos de todos modos: el workflow es idempotente y la
   // guarda dura (fail-closed) vive en send-daily; no despachar por un error
   // transitorio sí costaría la puntualidad del día.
-  let markerCheck = "skipped-by-force";
-  if (!force) {
+  let markerCheck = wf === WORKFLOWS.daily ? "skipped-by-force" : "no-aplica-al-recap";
+  if (!force && wf === WORKFLOWS.daily) {
     const marker = await checkSentMarker(slug);
     markerCheck = marker.status;
     if (marker.status === "sent") {
@@ -34,7 +45,7 @@ async function handler(request) {
   }
 
   const res = await fetch(
-    `https://api.github.com/repos/${REPO}/actions/workflows/gen-daily.yml/dispatches`,
+    `https://api.github.com/repos/${REPO}/actions/workflows/${wf}/dispatches`,
     {
       method: "POST",
       headers: {
@@ -49,13 +60,13 @@ async function handler(request) {
   // 204 = dispatch aceptado. 403/404 casi siempre = al token le falta el
   // permiso Actions:write → avisar con instrucción concreta.
   if (res.status === 204) {
-    return Response.json({ ok: true, dispatched: true, slug, markerCheck });
+    return Response.json({ ok: true, dispatched: true, workflow: wf, slug, markerCheck });
   }
   const detail = `HTTP ${res.status}: ${(await res.text()).slice(0, 200)}`;
-  await alertAdmin(`trigger-gen NO pudo despachar el workflow (${slug})`, {
+  await alertAdmin(`trigger-gen NO pudo despachar ${wf} (${slug})`, {
     detail,
     accion:
-      "Revisar que el fine-grained PAT (GITHUB_TOKEN en Vercel) tenga el permiso 'Actions: Read and write' sobre el repo Risk-On. El envío caerá a los respaldos 7:00/7:10.",
+      "Revisar que el fine-grained PAT (GITHUB_TOKEN en Vercel) tenga el permiso 'Actions: Read and write' sobre el repo Risk-On. El envío diario caerá a los respaldos 7:00/7:10; el recap, a sus crons de Actions.",
   });
   return Response.json({ ok: false, error: detail, slug }, { status: 502 });
 }
