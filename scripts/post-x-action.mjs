@@ -136,6 +136,43 @@ if (marker.status === "unknown") {
   process.exit(0);
 }
 
+// Aviso cuando X falla por SEGUNDO día hábil seguido (2026-09-11). El paso es
+// continue-on-error para no tocar el correo, así que X respondió 402 "credits
+// depleted" del 7 al 11-sep sin que nadie se enterara. Un fallo suelto puede
+// ser transitorio; si además el día hábil anterior no dejó sent/x-<slug>.json,
+// ya es la cuenta. Va por /api/ops-alert porque RESEND_API_KEY solo vive en
+// Vercel. Best-effort: nunca lanza ni cambia el exit code.
+async function avisarSiReincide(status, respuesta) {
+  try {
+    const d = new Date(`${slug}T12:00:00Z`);
+    do { d.setUTCDate(d.getUTCDate() - 1); } while (d.getUTCDay() === 0 || d.getUTCDay() === 6);
+    const anterior = d.toISOString().slice(0, 10);
+    const ayer = await checkSentMarker(`x-${anterior}`);
+    if (ayer.status !== "not-sent") return; // ayer sí publicó, o no se puede saber
+    if (!process.env.CRON_SECRET) {
+      console.error("[x] sin CRON_SECRET en el paso: no puedo avisar de la reincidencia.");
+      return;
+    }
+    const r = await fetch("https://riskon.lat/api/ops-alert", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${process.env.CRON_SECRET}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        subject: `X no publica desde el ${anterior} (HTTP ${status})`,
+        detail: {
+          hoy: slug,
+          sinPostDesde: anterior,
+          status,
+          respuesta,
+          qué_hacer: "Si es 402 credits depleted, recarga créditos en developer.x.com. Si no vas a usar X, borra los secrets X_* del repo y el paso se salta solo sin avisar.",
+        },
+      }),
+    });
+    console.error(`[x] aviso de reincidencia enviado (ops-alert HTTP ${r.status}).`);
+  } catch (e) {
+    console.error(`[x] no pude avisar de la reincidencia: ${e?.message ?? e}`);
+  }
+}
+
 const url = "https://api.twitter.com/2/tweets";
 const res = await fetch(url, {
   method: "POST",
@@ -145,6 +182,7 @@ const res = await fetch(url, {
 const body = await res.json().catch(() => ({}));
 if (!res.ok) {
   console.error(`[x] X respondió ${res.status}: ${JSON.stringify(body).slice(0, 400)}`);
+  await avisarSiReincide(res.status, body);
   process.exit(1);
 }
 const id = body?.data?.id;

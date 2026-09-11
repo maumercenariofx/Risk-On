@@ -100,8 +100,10 @@ jobs:
 
       # Post diario en X (@risk_on_views), compuesto del front-matter del view
       # (sin IA, $0). continue-on-error: si X falla, el correo ya salió y el
-      # run queda verde — el script loggea el motivo. Si los secrets de X no
-      # existen aún, el script sale en 0 con aviso.
+      # run queda verde — el script loggea el motivo y, desde el 2026-09-11,
+      # avisa por correo vía /api/ops-alert si falla dos días hábiles seguidos
+      # (por eso recibe CRON_SECRET). Si los secrets de X no existen aún, el
+      # script sale en 0 con aviso.
       - name: Publicar en X (@risk_on_views)
         if: ${{ (github.event.inputs.dry_run || '0') != '1' }}
         continue-on-error: true
@@ -111,6 +113,7 @@ jobs:
           X_ACCESS_TOKEN: ${{ secrets.X_ACCESS_TOKEN }}
           X_ACCESS_SECRET: ${{ secrets.X_ACCESS_SECRET }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: node scripts/post-x-action.mjs
 
       # Libro mayor de veredictos (public/data/postura-ledger.json). Va AL FINAL
