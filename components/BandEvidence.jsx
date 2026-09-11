@@ -116,8 +116,8 @@ export default function BandEvidence() {
           exactamente lo que define una reputación (auditoría 2026-08-21). */}
       <p style={{ fontSize: 12, color: "#9CA3AF", lineHeight: 1.65, margin: "12px 0 0" }}>
         <T
-          es="La mitad reciente es PEOR, y también va aquí: la base pro-peso del par baja de 57% a 54%, y el estiramiento de 62% a 59%. El backtest se calculó por mitades desde el principio; durante meses solo publicamos la mitad que favorecía. Ya no."
-          en="The recent half is WORSE, and it belongs here too: the pair's pro-peso base drops from 57% to 54%, and the stretch signal from 62% to 59%. The backtest was computed in halves from the start; for months we only published the favorable half. Not anymore."
+          es="La mitad reciente es PEOR, y también va aquí: en la ventana 2021-2026, la base pro-peso del par baja de 57% a 54%, y el estiramiento de 62% a 59%. Sobre 21 años la base es 53%. El backtest se calculó por mitades desde el principio; durante meses solo publicamos la mitad que favorecía. Ya no."
+          en="The recent half is WORSE, and it belongs here too: within the 2021-2026 window, the pair's pro-peso base drops from 57% to 54%, and the stretch signal from 62% to 59%. Over 21 years the base is 53%. The backtest was computed in halves from the start; for months we only published the favorable half. Not anymore."
         />
       </p>
       <p style={{ fontSize: 12, color: "#9CA3AF", lineHeight: 1.65, margin: "10px 0 0" }}>

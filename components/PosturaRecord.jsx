@@ -31,6 +31,8 @@ export default function PosturaRecord({ data }) {
   const icBench = data.benchmark?.n ? wilson(data.benchmark.hits, data.benchmark.n) : null;
   const seTraslapan = overlap(ic, icBench);
   const nEf = nEfectivo(data.resolved);
+  // 62% y 57% son del tramo 2021-2026 (estiramiento y base); se citan con su
+  // tramo porque sobre 21 años la base es 53% (regla de CLAUDE.md, 2026-09-11).
   const nFalta = nNecesarioVsBase(0.62, 0.57);
   const retorno = data.retorno;
 
@@ -130,8 +132,8 @@ export default function PosturaRecord({ data }) {
           )}
           <p style={{ fontSize: 11.5, color: "#8A8A8E", lineHeight: 1.6, margin: "8px 0 0" }}>
             <T
-              es={`Y el tamaño de muestra real es menor de lo que parece: las ventanas de 5 días hábiles se traslapan, así que ${data.resolved} posturas consecutivas equivalen a del orden de ${nEf} observaciones independientes. Para distinguir con rigor un 62% de la base de 57% del par harían falta ~${nFalta} posturas — unos ${(nFalta / 252).toFixed(1)} años publicando a diario. Llevamos ${data.resolved}.`}
-              en={`And the real sample is smaller than it looks: 5-day windows overlap, so ${data.resolved} consecutive stances amount to roughly ${nEf} independent observations. Rigorously telling 62% apart from the pair's 57% base would need ~${nFalta} stances — about ${(nFalta / 252).toFixed(1)} years of daily publishing. We're at ${data.resolved}.`}
+              es={`Y el tamaño de muestra real es menor de lo que parece: las ventanas de 5 días hábiles se traslapan, así que ${data.resolved} posturas consecutivas equivalen a del orden de ${nEf} observaciones independientes. Para distinguir con rigor un 62% de la base de 57% del par (las dos cifras del tramo 2021-2026; sobre 21 años la base es 53%) harían falta ~${nFalta} posturas — unos ${(nFalta / 252).toFixed(1)} años publicando a diario. Llevamos ${data.resolved}.`}
+              en={`And the real sample is smaller than it looks: 5-day windows overlap, so ${data.resolved} consecutive stances amount to roughly ${nEf} independent observations. Rigorously telling 62% apart from the pair's 57% base (both from 2021-2026; over 21 years the base is 53%) would need ~${nFalta} stances — about ${(nFalta / 252).toFixed(1)} years of daily publishing. We're at ${data.resolved}.`}
             />
           </p>
         </div>
