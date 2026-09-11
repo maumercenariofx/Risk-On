@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useLang, T } from "./Lang";
-import ScoreGauge from "./ScoreGauge";
+import ScoreGauge, { ScoreBreakdown } from "./ScoreGauge";
 import RiskBands from "./RiskBands";
 import SubscribeForm from "./SubscribeForm";
 import ReadingProgress from "./ReadingProgress";
@@ -162,18 +162,28 @@ export default function PostView({ post, prev, next, fwd = null }) {
 
       {typeof post.score === "number" && (
         <div className="reveal" style={{ animationDelay: "0.06s" }}>
-          <ScoreGauge score={post.score} signals={post.signals || []} />
+          <ScoreGauge score={post.score} />
         </div>
       )}
 
-      <div className="reveal" style={{ animationDelay: "0.08s" }}>
-        <RiskBands />
-      </div>
       <div
         className={`reveal ${ARTICLE_CLS}`}
         style={{ animationDelay: "0.1s" }}
         dangerouslySetInnerHTML={{ __html: (lang === "en" ? post.html_en : post.html_es) ?? post.html }}
       />
+
+      {/* Desglose y explicador de bandas DESPUÉS del cuerpo (2026-09-11): antes
+          iban entre el score y la primera frase, y el lector diario cruzaba
+          dos bloques de explicación para llegar al view. Orden: título,
+          metadata y score compacto → cuerpo → desglose → bandas. */}
+      {typeof post.score === "number" && Array.isArray(post.signals) && post.signals.length > 0 && (
+        <div className="reveal">
+          <ScoreBreakdown signals={post.signals} />
+        </div>
+      )}
+      <div className="reveal" style={{ animationDelay: "0.08s" }}>
+        <RiskBands />
+      </div>
       <WhatHappenedCard fwd={fwd} lang={lang} />
 
       <div className="border-t border-edge pt-4">
