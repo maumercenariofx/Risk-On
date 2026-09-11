@@ -10,15 +10,17 @@
 // los mismos sub-scores sin referencia. El detalle por señal y la tabla de
 // pesos siguen en /metodologia.
 //
-// Escala fija: 10 puntos de índice = media barra. El empuje máximo teórico de
-// una señal es w/2 (VIX: 10), así que las barras son comparables día a día.
+// Escala: 10 puntos de índice = media barra. Con las 9 señales el empuje
+// máximo teórico de una señal es w/2 (VIX: 10), así que las barras son
+// comparables día a día. Si faltan señales (Σw < 100) la escala crece lo
+// justo para que ninguna barra se recorte — ver halfScale (2026-09-11).
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { T, t, useLang } from "./Lang";
 import { pushes } from "../lib/homeStats";
 import { signalLabel } from "../lib/signalLabels";
 
-const HALF_SCALE = 10;            // puntos que llenan media barra
+const HALF_SCALE = 10;            // puntos que llenan media barra (mínimo)
 const POS = "#2FB89A";            // empuja a risk-on (verde de banda, no P&L)
 const NEG = "#5B7FB9";            // empuja a risk-off (azul de banda)
 const NEUTRAL = "#8A8A8E";
@@ -32,8 +34,8 @@ function fmt(n) {
 }
 
 // left/width en % para una barra que nace en 50% y crece según el signo.
-function bar(push) {
-  const pct = Math.min(Math.abs(push) / HALF_SCALE, 1) * 50;
+function bar(push, half) {
+  const pct = Math.min(Math.abs(push) / half, 1) * 50;
   return push >= 0 ? { left: "50%", width: `${pct}%` } : { left: `${50 - pct}%`, width: `${pct}%` };
 }
 
@@ -54,13 +56,15 @@ export default function ScoreDrivers({ live = null, published = null, anchor = n
   // vivo (Yahoo caído, /api/rates o /api/curve fallando) desaparecía en vez de
   // avisar — en local llegamos a ver 3 de 9 filas. Ahora las 9 señales SIEMPRE
   // están, indexadas por label (join key entre live y published: los labels
-  // son idénticos ES/EN), en el orden canónico que trae `published` — y si no
-  // hay published, en el orden de `live`.
+  // son idénticos ES/EN; la traducción es solo de presentación).
+  // Filas = UNIÓN estricta publicado + vivo (2026-09-11): antes se tomaba el
+  // orden de uno O del otro, y si el publicado traía menos de 9 señales (dato
+  // ausente a las 6:52) la fila viva de esa señal no se dibujaba.
   const livePushRows = pushes(live ?? []);
   const pubPushRows = pushes(published ?? []);
   const liveByLabel = new Map(livePushRows.map((r) => [r.label, r.push]));
   const pubByLabel = new Map(pubPushRows.map((r) => [r.label, r.push]));
-  const order = pubPushRows.length ? pubPushRows.map((r) => r.label) : livePushRows.map((r) => r.label);
+  const order = Array.from(new Set([...pubPushRows.map((r) => r.label), ...livePushRows.map((r) => r.label)]));
   if (!order.length) return null;
 
   const rows = order.map((label) => ({
@@ -68,6 +72,14 @@ export default function ScoreDrivers({ live = null, published = null, anchor = n
     livePush: liveByLabel.has(label) ? liveByLabel.get(label) : null,
     pubPush: pubByLabel.has(label) ? pubByLabel.get(label) : null,
   }));
+
+  // HALF_SCALE asume Σw = 100. Con señales faltantes un empuje puede pasar de
+  // 10 y la barra se recortaba sin aviso (2026-09-11): la escala es el máximo
+  // entre 10 y el mayor |empuje| que se dibuja (barra viva o marca publicada).
+  const halfScale = Math.max(
+    HALF_SCALE,
+    ...rows.flatMap((r) => [r.livePush, r.pubPush]).filter((v) => v != null).map((v) => Math.abs(v))
+  );
 
   // El total sigue siendo la suma de empujes de UNA sola fuente (la que se
   // titula arriba), igual que antes de F1 — F1 solo cambia qué filas se
@@ -113,9 +125,9 @@ export default function ScoreDrivers({ live = null, published = null, anchor = n
           const isLiveMissing = usingLive && !hasLive && r.pubPush != null;
           const drawPush = hasLive ? r.livePush : (usingLive ? null : r.pubPush);
           const color = drawPush == null ? NEUTRAL : drawPush >= 0 ? POS : NEG;
-          const geo = drawPush == null ? { left: "50%", width: 0 } : bar(grown ? drawPush : 0);
+          const geo = drawPush == null ? { left: "50%", width: 0 } : bar(grown ? drawPush : 0, halfScale);
           const tickLeft = usingLive && r.pubPush != null
-            ? `${50 + Math.max(-1, Math.min(1, r.pubPush / HALF_SCALE)) * 50}%`
+            ? `${50 + Math.max(-1, Math.min(1, r.pubPush / halfScale)) * 50}%`
             : null;
           const rowTitle = isLiveMissing
             ? t(lang, `Sin dato en vivo · publicado ${fmt(r.pubPush)}`, `No live data · published ${fmt(r.pubPush)}`)
@@ -142,13 +154,17 @@ export default function ScoreDrivers({ live = null, published = null, anchor = n
                 {!isLiveMissing && (
                   <div className="drivers-bar" style={{ position: "absolute", top: 2, height: 6, borderRadius: 2, background: color, ...geo }} />
                 )}
-                {/* marca del publicado */}
+                {/* marca del publicado. El `title` no llega a todos los
+                    lectores de pantalla ni dice el valor: va también como
+                    texto visually-hidden (2026-09-11). */}
                 {tickLeft && (
                   <div
                     className="drivers-tick"
                     title={lang === "en" ? "Published" : "Publicado"}
                     style={{ position: "absolute", top: -2, width: 1.5, height: 14, background: "#F5F5F2", left: grown ? tickLeft : "50%", transform: "translateX(-50%)", boxShadow: "0 0 0 1px rgba(0,0,0,0.6)" }}
-                  />
+                  >
+                    <span className="sr-only">{t(lang, `Publicado ${fmt(r.pubPush)}`, `Published ${fmt(r.pubPush)}`)}</span>
+                  </div>
                 )}
               </div>
               <div style={{ fontFamily: "var(--font-mono)", fontSize: 12, color: isLiveMissing ? NEUTRAL : color, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
