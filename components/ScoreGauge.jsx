@@ -10,16 +10,15 @@
 import { useEffect, useState } from "react";
 import { T, useLang } from "./Lang";
 import { signalLabel } from "../lib/signalLabels";
+import { BANDS, riskBand } from "../lib/riskScore";
 
-const BANDS = [
-  { max: 25,  label: "RISK-OFF",     color: "#5B7FB9" },
-  { max: 50,  label: "DEFENSIVE",    color: "#D9A227" },
-  { max: 75,  label: "CONSTRUCTIVE", color: "#2FB89A" },
-  { max: 100, label: "RISK-ON",      color: "#19C39B" },
-];
-
-function band(score) {
-  return BANDS.find((b) => score <= b.max) ?? BANDS[BANDS.length - 1];
+// Una sola fuente de bandas (2026-09-11). Este componente tenía su propia copia
+// con cortes 25/50/75 mientras el índice usa 32/49/67 desde el 13-jul: un 70
+// salía CONSTRUCTIVE en el archivo y RISK-ON en /indice. Mismo patrón que
+// send-daily y send-recap corrigieron el 21-ago. Si el view trae la banda
+// congelada al publicar, manda esa (como en forwardReturns).
+function band(score, congelada) {
+  return (congelada && BANDS.find((b) => b.key === congelada)) || riskBand(score);
 }
 
 // Monta con las barras en 0 y las suelta en el siguiente tick (transición).
@@ -32,9 +31,9 @@ function useMounted() {
   return mounted;
 }
 
-export default function ScoreGauge({ score = 50 }) {
+export default function ScoreGauge({ score = 50, band: congelada = null }) {
   const mounted = useMounted();
-  const b = band(score);
+  const b = band(score, congelada);
 
   return (
     <div className="rounded-2xl border border-edge bg-ink2/40 p-5">
@@ -51,7 +50,7 @@ export default function ScoreGauge({ score = 50 }) {
           className="rounded-md px-2.5 py-1 text-[11px] font-semibold tracking-wide"
           style={{ color: b.color, border: `1px solid ${b.color}55`, background: `${b.color}14` }}
         >
-          ◇ {b.label}
+          ◇ {b.key}
         </span>
       </div>
 

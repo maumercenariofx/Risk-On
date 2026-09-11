@@ -162,7 +162,7 @@ export default function PostView({ post, prev, next, fwd = null }) {
 
       {typeof post.score === "number" && (
         <div className="reveal" style={{ animationDelay: "0.06s" }}>
-          <ScoreGauge score={post.score} />
+          <ScoreGauge score={post.score} band={post.band ?? null} />
         </div>
       )}
 
