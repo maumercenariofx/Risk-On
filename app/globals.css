@@ -184,7 +184,9 @@ html.io .reveal.in-view {
 /* Ticker */
 @keyframes ticker-scroll {
   from { transform: translateX(0); }
-  to   { transform: translateX(-50%); }
+  /* −1/3 = una de las TRES copias de la fila (components/Ticker.jsx,
+     2026-09-11; antes −50% con dos copias). */
+  to   { transform: translateX(-33.3333%); }
 }
 .ticker-track {
   display: inline-flex; gap: 52px; white-space: nowrap;

@@ -119,9 +119,16 @@ export default function Ticker() {
       {/* El flash va en la BANDA, no en la pista: .data-arrive define animation
           y en la pista pisaría el ticker-scroll (así se detuvo el marquee). */}
       <div className={`ticker-band${arrived ? " data-arrive" : ""}`} style={{ padding: "11px 0" }}>
+        {/* TRES copias de la fila (2026-09-11): la pista avanza una copia por
+            vuelta (ticker-scroll, −1/3). Con 14 instrumentos una copia era
+            más ancha que casi cualquier pantalla; con 10 puede quedar más
+            angosta que un monitor ancho (2560 px CSS, el default de un 5K en
+            macOS — estimado, no medido) y con dos copias el final de cada
+            vuelta dejaba un hueco a la derecha. */}
         <div className={`ticker-track${paused ? " is-paused" : ""}`}>
           {row("a")}
           {row("b")}
+          {row("c")}
         </div>
       </div>
 
