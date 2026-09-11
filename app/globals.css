@@ -190,7 +190,10 @@ html.io .reveal.in-view {
 }
 .ticker-track {
   display: inline-flex; gap: 52px; white-space: nowrap;
-  animation: ticker-scroll 65s linear infinite;
+  /* 47s (antes 65s): con 10 instrumentos en vez de 14 cada copia mide ~27%
+     menos, y a 65s la cinta se veía más lenta (2026-09-11). Misma
+     velocidad en px/s que antes. */
+  animation: ticker-scroll 47s linear infinite;
   transition: filter 0.3s;
 }
 .ticker-band {

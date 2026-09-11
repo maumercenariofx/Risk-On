@@ -141,14 +141,22 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
       let DPR = Math.min((window.devicePixelRatio || 1) * (lowEnd ? 1 : 1.25),
                          isSmall ? (lowEnd ? 2 : 3.75) : (lowEnd ? 2 : 2.5));
 
+      // Tamaño de ARRANQUE con respaldo (2026-09-11). Si el globo monta con el
+      // contenedor en cero (pestaña o panel oculto), 0/0 da un aspect NaN que
+      // envenena la escala y las posiciones, que se calculan una sola vez: el
+      // 'computeBoundingSphere(): radius is NaN' visto el 10-sep. Se arranca
+      // con el tamaño de la ventana y el resize (con su guardia) corrige.
+      const W0 = container.clientWidth || window.innerWidth || 1;
+      const H0 = container.clientHeight || window.innerHeight || 1;
+
       const scene  = new THREE.Scene();
-      const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 100);
+      const camera = new THREE.PerspectiveCamera(45, W0 / H0, 0.1, 100);
       camera.position.z = 6.5;
 
       const renderer = new THREE.WebGLRenderer({ antialias: !isSmall, alpha: true });
       renderer.setClearColor(0x000000, 0);
       renderer.setPixelRatio(DPR);
-      renderer.setSize(container.clientWidth, container.clientHeight);
+      renderer.setSize(W0, H0);
       const canvas = renderer.domElement;
       // Debug observable (Playwright / Web Inspector remoto): DPR y N vivos.
       canvas.dataset.dpr = String(DPR);
@@ -195,7 +203,7 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
       const visibleHW = 2 * Math.tan(fovRad / 2) * camera.position.z;
       // Shrink the globe on narrow/portrait viewports so it never gets
       // clipped by the container's left/right edges.
-      const aspect    = container.clientWidth / container.clientHeight;
+      const aspect    = W0 / H0;
       const groupScale = Math.min(BASE_SCALE, (visibleHW * aspect * 0.85) / (2 * R));
       const visibleH = visibleHW / groupScale;
       const visibleW = visibleH * aspect;
@@ -620,7 +628,10 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
               } else {
                 DPR = Math.max(1.5, DPR - 0.5);
                 renderer.setPixelRatio(DPR);
-                renderer.setSize(container.clientWidth, container.clientHeight);
+                // Misma guardia que el resize: con el contenedor en cero no se
+                // redimensiona (2026-09-11).
+                if (container.clientWidth && container.clientHeight)
+                  renderer.setSize(container.clientWidth, container.clientHeight);
                 material.uniforms.uPixelRatio.value = DPR;
                 canvas.dataset.dpr = String(DPR);
                 if (DPR <= 1.5) qDone = true; // piso alcanzado
