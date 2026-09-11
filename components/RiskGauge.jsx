@@ -40,6 +40,18 @@ function newsAge(pubDate, lang) {
 // desplegar, así que "hoy" tiene que decidirlo el navegador (fin de semana).
 const CDMX = "America/Mexico_City";
 
+// Selección del radar: México fijo + los 4 más calientes sin él (2026-09-11).
+// La MISMA lista alimenta los chips y el globo; si divergen, el globo ilumina
+// un país que no está en los chips y deja a México apagado.
+function seleccionRadar(pool, scores) {
+  const ranked = pool
+    .map((c) => ({ ...c, live: scores?.[c.id] ?? c.score }))
+    .sort((a, b) => b.live - a.live);
+  const mx = ranked.find((c) => c.id === "mx");
+  return mx ? [mx, ...ranked.filter((c) => c !== mx).slice(0, 4)] : ranked.slice(0, 5);
+}
+const paraGlobo = (sel) => sel.map((c) => ({ maskId: c.maskId, score: c.live, phase: c.phase }));
+
 function todayCDMX() {
   return new Date().toLocaleDateString("en-CA", { timeZone: CDMX }); // YYYY-MM-DD
 }
@@ -215,11 +227,7 @@ export default function RiskGauge({ prevScore = null, scoreHistory = null, ticke
   // con sus scores en vivo (reintenta hasta que monte el 3D).
   useEffect(() => {
     if (!cScores) return;
-    const top5 = COUNTRY_UNIVERSE
-      .map((c) => ({ ...c, live: cScores?.[c.id] ?? c.score }))
-      .sort((a, b) => b.live - a.live)
-      .slice(0, 5)
-      .map((c) => ({ maskId: c.maskId, score: c.live, phase: c.phase }));
+    const top5 = paraGlobo(seleccionRadar(COUNTRY_UNIVERSE, cScores));
     let tries = 0, id;
     const apply = () => {
       // setCountries devuelve false mientras el 3D no monta → reintentar.
@@ -241,15 +249,11 @@ export default function RiskGauge({ prevScore = null, scoreHistory = null, ticke
   // Chile, EE.UU., Colombia y Japón y ni rastro de México, en un producto
   // sobre el peso. Mismo total de chips: México + los 4 más calientes SIN él.
   // Su score sale de la misma fuente que los demás (/api/country-risk → "mx").
-  // Solo cambian los chips: el globo sigue iluminando el top-5 puro.
-  const countriesByRisk = useMemo(() => {
-    const pool = cScores ? COUNTRY_UNIVERSE : RISK_COUNTRIES;
-    const ranked = pool
-      .map((c) => ({ ...c, live: cScores?.[c.id] ?? c.score }))
-      .sort((a, b) => b.live - a.live);
-    const mx = ranked.find((c) => c.id === "mx");
-    return mx ? [mx, ...ranked.filter((c) => c !== mx).slice(0, 4)] : ranked.slice(0, 5);
-  }, [cScores]);
+  // El globo ilumina exactamente la misma selección (seleccionRadar).
+  const countriesByRisk = useMemo(
+    () => seleccionRadar(cScores ? COUNTRY_UNIVERSE : RISK_COUNTRIES, cScores),
+    [cScores]
+  );
 
   // Mismo modelo que el view diario (lib/riskScore.js) → portada y nota coinciden.
   const result = useMemo(
@@ -310,12 +314,7 @@ export default function RiskGauge({ prevScore = null, scoreHistory = null, ticke
     sphereRef.current?.setHalo?.(accent(day.score), day.score);
     const snap = cHistory?.find((h) => h.date === day.slug)?.scores;
     if (snap) {
-      const top5 = COUNTRY_UNIVERSE
-        .map((c) => ({ ...c, live: snap[c.id] ?? c.score }))
-        .sort((a, b) => b.live - a.live)
-        .slice(0, 5)
-        .map((c) => ({ maskId: c.maskId, score: c.live, phase: c.phase }));
-      sphereRef.current?.setCountries?.(top5);
+      sphereRef.current?.setCountries?.(paraGlobo(seleccionRadar(COUNTRY_UNIVERSE, snap)));
     }
   };
   useEffect(() => {
@@ -323,12 +322,7 @@ export default function RiskGauge({ prevScore = null, scoreHistory = null, ticke
     // Regreso al vivo: re-aplicar halo y selección actuales.
     if (result) sphereRef.current?.setHalo?.(accentColor, score);
     if (cScores) {
-      const top5 = COUNTRY_UNIVERSE
-        .map((c) => ({ ...c, live: cScores?.[c.id] ?? c.score }))
-        .sort((a, b) => b.live - a.live)
-        .slice(0, 5)
-        .map((c) => ({ maskId: c.maskId, score: c.live, phase: c.phase }));
-      sphereRef.current?.setCountries?.(top5);
+      sphereRef.current?.setCountries?.(paraGlobo(seleccionRadar(COUNTRY_UNIVERSE, cScores)));
     }
   }, [lapse]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
