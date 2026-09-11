@@ -1,9 +1,10 @@
 // app/page.jsx
 // Home V2 (2026-09-03): el índice es el producto. Orden = niveles de lectura:
-// score vivo + ancla publicada → qué lo mueve → qué vigilar → el view →
-// mercados/tasas/calendario → casos → cómo leer el índice. La página solo
-// recompone; ningún componente cambió de contrato salvo RiskGauge, que ya no
-// monta DailyRead ni MarketsClient (viven aquí para poder ordenarlos).
+// score vivo + ancla publicada → qué lo mueve → el view (+ suscripción) →
+// qué vigilar → mercados/tasas/calendario → casos → cómo leer el índice. La
+// página solo recompone; ningún componente cambió de contrato salvo RiskGauge,
+// que ya no monta DailyRead ni MarketsClient (viven aquí para poder ordenarlos).
+// 2026-09-11: el view sube por encima de DailyWatch — ver el bloque 4.
 import Link from "next/link";
 import Ticker from "../components/Ticker";
 import RiskGauge from "../components/RiskGauge";
@@ -68,11 +69,14 @@ export default async function Home() {
         range7={range7(posts)}
       />
 
-      {/* 4 · Qué vigilar hoy, FX y rango técnico */}
-      {latest && <DailyWatch post={latest} />}
-
-      {/* 5 · El Pre-Market (+ SubscribeForm: aquí vive el ancla #subscribe) */}
+      {/* 4 · El Pre-Market (+ SubscribeForm: aquí vive el ancla #subscribe).
+          Va justo debajo del índice y antes de DailyWatch (2026-09-11): el
+          negocio es el correo y el formulario era el bloque 9 de la página
+          (revisión 2026-09-10). */}
       {latest && <DailyRead post={latest} />}
+
+      {/* 5 · Qué vigilar hoy, FX y rango técnico */}
+      {latest && <DailyWatch post={latest} />}
 
       {/* 6 · Mercados, cuenta regresiva y secciones densas (colapsables en móvil) */}
       <div style={{ padding: "8px 0" }}>
