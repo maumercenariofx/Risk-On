@@ -1,3 +1,5 @@
+import { enCdmx } from "../../../lib/cdmxTime";
+
 export const revalidate = 3600;
 
 // ─── AGENDAS OFICIALES 2026 ───────────────────────────────────────────────────
@@ -30,7 +32,7 @@ const BOE_2026 = [
   "2026-11-05","2026-12-17",
 ];
 
-// BOJ — Banco de Japón (anuncio el 2º día de cada reunión). Fuente: boj.or.jp
+// BOJ — Banco de Japón (anuncio el 2º día de cada reunión, sin hora fija: hacia el mediodía de Tokio). Fuente: boj.or.jp
 const BOJ_2026 = [
   "2026-01-23","2026-03-19","2026-04-28",
   "2026-06-16","2026-07-31","2026-09-18",
@@ -51,14 +53,14 @@ const PCE_US_2026 = [
   "2026-09-30","2026-10-29","2026-11-25","2026-12-23",
 ];
 
-// INEGI CPI México — INPC mensual (día 9, o hábil anterior si cae en finde). Fuente: regla INEGI.
+// INEGI CPI México — INPC mensual (día 9, o hábil anterior si cae en finde), 06:00 CDMX. Fuente: regla INEGI.
 const CPI_MX_2026 = [
   "2026-01-09","2026-02-09","2026-03-09","2026-04-09",
   "2026-05-08","2026-06-09","2026-07-09","2026-08-07",
   "2026-09-09","2026-10-09","2026-11-09","2026-12-09",
 ];
 
-// IPC Flash Eurozona — último día hábil del mes de referencia. Fuente: Eurostat.
+// IPC Flash Eurozona — último día hábil del mes de referencia, 11:00 CET. Fuente: Eurostat.
 const CPI_EU_2026 = [
   "2026-01-30","2026-02-27","2026-03-31","2026-04-30",
   "2026-05-29","2026-06-30","2026-07-31","2026-08-31",
@@ -119,51 +121,59 @@ function buildEvents(today, days) {
   const to = toDate.toISOString().slice(0, 10);
   const inRange = (d) => d >= today && d <= to;
 
-  const ev = (date, time, impact, flag, event_es, event_en) =>
-    ({ date, time, impact, flag, event_es, event_en });
+  // Cada evento se declara en la hora LOCAL de su fuente y sale en hora de
+  // CDMX (lib/cdmxTime.js, 2026-09-11): el correo la imprime como "AGENDA DE
+  // HOY (CDMX)" y el sitio la rotula igual. Antes salía la hora local cruda.
+  const NY = "America/New_York", MX = "America/Mexico_City";
+  const ev = (date, time, tz, impact, flag, event_es, event_en) =>
+    ({ ...enCdmx(date, time, tz), impact, flag, event_es, event_en });
 
   const events = [
     ...FOMC_2026.filter(inRange).map((d) =>
-      ev(d, "14:00", "high", "🇺🇸", "Decisión de tasas Fed (FOMC)", "FOMC Rate Decision")),
+      ev(d, "14:00", NY, "high", "🇺🇸", "Decisión de tasas Fed (FOMC)", "FOMC Rate Decision")),
 
     ...BANXICO_2026.filter(inRange).map((d) =>
-      ev(d, "13:00", "high", "🇲🇽", "Decisión de tasas Banxico", "Banxico Rate Decision")),
+      ev(d, "13:00", MX, "high", "🇲🇽", "Decisión de tasas Banxico", "Banxico Rate Decision")),
 
     ...ECB_2026.filter(inRange).map((d) =>
-      ev(d, "14:15", "high", "🇪🇺", "Decisión de tasas BCE", "ECB Rate Decision")),
+      ev(d, "14:15", "Europe/Berlin", "high", "🇪🇺", "Decisión de tasas BCE", "ECB Rate Decision")),
 
     ...BOE_2026.filter(inRange).map((d) =>
-      ev(d, "12:00", "high", "🇬🇧", "Decisión de tasas Banco de Inglaterra", "BOE Rate Decision")),
+      ev(d, "12:00", "Europe/London", "high", "🇬🇧", "Decisión de tasas Banco de Inglaterra", "BOE Rate Decision")),
 
     ...BOJ_2026.filter(inRange).map((d) =>
-      ev(d, "03:00", "high", "🇯🇵", "Decisión de tasas Banco de Japón", "BOJ Rate Decision")),
+      ev(d, "12:00", "Asia/Tokyo", "high", "🇯🇵", "Decisión de tasas Banco de Japón", "BOJ Rate Decision")),
 
     ...CPI_US_2026.filter(inRange).map((d) =>
-      ev(d, "08:30", "high", "🇺🇸", "IPC / CPI (EE.UU.)", "CPI Inflation (US)")),
+      ev(d, "08:30", NY, "high", "🇺🇸", "IPC / CPI (EE.UU.)", "CPI Inflation (US)")),
 
     ...PCE_US_2026.filter(inRange).map((d) =>
-      ev(d, "08:30", "high", "🇺🇸", "PCE (gasto personal EE.UU.)", "PCE Deflator (US)")),
+      ev(d, "08:30", NY, "high", "🇺🇸", "PCE (gasto personal EE.UU.)", "PCE Deflator (US)")),
 
     ...CPI_MX_2026.filter(inRange).map((d) =>
-      ev(d, "08:00", "high", "🇲🇽", "Inflación CPI (México · INEGI)", "CPI Inflation (Mexico)")),
+      ev(d, "06:00", MX, "high", "🇲🇽", "Inflación CPI (México · INEGI)", "CPI Inflation (Mexico)")),
 
     ...CPI_EU_2026.filter(inRange).map((d) =>
-      ev(d, "10:00", "medium", "🇪🇺", "IPC Flash Eurozona", "Eurozone CPI Flash")),
+      ev(d, "11:00", "Europe/Berlin", "medium", "🇪🇺", "IPC Flash Eurozona", "Eurozone CPI Flash")),
 
     ...RETAIL_US_2026.filter(inRange).map((d) =>
-      ev(d, "08:30", "medium", "🇺🇸", "Ventas al menudeo (EE.UU.)", "US Retail Sales")),
+      ev(d, "08:30", NY, "medium", "🇺🇸", "Ventas al menudeo (EE.UU.)", "US Retail Sales")),
 
     ...nfpDates(today, 3).filter(inRange).map((d) =>
-      ev(d, "08:30", "high", "🇺🇸", "Nóminas No-Agrícolas / NFP", "Nonfarm Payrolls (NFP)")),
+      ev(d, "08:30", NY, "high", "🇺🇸", "Nóminas No-Agrícolas / NFP", "Nonfarm Payrolls (NFP)")),
 
     ...claimsDates(today, to).map((d) =>
-      ev(d, "08:30", "medium", "🇺🇸", "Solicitudes de desempleo (EE.UU.)", "Jobless Claims (US)")),
+      ev(d, "08:30", NY, "medium", "🇺🇸", "Solicitudes de desempleo (EE.UU.)", "Jobless Claims (US)")),
 
     ...ismDates(today, 3).filter(inRange).map((d) =>
-      ev(d, "10:00", "medium", "🇺🇸", "PMI Manufacturero ISM (EE.UU.)", "ISM Manufacturing PMI")),
+      ev(d, "10:00", NY, "medium", "🇺🇸", "PMI Manufacturero ISM (EE.UU.)", "ISM Manufacturing PMI")),
   ];
 
-  return events.sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
+  // El filtro se repite sobre la fecha YA en CDMX: la conversión puede mover
+  // un evento al día anterior (BOJ).
+  return events
+    .filter((e) => inRange(e.date))
+    .sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
 }
 
 export async function GET(request) {

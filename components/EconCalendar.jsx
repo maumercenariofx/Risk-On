@@ -94,7 +94,7 @@ export default function EconCalendar() {
   return (
     <section className="reveal" style={{ animationDelay: "0.35s" }}>
       <div style={{ fontSize: 11, letterSpacing: 3, textTransform: "uppercase", color: "#8A8A8E", marginBottom: 12 }}>
-        &mdash; <T es="Calendario económico — próximos 14 días" en="Economic calendar — next 14 days" />
+        &mdash; <T es="Calendario económico — próximos 14 días · hora CDMX" en="Economic calendar — next 14 days · Mexico City time" />
       </div>
       <div
         className="card-glass"
