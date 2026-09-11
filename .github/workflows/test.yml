@@ -1,0 +1,41 @@
+# Pruebas unitarias (npm test) en cada push de código. Workflow APARTE a
+# propósito: jamás dentro de gen-daily, porque un test roto no puede frenar el
+# correo de las 7am (pendiente del Home V2, 2026-09-03; creado 2026-09-11).
+# Ignora los commits del bot (content/, sent/, public/data/) y los de docs.
+name: tests
+
+on:
+  push:
+    paths-ignore:
+      - "content/**"
+      - "sent/**"
+      - "public/data/**"
+      - "docs/**"
+      - "notas/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci --ignore-scripts
+
+      - run: npm test
+
+      # TEMPORAL (2026-09-11), se borra antes del merge: corre el ledger en la
+      # red de Actions para ver si FRED responde con el UA nuevo. Escribe solo
+      # en el disco del runner; aquí no hay permiso de escritura al repo.
+      - name: Diagnóstico FRED desde Actions (temporal)
+        continue-on-error: true
+        run: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/update-ledger.mjs
