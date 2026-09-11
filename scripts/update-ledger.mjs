@@ -86,7 +86,8 @@ async function fredCloses() {
   // UA propio y timeout corto (2026-09-11). Con el UA de navegador de Yahoo,
   // FRED no respondía desde GitHub Actions: "fetch failed" tras ~70 s en cada
   // corrida desde que existe el contraste (28-ago), así que ninguna entrada
-  // nueva lo recibió. Desde una IP residencial responde en 0.5 s.
+  // nueva lo recibió. Con este UA propio respondió desde Actions en menos de
+  // 1 s y rellenó 15 entradas (corrida de diagnóstico del 2026-09-11).
   const res = await fetch("https://fred.stlouisfed.org/graph/fredgraph.csv?id=DEXMXUS", {
     headers: { "User-Agent": "riskon-ledger/1.0 (+https://riskon.lat)" },
     signal: AbortSignal.timeout(20000),

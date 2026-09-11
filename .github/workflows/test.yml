@@ -32,10 +32,3 @@ jobs:
       - run: npm ci --ignore-scripts
 
       - run: npm test
-
-      # TEMPORAL (2026-09-11), se borra antes del merge: corre el ledger en la
-      # red de Actions para ver si FRED responde con el UA nuevo. Escribe solo
-      # en el disco del runner; aquí no hay permiso de escritura al repo.
-      - name: Diagnóstico FRED desde Actions (temporal)
-        continue-on-error: true
-        run: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/update-ledger.mjs
