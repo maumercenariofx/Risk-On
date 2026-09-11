@@ -76,7 +76,9 @@ export async function GET(request) {
     // la serie quedaba etiquetada un día antes (mismo fix que forwardReturns).
     const off = result.meta?.gmtoffset ?? 0;
 
-    const prices = [], labels = [], isoDates = [];
+    // labels_en existe desde el 2026-09-11: en modo EN el eje y la cinta
+    // enseñaban "10 sept" porque solo había la versión es-MX.
+    const prices = [], labels = [], labels_en = [], isoDates = [];
     for (let i = 0; i < ts.length; i++) {
       const c = closes[i];
       if (c == null || isNaN(c)) continue;
@@ -84,10 +86,11 @@ export async function GET(request) {
       const label = d.toLocaleDateString("es-MX", { day: "numeric", month: "short", timeZone: "UTC" });
       prices.push(Math.round(c * 10000) / 10000);
       labels.push(label);
+      labels_en.push(d.toLocaleDateString("en-US", { day: "numeric", month: "short", timeZone: "UTC" }));
       isoDates.push(d.toISOString().slice(0, 10)); // para alinear por fecha con los views
     }
 
-    return Response.json({ prices, labels, dates: isoDates }, {
+    return Response.json({ prices, labels, labels_en, dates: isoDates }, {
       headers: { "Cache-Control": "s-maxage=60, stale-while-revalidate=300" },
     });
   } catch {

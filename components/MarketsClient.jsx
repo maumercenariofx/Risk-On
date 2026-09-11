@@ -296,18 +296,18 @@ export default function MarketsClient({ embed = false }) {
 
     const cacheKey = `${pair}-${range}`;
     if (dataCache.current[cacheKey]) {
-      const { prices, labels, timestamps } = dataCache.current[cacheKey];
-      buildChart(prices, labels, timestamps ?? []);
+      const { prices, labels, labels_en, timestamps } = dataCache.current[cacheKey];
+      buildChart(prices, lang === "en" && labels_en ? labels_en : labels, timestamps ?? []);
       return () => { cancelled = true; };
     }
 
     fetch(`/api/history?range=${range}&symbol=${pair}`)
       .then((r) => r.json())
-      .then(({ prices, labels, timestamps: ts }) => {
+      .then(({ prices, labels, labels_en, timestamps: ts }) => {
         if (cancelled) return;
         if (prices?.length > 0) {
-          dataCache.current[cacheKey] = { prices, labels, timestamps: ts };
-          buildChart(prices, labels, ts ?? []);
+          dataCache.current[cacheKey] = { prices, labels, labels_en, timestamps: ts };
+          buildChart(prices, lang === "en" && labels_en ? labels_en : labels, ts ?? []);
         } else {
           // Sin datos NO se dibuja nada. No se cachea: el siguiente intento
           // vuelve a pedir en vez de servir un hueco pegado.
@@ -322,7 +322,9 @@ export default function MarketsClient({ embed = false }) {
       });
 
     return () => { cancelled = true; };
-  }, [range, pair]);
+    // lang: al cambiar de idioma se redibuja desde la caché con las etiquetas
+    // del idioma (2026-09-11); no vuelve a pedir datos.
+  }, [range, pair, lang]);
 
   // ── derived display values ────────────────────────────────────────────────
 

@@ -38,7 +38,7 @@ const ASSETS = [
   { label: "USD/JPY", href: "/markets?pair=USDJPY", hard: true },
   { label: "S&P 500", href: "/analisis?symbol=^GSPC", hard: true },
   { label: "Nasdaq", href: "/analisis?symbol=^IXIC", hard: true },
-  { label: "IPC México", href: "/analisis?symbol=^MXX", hard: true },
+  { label: "IPC México · Mexico IPC", href: "/analisis?symbol=^MXX", hard: true }, // bilingüe, como "Oro · Gold" (2026-09-11)
   { label: "Bitcoin", href: "/analisis?symbol=BTC-USD", hard: true },
   { label: "Oro · Gold", href: "/analisis?symbol=GC=F", hard: true },
   { label: "WTI", href: "/analisis?symbol=CL=F", hard: true },

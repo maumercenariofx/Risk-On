@@ -65,7 +65,9 @@ export default function TapeWidget({ score }) {
     function draw() {
       const d = dataRef.current;
       if (dead || !d || d.prices.length < 2) return;
-      const { prices, labels } = d;
+      const { prices } = d;
+      // Etiquetas del idioma activo (labels_en desde 2026-09-11).
+      const labels = langRef.current === "en" && d.labels_en ? d.labels_en : d.labels;
       const w = canvas.width;
       const h = canvas.height;
       ctx.clearRect(0, 0, w, h);
@@ -172,7 +174,7 @@ export default function TapeWidget({ score }) {
       .then((r) => (r.ok ? r.json() : null))
       .then((j) => {
         if (dead || !j?.prices?.length) return;
-        dataRef.current = { prices: j.prices, labels: j.labels };
+        dataRef.current = { prices: j.prices, labels: j.labels, labels_en: j.labels_en };
         onScroll();
       })
       .catch(() => {}); // best-effort: sin datos el widget simplemente no aparece
