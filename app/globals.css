@@ -480,3 +480,19 @@ button, a[class*="rounded"] { transition-property: color, background-color, bord
 }
 .spark-live-dot { animation: sparkPulse 2.2s ease-in-out infinite; }
 @media (prefers-reduced-motion: reduce) { .spark-live-dot { animation: none; } }
+
+/* NotchGauge: cada muesca brota desde su centro, en cascada (--i). Primero la
+   pista tenue, luego las encendidas. El cubic-bezier con rebote imita el
+   resorte del original de bklit-ui sin cargar Motion. */
+@keyframes notchIn {
+  from { opacity: 0; transform: scale(0); }
+  to   { opacity: 1; transform: scale(1); }
+}
+.notch {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: notchIn .45s cubic-bezier(.34, 1.56, .64, 1) both;
+  animation-delay: calc(var(--i) * 12ms);
+}
+.notch-on { animation-delay: calc(300ms + var(--i) * 18ms); }
+@media (prefers-reduced-motion: reduce) { .notch { animation: none; } }

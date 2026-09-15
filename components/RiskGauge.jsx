@@ -8,6 +8,7 @@ import SessionClock from "./SessionClock";
 import RegimeStrip from "./RegimeStrip";
 import IntradaySpark from "./IntradaySpark";
 import ScoreDrivers from "./ScoreDrivers";
+import NotchGauge from "./NotchGauge";
 import Link from "next/link";
 
 // Frescura del dato, frase completa según idioma (antes mezclaba "Data ahora ago").
@@ -147,7 +148,6 @@ export default function RiskGauge({ prevScore = null, scoreHistory = null, ticke
   const [newsLoading, setNewsLoading] = useState(false);
   const [heroGone, setHeroGone]       = useState(false);
   const [isSub, setIsSub]             = useState(false); // ya suscrito → sin CTA en el badge
-  const [thermoIn, setThermoIn]       = useState(false); // desliza el termómetro 0→score
   const [cScores, setCScores]         = useState(null); // riesgo por país en vivo
   // Time-lapse 30d: null = vivo; {i} = índice en scoreHistory (rebobinado).
   const [lapse, setLapse]             = useState(null);
@@ -219,8 +219,6 @@ export default function RiskGauge({ prevScore = null, scoreHistory = null, ticke
     // Historia diaria de riesgo por país (time-lapse; se acumula desde 27-jul-2026)
     fetch("/data/country-risk-history.json").then((r) => (r.ok ? r.json() : null)).then(setCHistory).catch(() => {});
     try { setIsSub(localStorage.getItem("riskon-sub") === "1"); } catch {}
-    const t = setTimeout(() => setThermoIn(true), 150);
-    return () => clearTimeout(t);
   }, []);
 
   // Aplica al globo la SELECCIÓN dinámica (los 5 más calientes del universo)
@@ -584,21 +582,16 @@ export default function RiskGauge({ prevScore = null, scoreHistory = null, ticke
       {/* Ticker: vive justo debajo del hero (llega como prop desde la página) */}
       {ticker}
 
-      {/* ── Termómetro 0–100: lectura instantánea de la temperatura del mercado.
-          El marcador se DESLIZA de 0 al score al montar (thermoIn). ── */}
+      {/* ── Termómetro 0–100 en muescas (2026-09-15): cada una lleva el color de
+          su banda, así que los cortes 32/49/67 se ven; el gradiente continuo
+          que había antes los difuminaba. Se encienden en cascada hasta el score. ── */}
       {result && (
         <div style={{ margin: "0 0 22px" }}>
-          <div style={{
-            position: "relative", height: 8, borderRadius: 5,
-            background: "linear-gradient(90deg,#5B7FB9 0%,#D9A227 34%,#2FB89A 60%,#19C39B 100%)",
-          }}>
-            <div style={{
-              position: "absolute", top: -3, left: `${thermoIn ? score : 0}%`, transform: "translateX(-50%)",
-              width: 3, height: 14, background: "#F5F5F2", borderRadius: 2,
-              boxShadow: "0 0 0 1px rgba(0,0,0,0.55)",
-              transition: "left 1.3s cubic-bezier(0.2, 0.7, 0.3, 1)",
-            }} />
-          </div>
+          <NotchGauge
+            value={score}
+            colorAt={(v) => riskBand(v).color}
+            label={lang === "en" ? `Risk On index ${score} of 100, ${label.en}` : `Índice Risk On ${score} de 100, ${label.es}`}
+          />
           <div style={{
             display: "flex", justifyContent: "space-between", marginTop: 6,
             fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: 1, color: "#8A8A8E",

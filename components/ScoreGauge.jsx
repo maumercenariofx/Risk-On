@@ -11,6 +11,7 @@ import { useEffect, useState } from "react";
 import { T, useLang } from "./Lang";
 import { signalLabel } from "../lib/signalLabels";
 import { BANDS, riskBand } from "../lib/riskScore";
+import NotchGauge from "./NotchGauge";
 
 // Una sola fuente de bandas (2026-09-11). Este componente tenía su propia copia
 // con cortes 25/50/75 mientras el índice usa 32/49/67 desde el 13-jul: un 70
@@ -31,43 +32,36 @@ function useMounted() {
   return mounted;
 }
 
+// Arco de muescas (2026-09-15). Todas las muescas usan el color de la banda
+// del view, no el de su propia posición: con cortes congelados anteriores al
+// 13-jul, colorear por posición con los cortes vigentes pondría la punta del
+// arco en otra banda que la del chip.
 export default function ScoreGauge({ score = 50, band: congelada = null }) {
-  const mounted = useMounted();
+  const { lang } = useLang();
   const b = band(score, congelada);
 
   return (
-    <div className="rounded-2xl border border-edge bg-ink2/40 p-5">
-      {/* Score + estado */}
-      <div className="flex items-end justify-between">
-        <div>
-          <div className="text-[11px] uppercase tracking-[2px] text-muted">Risk On Score</div>
-          <div className="mt-1 flex items-baseline gap-2">
-            <span className="font-mono text-4xl font-medium tabular-nums" style={{ color: b.color }}>{score}</span>
-            <span className="text-sm text-muted">/ 100</span>
-          </div>
-        </div>
+    <div className="flex items-center gap-5 rounded-2xl border border-edge bg-ink2/40 p-5">
+      <NotchGauge
+        variant="arc"
+        value={score}
+        size={124}
+        colorAt={() => b.color}
+        label={lang === "en" ? `Risk On score ${score} of 100, ${b.en}` : `Risk On score ${score} de 100, ${b.es}`}
+      >
+        <span className="font-mono text-4xl font-medium tabular-nums" style={{ color: b.color }}>{score}</span>
+      </NotchGauge>
+      <div className="min-w-0">
+        <div className="text-[11px] uppercase tracking-[2px] text-muted">Risk On Score</div>
         <span
-          className="rounded-md px-2.5 py-1 text-[11px] font-semibold tracking-wide"
+          className="mt-2 inline-block rounded-md px-2.5 py-1 text-[11px] font-semibold tracking-wide"
           style={{ color: b.color, border: `1px solid ${b.color}55`, background: `${b.color}14` }}
         >
           ◇ {b.key}
         </span>
-      </div>
-
-      {/* Barra principal */}
-      <div className="mt-4 h-2.5 w-full overflow-hidden rounded-full bg-edge/60">
-        <div
-          className="h-full rounded-full"
-          style={{
-            width: mounted ? `${score}%` : "0%",
-            background: b.color,
-            transition: "width 900ms cubic-bezier(.22,1,.36,1)",
-          }}
-        />
-      </div>
-      <div className="mt-1.5 flex justify-between text-[11px] uppercase tracking-wide text-muted/70">
-        <span><T es="0 · risk-off" en="0 · risk-off" /></span>
-        <span><T es="risk-on · 100" en="risk-on · 100" /></span>
+        <div className="mt-2 text-[11px] uppercase tracking-wide text-muted">
+          <T es="0 risk-off · 100 risk-on" en="0 risk-off · 100 risk-on" />
+        </div>
       </div>
     </div>
   );
