@@ -9,10 +9,14 @@ import {
 
 // ── constants ────────────────────────────────────────────────────────────────
 
+// `peso`: el color es relativo al PESO, no al par — USD/MXN a la baja = peso
+// más fuerte = verde. Misma convención que Ticker, IntradaySpark, PosturaRecord
+// y BandEvidence; esta gráfica era la última que pintaba verde al dólar
+// subiendo (2026-09-15). Los cruces sin peso siguen con arriba = verde.
 const PAIRS = [
-  { key: "USDMXN", label: "USD/MXN", decimals: 4 },
-  { key: "EURMXN", label: "EUR/MXN", decimals: 4 },
-  { key: "CHFMXN", label: "CHF/MXN", decimals: 4 },
+  { key: "USDMXN", label: "USD/MXN", decimals: 4, peso: true },
+  { key: "EURMXN", label: "EUR/MXN", decimals: 4, peso: true },
+  { key: "CHFMXN", label: "CHF/MXN", decimals: 4, peso: true },
   { key: "EURUSD", label: "EUR/USD", decimals: 4 },
   { key: "GBPUSD", label: "GBP/USD", decimals: 4 },
   { key: "USDJPY", label: "USD/JPY", decimals: 2 },
@@ -59,6 +63,8 @@ function lastBarOpen(dates, now = new Date()) {
   if (d === 6 || (d === 5 && h >= 22) || (d === 0 && h < 22)) return false;
   return dates[dates.length - 1] === now.toLocaleDateString("en-CA", { timeZone: "Europe/London" });
 }
+
+const dirColor = (isUp, peso) => ((peso ? !isUp : isUp) ? GREEN : RED);
 
 function computeSessionChanges(prices, timestamps) {
   const out = {};
@@ -125,7 +131,7 @@ export default function MarketsClient({ embed = false }) {
       const first     = prices[0] ?? 0;
       const last      = prices[prices.length - 1] ?? 0;
       const isUp      = last >= first;
-      const color     = isUp ? GREEN : RED;
+      const color     = dirColor(isUp, currentPair.peso);
       const change    = last - first;
       const changePct = first ? (change / first) * 100 : 0;
 
@@ -315,7 +321,7 @@ export default function MarketsClient({ embed = false }) {
           background:            embed ? "transparent" : "rgba(4,4,5,0.80)",
           backdropFilter:        embed ? "none" : "blur(20px)",
           WebkitBackdropFilter:  embed ? "none" : "blur(20px)",
-          border:                embed ? "none" : `1px solid ${priceInfo ? `${isUp ? GREEN : RED}26` : "rgba(255,255,255,0.06)"}`,
+          border:                embed ? "none" : `1px solid ${priceInfo ? `${lineColor}26` : "rgba(255,255,255,0.06)"}`,
           borderRadius:          20,
           padding:               embed ? 0 : "22px 22px 18px",
           transition:            "border-color .4s",
@@ -473,7 +479,7 @@ export default function MarketsClient({ embed = false }) {
                     <span style={{ fontSize: 11, color: "#8A8A8E", letterSpacing: 1 }}>
                       {lang === "en" ? s.en : s.es}
                     </span>
-                    <span style={{ fontSize: 12, fontWeight: 600, color: up ? GREEN : RED, fontVariantNumeric: "tabular-nums" }}>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: dirColor(up, currentPair.peso), fontVariantNumeric: "tabular-nums" }}>
                       {up ? "+" : ""}{delta.toFixed(2)}%
                     </span>
                   </div>

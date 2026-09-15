@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useLang } from "./Lang";
+import { GREEN, RED } from "../lib/colors.js";
 
 // Cada item del ticker es un link: pares FX → /markets con el par abierto;
 // lo demás → /analisis con la lectura técnica del símbolo.
@@ -81,7 +82,7 @@ export default function Ticker() {
     if (dir === 2) return "#8A8A8E";
     const up = dir === 1;
     const good = PESO_PAIRS.has(name) ? !up : up;
-    return good ? "#14A276" : "#CE5555";
+    return good ? GREEN : RED;
   };
 
   const row = (key) =>
