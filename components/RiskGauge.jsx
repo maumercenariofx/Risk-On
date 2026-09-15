@@ -9,6 +9,7 @@ import RegimeStrip from "./RegimeStrip";
 import IntradaySpark from "./IntradaySpark";
 import ScoreDrivers from "./ScoreDrivers";
 import NotchGauge from "./NotchGauge";
+import CountryNews from "./CountryNews";
 import Link from "next/link";
 
 // Frescura del dato, frase completa según idioma (antes mezclaba "Data ahora ago").
@@ -23,15 +24,6 @@ function dataFreshness(isoStr, lang) {
   if (mins < 1) return "Datos ahora mismo";
   if (mins < 60) return `Datos hace ${mins} min`;
   return `Datos hace ${Math.round(mins / 60)}h`;
-}
-
-function newsAge(pubDate, lang) {
-  const t = new Date(pubDate).getTime();
-  if (isNaN(t)) return "";
-  const hrs = Math.round((Date.now() - t) / 3600000);
-  if (hrs < 1) return lang === "en" ? "now" : "ahora";
-  if (hrs < 24) return `${hrs}h`;
-  return `${Math.round(hrs / 24)}d`;
 }
 
 // ── Ancla del día (Home V2, 2026-09-03) ──────────────────────────────────────
@@ -199,12 +191,16 @@ export default function RiskGauge({ prevScore = null, scoreHistory = null, ticke
 
   useEffect(() => {
     if (!newsCountry) return;
+    // `dead`: al saltar de un chip a otro, la respuesta del país anterior podía
+    // llegar después y pintar sus noticias bajo el nombre del nuevo.
+    let dead = false;
     setNewsLoading(true);
     fetch(`/api/news?country=${newsCountry}&lang=${lang}`)
       .then((r) => r.json())
-      .then((d) => setNews(d.items || []))
-      .catch(() => setNews([]))
-      .finally(() => setNewsLoading(false));
+      .then((d) => { if (!dead) setNews(d.items || []); })
+      .catch(() => { if (!dead) setNews([]); })
+      .finally(() => { if (!dead) setNewsLoading(false); });
+    return () => { dead = true; };
   }, [newsCountry, lang]);
 
   useEffect(() => {
@@ -364,7 +360,7 @@ export default function RiskGauge({ prevScore = null, scoreHistory = null, ticke
             porque una animación con fill pisaría el transform inline del scroll. */}
         <div ref={sphereWrapRef} style={{ position: "absolute", inset: 0, willChange: "transform, opacity" }}>
           <div className="hero-canvas" style={{ position: "absolute", inset: 0 }}>
-            <RiskSphere ref={sphereRef} height="100%" />
+            <RiskSphere ref={sphereRef} height="100%" onUnfocus={() => setNewsCountry(null)} />
           </div>
         </div>
 
@@ -385,6 +381,10 @@ export default function RiskGauge({ prevScore = null, scoreHistory = null, ticke
           fontSize: "clamp(30px, 6.5vw, 84px)",
           letterSpacing: "-0.03em",
           pointerEvents: "none",
+          // Cede su lugar al panel de noticias mientras hay un país en foco.
+          opacity: newsCountry ? 0 : 1,
+          visibility: newsCountry ? "hidden" : "visible",
+          transition: "opacity .3s, visibility .3s",
         }}>
           {/* h1 semántico (la landing no tenía ninguno — SEO 2026-07-13);
               hereda todo el estilo del wrapper, cero cambio visual. */}
@@ -414,6 +414,27 @@ export default function RiskGauge({ prevScore = null, scoreHistory = null, ticke
           </div>
         </div>
 
+
+        {/* Noticias del país en foco, en el lugar del título. El alto deja libre
+            la franja inferior (sparkline a la izquierda, chips y score a la
+            derecha); la lista hace scroll adentro. */}
+        {newsCountry && (
+          <div style={{
+            position: "absolute", top: 104, left: 20,
+            width: "min(400px, calc(100% - 40px))",
+            maxHeight: "max(180px, calc(100% - 104px - 290px))",
+            display: "flex", zIndex: 2,
+          }}>
+            <CountryNews
+              country={COUNTRY_UNIVERSE.find((rc) => rc.id === newsCountry)}
+              color={tensionColor(countriesByRisk.find((rc) => rc.id === newsCountry)?.live ?? 0)}
+              items={news}
+              loading={newsLoading}
+              lang={lang}
+              onClose={() => { sphereRef.current?.flyBack?.(); setNewsCountry(null); }}
+            />
+          </div>
+        )}
 
         {/* Bottom-right: alert countries + score + label — score-blink starts after counter settles */}
         {result && (
@@ -754,75 +775,6 @@ export default function RiskGauge({ prevScore = null, scoreHistory = null, ticke
           </div>
         </a>
       )}
-
-      {/* ── Country news panel ── */}
-      {newsCountry && (() => {
-        const c = COUNTRY_UNIVERSE.find((rc) => rc.id === newsCountry);
-        return (
-          <div
-            className="card-glass"
-            style={{
-              background: "rgba(11,11,12,0.92)", border: "1px solid #1E1E20", borderRadius: 12,
-              padding: "14px 16px", marginBottom: 28,
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-              <div style={{ fontSize: 11, letterSpacing: 1.5, textTransform: "uppercase", color: "#8A8A8E" }}>
-                <T es={`Noticias · ${c?.name_es ?? ""} · últimas 48h`} en={`News · ${c?.name_en ?? ""} · last 48h`} />
-              </div>
-              <button
-                onClick={() => setNewsCountry(null)}
-                style={{ background: "none", border: "none", cursor: "pointer", color: "#8A8A8E", fontSize: 12, padding: 0 }}
-                aria-label="close"
-              >
-                ✕
-              </button>
-            </div>
-
-            {newsLoading && (
-              <p style={{ fontSize: 12, color: "#8A8A8E" }}>
-                <T es="Cargando…" en="Loading…" />
-              </p>
-            )}
-
-            {!newsLoading && news.length === 0 && (
-              <p style={{ fontSize: 12, color: "#8A8A8E" }}>
-                <T es="Sin noticias relevantes en las últimas 48 horas." en="No relevant news in the last 48 hours." />
-              </p>
-            )}
-
-            {!newsLoading && news.length > 0 && (
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {news.map((n, i) => (
-                  <a
-                    key={i}
-                    href={n.link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{
-                      display: "flex", alignItems: "baseline", gap: 8,
-                      fontSize: 13, lineHeight: 1.5, color: "#D5D5D2",
-                      textDecoration: "none", borderBottom: i < news.length - 1 ? "1px solid #1A1A1C" : "none",
-                      paddingBottom: 8,
-                    }}
-                  >
-                    <span style={{
-                      fontFamily: "var(--font-mono)", fontSize: 11, color: "#8A8A8E",
-                      flexShrink: 0, minWidth: 28,
-                    }}>
-                      {newsAge(n.pubDate, lang)}
-                    </span>
-                    <span style={{ flex: 1 }}>
-                      {n.title}
-                      {n.source && <span style={{ color: "#8A8A8E" }}> — {n.source}</span>}
-                    </span>
-                  </a>
-                ))}
-              </div>
-            )}
-          </div>
-        );
-      })()}
 
       {/* ── Qué mueve el score (Home V2, 2026-09-03): sustituye al desplegable
           de 9 tarjetas. Vivo si hay resultado; si /api/market falló, enseña el

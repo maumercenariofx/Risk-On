@@ -68,9 +68,14 @@ const REPEL_ACCEL        = 14;
 const SPRING_K           = 9;
 const DAMPING            = 0.88;
 
-const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
+const RiskSphere = forwardRef(function RiskSphere({ height = 274, onUnfocus }, ref) {
   const mountRef    = useRef(null);
   const selectRef   = useRef(null);
+  // En ref para no re-montar la escena 3D cuando el padre pasa otra función.
+  // Avisa al terminar el regreso del fly-to, venga de donde venga (clic en el
+  // globo, Esc o el padre): el panel de noticias del hero se cierra con él.
+  const onUnfocusRef = useRef(onUnfocus);
+  onUnfocusRef.current = onUnfocus;
 
   useImperativeHandle(ref, () => ({
     focusCountry: (lat, lon) => selectRef.current?.focusCountry(lat, lon),
@@ -703,6 +708,7 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274 }, ref) {
             material.uniforms.uFocusId.value = 0;
             focusData = null;
             panel.style.opacity = "0";
+            onUnfocusRef.current?.();
           } else {
             group.updateMatrixWorld();
             tmpV.copy(focusData.dirObj).multiplyScalar(R * (1 + focusLift * 0.1))
