@@ -4,6 +4,7 @@
 // Técnico de Estiramiento. Acordeón bilingüe.
 import { useState } from "react";
 import { useLang, t } from "./Lang";
+import { GREEN, RED } from "../lib/colors.js";
 
 function Section({ open, onClick, title, children }) {
   return (
@@ -29,11 +30,11 @@ const FACTORS = [
 ];
 
 const BANDS = [
-  { c: "#00C805", es: ["0–20 · Muy sobrevendido", "Muy castigado. El histórico favorece un rebote."], en: ["0–20 · Deeply oversold", "Beaten down. History favors a bounce."] },
+  { c: GREEN, es: ["0–20 · Muy sobrevendido", "Muy castigado. El histórico favorece un rebote."], en: ["0–20 · Deeply oversold", "Beaten down. History favors a bounce."] },
   { c: "#5BC88A", es: ["20–40 · Sobreventa", "Sesgo a la baja, algo sobrevendido."], en: ["20–40 · Oversold", "Downward bias, somewhat oversold."] },
   { c: "#9CA3AF", es: ["40–60 · Equilibrio", "Sin estiramiento claro; mandan los niveles."], en: ["40–60 · Balanced", "No clear stretch; levels dominate."] },
   { c: "#F59E0B", es: ["60–80 · Estirado al alza", "Sesgo al alza, algo extendido."], en: ["60–80 · Stretched up", "Upward bias, somewhat extended."] },
-  { c: "#FF5000", es: ["80–100 · Muy sobrecomprado", "Muy estirado. Riesgo de corrección."], en: ["80–100 · Deeply overbought", "Very stretched. Pullback risk."] },
+  { c: RED, es: ["80–100 · Muy sobrecomprado", "Muy estirado. Riesgo de corrección."], en: ["80–100 · Deeply overbought", "Very stretched. Pullback risk."] },
 ];
 
 export default function TAMethodology() {

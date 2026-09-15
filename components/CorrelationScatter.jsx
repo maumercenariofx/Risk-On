@@ -1,10 +1,12 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { useLang, T } from "./Lang";
+import Skeleton from "./Skeleton";
+import ChartUnavailable from "./ChartUnavailable";
 import {
   GREEN, crosshairPlugin, makeGlowPlugin,
   tooltipDefaults, xScaleDefaults, yScaleDefaults,
-  cardStyle, sectionLabel,
+  cardStyle, sectionLabel, loadChart,
 } from "../lib/chartHelpers";
 
 function linReg(points) {
@@ -30,18 +32,24 @@ export default function CorrelationScatter() {
   const chartRef   = useRef(null);
   const [data,    setData]    = useState(null);
   const [insight, setInsight] = useState(null);
+  const [failed,  setFailed]  = useState(false);
   const { lang } = useLang();
 
+  // /api/correlation responde { points: [] } si Yahoo falla; antes eso dejaba
+  // el canvas en blanco sin explicar nada.
   useEffect(() => {
-    fetch("/api/correlation").then((r) => r.json()).then(setData).catch(() => {});
+    fetch("/api/correlation")
+      .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
+      .then((d) => (d?.points?.length ? setData(d) : setFailed(true)))
+      .catch(() => setFailed(true));
   }, []);
 
   useEffect(() => {
     if (!data?.points?.length) return;
     let cancelled = false;
     (async () => {
-      const { default: Chart } = await import("chart.js/auto");
-      if (cancelled) return;
+      const Chart = await loadChart();
+      if (cancelled || !canvasRef.current) return;
       if (chartRef.current) chartRef.current.destroy();
 
       const pts  = data.points;
@@ -144,19 +152,27 @@ export default function CorrelationScatter() {
         </div>
       )}
 
-      <div style={{ position: "relative", height: 165 }}>
-        <canvas ref={canvasRef} />
-      </div>
+      {failed ? (
+        <ChartUnavailable height={165} />
+      ) : !data ? (
+        <Skeleton height={165} />
+      ) : (
+        <div style={{ position: "relative", height: 165 }}>
+          <canvas ref={canvasRef} />
+        </div>
+      )}
 
       {/* Trendline legend */}
-      <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 8 }}>
-        <svg width="22" height="8">
-          <line x1="0" y1="4" x2="22" y2="4" stroke={GREEN} strokeWidth="2" style={{ filter: `drop-shadow(0 0 3px ${GREEN})` }} />
-        </svg>
-        <span style={{ fontSize: 11, color: "#8A8A8E", letterSpacing: 1, fontFamily: "var(--font-mono)" }}>
-          <T es="Regresión lineal" en="Linear trend" />
-        </span>
-      </div>
+      {data && (
+        <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 8 }}>
+          <svg width="22" height="8">
+            <line x1="0" y1="4" x2="22" y2="4" stroke={GREEN} strokeWidth="2" style={{ filter: `drop-shadow(0 0 3px ${GREEN})` }} />
+          </svg>
+          <span style={{ fontSize: 11, color: "#8A8A8E", letterSpacing: 1, fontFamily: "var(--font-mono)" }}>
+            <T es="Regresión lineal" en="Linear trend" />
+          </span>
+        </div>
+      )}
 
       {insight && (
         <div style={{ borderTop: "1px solid rgba(255,255,255,0.05)", paddingTop: 10, marginTop: 8 }}>

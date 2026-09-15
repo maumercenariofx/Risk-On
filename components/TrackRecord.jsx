@@ -12,14 +12,11 @@ import SourceTag from "./SourceTag";
 import {
   crosshairPlugin, makeGlowPlugin, makeTerminalDotPlugin, makeGradientFn,
   semanticColor, tooltipDefaults, xScaleDefaults, yScaleDefaults,
-  cardStyle, sectionLabel, progressiveLine,
+  cardStyle, sectionLabel, progressiveLine, monoFont, reducedMotion, loadChart,
 } from "../lib/chartHelpers";
 
 // Draw-on solo si el sistema no pide reduced-motion.
-const lineAnim = (count) =>
-  typeof matchMedia !== "undefined" && matchMedia("(prefers-reduced-motion: reduce)").matches
-    ? false
-    : progressiveLine(count);
+const lineAnim = (count) => (reducedMotion() ? false : progressiveLine(count));
 
 // Líneas punteadas en los cortes de banda (29/48/72) con etiqueta discreta.
 const bandLinesPlugin = {
@@ -38,7 +35,7 @@ const bandLinesPlugin = {
       ctx.setLineDash([3, 6]);
       ctx.stroke();
       ctx.setLineDash([]);
-      ctx.font = "9px var(--font-mono, monospace)";
+      ctx.font = `9px ${monoFont(9).family}`;
       ctx.fillStyle = `${b.color}80`;
       ctx.fillText(String(b.max), chartArea.left + 4, y - 4);
     });
@@ -107,7 +104,7 @@ function SyncedScoreFx({ points, range }) {
     if (!points?.length) return;
     let cancelled = false;
     (async () => {
-      const { default: Chart } = await import("chart.js/auto");
+      const Chart = await loadChart();
       if (cancelled || !scoreRef.current) return;
       chartsRef.current.unlink?.();
       chartsRef.current.score?.destroy();

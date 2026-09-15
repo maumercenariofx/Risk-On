@@ -25,6 +25,8 @@ module.exports = {
         // cards — ambos reprobaban AA. components/Ticker.jsx:66 ya los parcheaba
         // en local desde la auditoría de 2026-07-13 en vez de arreglar el token;
         // aquí se corrige el origen y el parche local puede irse (2026-08-21).
+        // lib/colors.js (GREEN/RED de canvas y estilos inline) es su espejo: si
+        // cambias uno, cambia el otro.
         riskoff: "#CE5555", // 4.76:1 / 4.54:1 — pasa AA
         riskon: "#14A276",  // 6.09:1 / 5.80:1 — pasa AA
       },

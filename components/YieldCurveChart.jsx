@@ -3,15 +3,16 @@ import { useEffect, useRef, useState } from "react";
 import { useLang, T } from "./Lang";
 import Skeleton from "./Skeleton";
 import SourceTag from "./SourceTag";
+import ChartUnavailable from "./ChartUnavailable";
 import {
-  crosshairPlugin, makeGlowPlugin, makeTerminalDotPlugin,
+  GREEN, RED, crosshairPlugin, makeGlowPlugin, makeTerminalDotPlugin,
   makeGradientFn, tooltipDefaults, xScaleDefaults, yScaleDefaults,
-  cardStyle, sectionLabel,
+  cardStyle, sectionLabel, loadChart,
 } from "../lib/chartHelpers";
 
 function curveStatus(spread) {
   if (spread == null) return null;
-  if (spread >=  0.75) return { es: "NORMAL",       en: "NORMAL",      color: "#00C805",
+  if (spread >=  0.75) return { es: "NORMAL",       en: "NORMAL",      color: GREEN,
     es2: "Curva con pendiente sana — condiciones crediticias favorables.",
     en2: "Healthy upward slope — supportive credit conditions." };
   if (spread >=  0.20) return { es: "NORMALIZANDO", en: "NORMALIZING", color: "#FACC15",
@@ -20,7 +21,7 @@ function curveStatus(spread) {
   if (spread >= -0.10) return { es: "PLANA",        en: "FLAT",        color: "#FF8040",
     es2: "Curva plana: mercado sin convicción sobre el ciclo de tasas.",
     en2: "Flat curve: market lacks conviction on the rate cycle." };
-  return             { es: "INVERTIDA",    en: "INVERTED",    color: "#FF5000",
+  return             { es: "INVERTIDA",    en: "INVERTED",    color: RED,
     es2: "Curva invertida — históricamente precede recesión en 6–18 meses.",
     en2: "Inverted curve — historically precedes recession by 6–18 months." };
 }
@@ -29,18 +30,24 @@ export default function YieldCurveChart() {
   const canvasRef = useRef(null);
   const chartRef  = useRef(null);
   const [data, setData] = useState(null);
+  const [failed, setFailed] = useState(false);
   const { lang } = useLang();
 
+  // Antes el .catch(() => {}) se tragaba el error y el Skeleton se quedaba
+  // girando para siempre: parecía que cargaba, nunca decía que no había datos.
   useEffect(() => {
-    fetch("/api/curve").then((r) => r.json()).then(setData).catch(() => {});
+    fetch("/api/curve")
+      .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
+      .then((d) => (d?.points?.length ? setData(d) : setFailed(true)))
+      .catch(() => setFailed(true));
   }, []);
 
   useEffect(() => {
     if (!data?.points?.length) return;
     let cancelled = false;
     (async () => {
-      const { default: Chart } = await import("chart.js/auto");
-      if (cancelled) return;
+      const Chart = await loadChart();
+      if (cancelled || !canvasRef.current) return;
       if (chartRef.current) chartRef.current.destroy();
 
       const status = curveStatus(data.spread2s10s);
@@ -128,7 +135,9 @@ export default function YieldCurveChart() {
         </div>
       )}
 
-      {!data?.points?.length ? (
+      {failed ? (
+        <ChartUnavailable height={165} />
+      ) : !data?.points?.length ? (
         <Skeleton height={165} />
       ) : (
         <div style={{ position: "relative", height: 165 }}>

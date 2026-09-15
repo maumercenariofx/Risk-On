@@ -6,9 +6,8 @@
 import { useEffect, useState, useCallback } from "react";
 import { useLang, t } from "./Lang";
 import TAMethodology from "./TAMethodology";
+import { GREEN, RED } from "../lib/colors.js";
 
-const GREEN = "#00C805";
-const RED = "#FF5000";
 const AMBER = "#F59E0B";
 
 const CURATED = [
@@ -268,7 +267,7 @@ function StretchGauge({ idx, lang }) {
 
       {/* Barra divergente: verde (sobreventa) → gris (equilibrio) → rojo (sobrecompra) */}
       <div className="relative mt-3 h-2.5 w-full rounded-full"
-        style={{ background: "linear-gradient(90deg,#00C805,#5BC88A 25%,#9CA3AF 50%,#F59E0B 75%,#FF5000)" }}>
+        style={{ background: `linear-gradient(90deg,${GREEN},#5BC88A 25%,#9CA3AF 50%,#F59E0B 75%,${RED})` }}>
         <div className="absolute top-1/2 h-4 w-1 -translate-y-1/2 rounded-full bg-bone" style={{ left: `calc(${posture}% - 2px)` }} />
       </div>
       <div className="mt-1.5 flex justify-between text-[11px] uppercase tracking-wide text-muted/70">

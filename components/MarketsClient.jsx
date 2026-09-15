@@ -1,11 +1,13 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { useLang, T } from "./Lang";
+import {
+  GREEN, RED, crosshairPlugin, makeGlowPlugin, makeTerminalDotPlugin,
+  makeGradientFn, tooltipDefaults, xScaleDefaults, yScaleDefaults,
+  monoFont, loadChart,
+} from "../lib/chartHelpers";
 
 // ── constants ────────────────────────────────────────────────────────────────
-
-const GREEN = "#00C805";
-const RED   = "#FF5000";
 
 const PAIRS = [
   { key: "USDMXN", label: "USD/MXN", decimals: 4 },
@@ -27,14 +29,14 @@ const RANGES = [
 // Overlap priority for MXN traders: NY > London > Tokyo (by peso volume)
 
 const FX_SESSIONS = [
-  { key: "newyork", es: "NY",      en: "NY",     color: "#00C805", from: 12, to: 21 },
+  { key: "newyork", es: "NY",      en: "NY",     color: GREEN,     from: 12, to: 21 },
   { key: "london",  es: "Londres", en: "London", color: "#F59E0B", from: 7,  to: 16 },
   { key: "tokyo",   es: "Asia",    en: "Asia",   color: "#818CF8", from: 0,  to: 9  },
 ];
 const QUIET_COLOR = "#374151";
 
 function sessionColor(hourUTC) {
-  if (hourUTC >= 12 && hourUTC < 21) return "#00C805";  // NY
+  if (hourUTC >= 12 && hourUTC < 21) return GREEN;      // NY
   if (hourUTC >= 7  && hourUTC < 16) return "#F59E0B";  // London
   if (hourUTC >= 0  && hourUTC < 9)  return "#818CF8";  // Asia/Tokyo
   return QUIET_COLOR;
@@ -67,76 +69,6 @@ function computeSessionChanges(prices, timestamps) {
 // con el spot real en 16.89. Contradice la regla de la casa ("si un número no
 // está verificado, no existe") y es justo lo que /api/history evita al
 // devolver arreglos vacíos. Si no hay datos, no hay gráfica (2026-08-21).
-
-// ── Chart.js plugins ─────────────────────────────────────────────────────────
-
-const crosshairPlugin = {
-  id: "crosshair",
-  afterDraw(chart) {
-    if (!chart.tooltip._active?.length) return;
-    const { ctx } = chart;
-    const x = chart.tooltip._active[0].element.x;
-    const { top, bottom } = chart.scales.y;
-    ctx.save();
-    ctx.beginPath();
-    ctx.moveTo(x, top); ctx.lineTo(x, bottom);
-    ctx.lineWidth   = 1;
-    ctx.strokeStyle = "rgba(255,255,255,0.10)";
-    ctx.setLineDash([4, 5]);
-    ctx.stroke();
-    ctx.restore();
-  },
-};
-
-function makeGlowPlugin(color) {
-  return {
-    id: "lineGlow",
-    beforeDatasetDraw(chart, args) {
-      if (args.index !== 0) return;
-      chart.ctx.shadowColor = color;
-      chart.ctx.shadowBlur  = 14;
-    },
-    afterDatasetDraw(chart, args) {
-      if (args.index !== 0) return;
-      chart.ctx.shadowColor = "transparent";
-      chart.ctx.shadowBlur  = 0;
-    },
-  };
-}
-
-function makeTerminalDotPlugin(color) {
-  return {
-    id: "terminalDot",
-    afterDatasetsDraw(chart) {
-      const meta = chart.getDatasetMeta(0);
-      const pts  = meta?.data;
-      if (!pts?.length) return;
-      const tip = pts[pts.length - 1];
-      const { ctx } = chart;
-      ctx.save();
-      ctx.shadowColor = color;
-      ctx.shadowBlur  = 18;
-      ctx.beginPath();
-      ctx.arc(tip.x, tip.y, 5, 0, Math.PI * 2);
-      ctx.fillStyle = color;
-      ctx.fill();
-      ctx.shadowBlur = 0;
-      ctx.beginPath();
-      ctx.arc(tip.x, tip.y, 2.5, 0, Math.PI * 2);
-      ctx.fillStyle = "#FFFFFF";
-      ctx.fill();
-      ctx.restore();
-    },
-  };
-}
-
-function makeGradient(ctx, chartArea, color) {
-  const g = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
-  g.addColorStop(0,   color + "38");
-  g.addColorStop(0.6, color + "0C");
-  g.addColorStop(1,   color + "00");
-  return g;
-}
 
 // ── component ────────────────────────────────────────────────────────────────
 
@@ -196,9 +128,8 @@ export default function MarketsClient({ embed = false }) {
         setActiveSess(currentSession(lastH));
       }
 
-      const mod   = await import("chart.js/auto");
-      if (cancelled) return;
-      const Chart = mod.default;
+      const Chart = await loadChart();
+      if (cancelled || !canvasRef.current) return;
 
       if (chartRef.current) chartRef.current.destroy();
       canvasRef.current.style.background = "transparent";
@@ -210,11 +141,7 @@ export default function MarketsClient({ embed = false }) {
         data:            prices,
         borderColor:     color,
         borderWidth:     2,
-        backgroundColor: (ctx) => {
-          const area = ctx.chart.chartArea;
-          if (!area) return "transparent";
-          return makeGradient(ctx.chart.ctx, area, fillColor);
-        },
+        backgroundColor: makeGradientFn(fillColor),
         fill:                      true,
         tension:                   0.3,
         pointRadius:               0,
@@ -234,9 +161,11 @@ export default function MarketsClient({ embed = false }) {
         };
       }
 
-      const plugins = [crosshairPlugin, makeTerminalDotPlugin(dotColor)];
-      if (!isIntraday) plugins.push(makeGlowPlugin(color));
+      const plugins = [crosshairPlugin, makeTerminalDotPlugin(dotColor, 0)];
+      if (!isIntraday) plugins.push(makeGlowPlugin(color, 0));
 
+      // Ejes en #8A8A8E (los de chartHelpers): el #4B5563 que traía esta copia
+      // local daba ~2.6:1 sobre negro y reprobaba AA (2026-09-15).
       chartRef.current = new Chart(canvasRef.current, {
         type:    "line",
         plugins,
@@ -245,20 +174,13 @@ export default function MarketsClient({ embed = false }) {
           responsive:          true,
           maintainAspectRatio: false,
           interaction:         { intersect: false, mode: "index" },
-          animation:           { duration: 350 },
+          ...(Chart.defaults.animation === false ? {} : { animation: { duration: 350 } }),
           plugins: {
             legend:  { display: false },
             tooltip: {
-              backgroundColor:  "rgba(10,10,12,0.92)",
-              borderColor:      "rgba(255,255,255,0.08)",
-              borderWidth:      1,
-              cornerRadius:     10,
-              titleColor:       "#6B7280",
-              bodyColor:        "#F5F5F2",
-              titleFont:        { size: 11 },
-              bodyFont:         { family: "var(--font-mono)", size: 14, weight: "600" },
-              padding:          12,
-              filter:           (item) => item.datasetIndex === 0,
+              ...tooltipDefaults,
+              bodyFont: monoFont(14, "600"),
+              filter:   (item) => item.datasetIndex === 0,
               callbacks: {
                 title: (items) => items[0]?.label ?? "",
                 label: (c)     => " " + (+c.parsed.y).toFixed(currentPair.decimals),
@@ -266,26 +188,10 @@ export default function MarketsClient({ embed = false }) {
             },
           },
           scales: {
-            x: {
-              ticks: {
-                color:         "#4B5563",
-                font:          { size: 10 },
-                maxTicksLimit: isIntraday ? 8 : (range === 365 ? 10 : range === 90 ? 7 : 5),
-                maxRotation:   0,
-              },
-              grid:   { display: false },
-              border: { display: false },
-            },
+            x: xScaleDefaults(isIntraday ? 8 : (range === 365 ? 10 : range === 90 ? 7 : 5)),
             y: {
+              ...yScaleDefaults((v) => v.toFixed(currentPair.decimals === 2 ? 0 : 2)),
               position: "right",
-              ticks: {
-                color:         "#4B5563",
-                font:          { size: 10, family: "var(--font-mono)" },
-                callback:      (v) => v.toFixed(currentPair.decimals === 2 ? 0 : 2),
-                maxTicksLimit: 5,
-              },
-              grid:   { color: "rgba(255,255,255,0.025)" },
-              border: { display: false },
             },
           },
         },
@@ -386,7 +292,7 @@ export default function MarketsClient({ embed = false }) {
           background:            embed ? "transparent" : "rgba(4,4,5,0.80)",
           backdropFilter:        embed ? "none" : "blur(20px)",
           WebkitBackdropFilter:  embed ? "none" : "blur(20px)",
-          border:                embed ? "none" : `1px solid ${priceInfo ? (isUp ? "rgba(0,200,5,0.15)" : "rgba(255,80,0,0.15)") : "rgba(255,255,255,0.06)"}`,
+          border:                embed ? "none" : `1px solid ${priceInfo ? `${isUp ? GREEN : RED}26` : "rgba(255,255,255,0.06)"}`,
           borderRadius:          20,
           padding:               embed ? 0 : "22px 22px 18px",
           transition:            "border-color .4s",
@@ -461,7 +367,7 @@ export default function MarketsClient({ embed = false }) {
                     border:       "none",
                     background:   active ? GREEN : "rgba(255,255,255,0.06)",
                     color:        active ? "#000" : "#6B7280",
-                    boxShadow:    active ? `0 0 14px rgba(0,200,5,0.40)` : "none",
+                    boxShadow:    active ? `0 0 14px ${GREEN}66` : "none",
                     transition:   "all 0.18s",
                     letterSpacing: 0.5,
                   }}
@@ -544,7 +450,7 @@ export default function MarketsClient({ embed = false }) {
                     <span style={{ fontSize: 11, color: "#8A8A8E", letterSpacing: 1 }}>
                       {lang === "en" ? s.en : s.es}
                     </span>
-                    <span style={{ fontSize: 12, fontWeight: 600, color: up ? "#00C805" : "#FF5000", fontVariantNumeric: "tabular-nums" }}>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: up ? GREEN : RED, fontVariantNumeric: "tabular-nums" }}>
                       {up ? "+" : ""}{delta.toFixed(2)}%
                     </span>
                   </div>

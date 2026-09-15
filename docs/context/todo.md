@@ -20,6 +20,12 @@ to results.md. Format: `- [ ] (pending|in_progress) task - short note`.
 - [ ] (pending) Compresión del score en vivo: sobre 10 views comparables la desviación del score publicado es 2.7 contra 5.5 de la réplica de `history.csv`, y en 40 días la del sub-score del S&P es 14.4 contra 22.1. Hipótesis sin verificar: el sub-score usa el cambio premarket de ES=F escalado con la MAD de cambios diarios completos del ^GSPC (`app/api/market/route.js:363`), y un cambio de medio día medido con escala de día completo sale chico. Toca el camino del correo y el índice: si se corrige, re-correr `scripts/validate/` en el mismo commit.
 - [ ] (pending) Documentación que no coincide con los datos: de 2005 a 2007 hay 717 días con 7 de 9 señales (sin carry, no 8 de 9); el comentario de `scripts/lib/histScore.mjs` sobre la columna `carry_proxy` no corresponde a nada; el objetivo de calibración de `lib/riskScore.js` (RISK-ON ~3.6%) no coincide con el 1.7% [0.8, 2.9] de 2021-26.
 
+## Visualizaciones (patrones de bklit-ui, MIT; nunca `packages/studio`, que es propietario)
+- [ ] (pending) Gauge de muescas: arco de 40 segmentos en SVG con encendido escalonado por CSS y color por banda (`gauge.tsx` + `notch-gauge-shared.ts` de bklit). Para el score del hero (`RiskGauge`) y `ScoreGauge`; de paso juntar las 4 copias de la barra con marcador (RiskGauge, COTCard, DailyWatch, TechnicalAnalysis).
+- [ ] (pending) `IntradaySpark` como línea en vivo: escala que crece al instante y se encoge con lerp, punta que se desvanece, línea punteada en el precio actual y lectura al hover (hoy no tiene) — `live-line.tsx` de bklit.
+- [ ] (pending) Pulido de líneas en MarketsClient y YieldCurveChart: revelado izquierda→derecha con clip, bordes que se desvanecen, tramo de la sesión abierta punteado.
+- [ ] (pending) `MarketsClient` colorea USD/MXN al alza en verde; la convención del sitio desde el 21-ago (Ticker, IntradaySpark, PosturaRecord) es relativa al PESO (USD/MXN a la baja = verde). Aplica a USDMXN, EURMXN y CHFMXN; la flecha ▲/▼ se queda literal.
+
 ## Limpieza candidata (no urgente)
 - [ ] (pending) `/api/market` sigue pidiendo AAPL, TSLA, NVDA y ETH a Yahoo sin ningún consumidor desde que salieron del ticker. Quitarlos ahorra cuatro llamadas, pero es la ruta que alimenta el gen de las 6:50: hacerlo con un dry-run de fin de semana.
 - [ ] (pending) `claimsDates`/`nfpDates` en `app/api/calendar/route.js` usan `getDay()` local: correctos en UTC (Vercel, Actions), pero en una máquina en hora de CDMX los jueves salen en viernes. Solo afecta al desarrollo local.
