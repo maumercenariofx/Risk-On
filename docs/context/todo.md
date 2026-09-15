@@ -21,7 +21,6 @@ to results.md. Format: `- [ ] (pending|in_progress) task - short note`.
 - [ ] (pending) Documentación que no coincide con los datos: de 2005 a 2007 hay 717 días con 7 de 9 señales (sin carry, no 8 de 9); el comentario de `scripts/lib/histScore.mjs` sobre la columna `carry_proxy` no corresponde a nada; el objetivo de calibración de `lib/riskScore.js` (RISK-ON ~3.6%) no coincide con el 1.7% [0.8, 2.9] de 2021-26.
 
 ## Visualizaciones (patrones de bklit-ui, MIT; nunca `packages/studio`, que es propietario)
-- [ ] (pending) Pulido de líneas en MarketsClient y YieldCurveChart: revelado izquierda→derecha con clip, bordes que se desvanecen, tramo de la sesión abierta punteado.
 - [ ] (pending) `MarketsClient` colorea USD/MXN al alza en verde; la convención del sitio desde el 21-ago (Ticker, IntradaySpark, PosturaRecord) es relativa al PESO (USD/MXN a la baja = verde). Aplica a USDMXN, EURMXN y CHFMXN; la flecha ▲/▼ se queda literal.
 
 ## Limpieza candidata (no urgente)

@@ -4,7 +4,7 @@ import { useLang, T } from "./Lang";
 import {
   GREEN, RED, crosshairPlugin, makeGlowPlugin, makeTerminalDotPlugin,
   makeGradientFn, tooltipDefaults, xScaleDefaults, yScaleDefaults,
-  monoFont, loadChart,
+  monoFont, loadChart, makeRevealPlugin,
 } from "../lib/chartHelpers";
 
 // ── constants ────────────────────────────────────────────────────────────────
@@ -49,6 +49,17 @@ function currentSession(hourUTC) {
   return null;
 }
 
+// ¿La última barra diaria es la de hoy y sigue abierta? /api/history estampa la
+// sesión con el gmtoffset de Yahoo (Londres para FX), así que "hoy" se mide en
+// Europe/London. FX cierra vie 22:00 UTC y reabre dom 22:00 UTC (mismo criterio
+// que fxClosed de RiskGauge). Si abre, el último tramo va punteado (2026-09-15).
+function lastBarOpen(dates, now = new Date()) {
+  if (!dates?.length) return false;
+  const d = now.getUTCDay(), h = now.getUTCHours();
+  if (d === 6 || (d === 5 && h >= 22) || (d === 0 && h < 22)) return false;
+  return dates[dates.length - 1] === now.toLocaleDateString("en-CA", { timeZone: "Europe/London" });
+}
+
 function computeSessionChanges(prices, timestamps) {
   const out = {};
   for (const s of FX_SESSIONS) {
@@ -86,6 +97,7 @@ export default function MarketsClient({ embed = false }) {
   const [noData,       setNoData]       = useState(false);
   const [sessChanges,  setSessChanges]  = useState(null);
   const [activeSess,   setActiveSess]   = useState(null);
+  const [openBar,      setOpenBar]      = useState(false);
 
   const currentPair = PAIRS.find((p) => p.key === pair) || PAIRS[0];
   const isIntraday  = range === "1d";
@@ -105,8 +117,10 @@ export default function MarketsClient({ embed = false }) {
     setSessChanges(null);
     setActiveSess(null);
 
-    const buildChart = async (prices, labels, tsArr = []) => {
+    const buildChart = async (prices, labels, tsArr = [], dates = []) => {
       if (cancelled || !canvasRef.current) return;
+      const open = !isIntraday && lastBarOpen(dates);
+      setOpenBar(open);
 
       const first     = prices[0] ?? 0;
       const last      = prices[prices.length - 1] ?? 0;
@@ -151,6 +165,10 @@ export default function MarketsClient({ embed = false }) {
         pointHoverBorderWidth:     2,
       };
 
+      if (open) {
+        dataset.segment = { borderDash: (s) => (s.p1DataIndex === prices.length - 1 ? [4, 4] : undefined) };
+      }
+
       // Session-colored line for 1D
       if (isIntraday && tsArr.length) {
         dataset.segment = {
@@ -163,6 +181,7 @@ export default function MarketsClient({ embed = false }) {
 
       const plugins = [crosshairPlugin, makeTerminalDotPlugin(dotColor, 0)];
       if (!isIntraday) plugins.push(makeGlowPlugin(color, 0));
+      plugins.push(makeRevealPlugin({ fadeLeft: 0.08 }));
 
       // Ejes en #8A8A8E (los de chartHelpers): el #4B5563 que traía esta copia
       // local daba ~2.6:1 sobre negro y reprobaba AA (2026-09-15).
@@ -174,7 +193,7 @@ export default function MarketsClient({ embed = false }) {
           responsive:          true,
           maintainAspectRatio: false,
           interaction:         { intersect: false, mode: "index" },
-          ...(Chart.defaults.animation === false ? {} : { animation: { duration: 350 } }),
+          animation:           false, // la entrada la hace makeRevealPlugin
           plugins: {
             legend:  { display: false },
             tooltip: {
@@ -182,7 +201,11 @@ export default function MarketsClient({ embed = false }) {
               bodyFont: monoFont(14, "600"),
               filter:   (item) => item.datasetIndex === 0,
               callbacks: {
-                title: (items) => items[0]?.label ?? "",
+                title: (items) => {
+                  const t = items[0]?.label ?? "";
+                  const live = open && items[0]?.dataIndex === prices.length - 1;
+                  return live ? `${t} · ${lang === "en" ? "in progress" : "en curso"}` : t;
+                },
                 label: (c)     => " " + (+c.parsed.y).toFixed(currentPair.decimals),
               },
             },
@@ -202,18 +225,18 @@ export default function MarketsClient({ embed = false }) {
 
     const cacheKey = `${pair}-${range}`;
     if (dataCache.current[cacheKey]) {
-      const { prices, labels, labels_en, timestamps } = dataCache.current[cacheKey];
-      buildChart(prices, lang === "en" && labels_en ? labels_en : labels, timestamps ?? []);
+      const { prices, labels, labels_en, timestamps, dates } = dataCache.current[cacheKey];
+      buildChart(prices, lang === "en" && labels_en ? labels_en : labels, timestamps ?? [], dates ?? []);
       return () => { cancelled = true; };
     }
 
     fetch(`/api/history?range=${range}&symbol=${pair}`)
       .then((r) => r.json())
-      .then(({ prices, labels, labels_en, timestamps: ts }) => {
+      .then(({ prices, labels, labels_en, timestamps: ts, dates }) => {
         if (cancelled) return;
         if (prices?.length > 0) {
-          dataCache.current[cacheKey] = { prices, labels, labels_en, timestamps: ts };
-          buildChart(prices, lang === "en" && labels_en ? labels_en : labels, ts ?? []);
+          dataCache.current[cacheKey] = { prices, labels, labels_en, timestamps: ts, dates };
+          buildChart(prices, lang === "en" && labels_en ? labels_en : labels, ts ?? [], dates ?? []);
         } else {
           // Sin datos NO se dibuja nada. No se cachea: el siguiente intento
           // vuelve a pedir en vez de servir un hueco pegado.
@@ -495,6 +518,9 @@ export default function MarketsClient({ embed = false }) {
             : <T es="Cierres diarios · Yahoo Finance · datos con posible retraso"
                  en="Daily closes · Yahoo Finance · data may be delayed" />
           }
+          {!isIntraday && openBar && (
+            <T es=" · punteado: sesión de hoy, aún abierta" en=" · dashed: today's session, still open" />
+          )}
         </p>
       </div>
     </div>

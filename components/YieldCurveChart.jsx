@@ -7,7 +7,7 @@ import ChartUnavailable from "./ChartUnavailable";
 import {
   GREEN, RED, crosshairPlugin, makeGlowPlugin, makeTerminalDotPlugin,
   makeGradientFn, tooltipDefaults, xScaleDefaults, yScaleDefaults,
-  cardStyle, sectionLabel, loadChart,
+  cardStyle, sectionLabel, loadChart, makeRevealPlugin,
 } from "../lib/chartHelpers";
 
 function curveStatus(spread) {
@@ -61,6 +61,9 @@ export default function YieldCurveChart() {
           crosshairPlugin,
           makeGlowPlugin(color, 0, 12),
           makeTerminalDotPlugin(color, 0),
+          // Sin fadeLeft: el borde izquierdo es el tenor de 1M, un dato de la
+          // curva, no el extremo arbitrario de una ventana de tiempo.
+          makeRevealPlugin(),
         ],
         data: {
           labels: data.points.map((p) => p.term),
@@ -82,6 +85,7 @@ export default function YieldCurveChart() {
           responsive:          true,
           maintainAspectRatio: false,
           interaction:         { intersect: false, mode: "index" },
+          animation:           false, // la entrada la hace makeRevealPlugin
           plugins: {
             legend:  { display: false },
             tooltip: {
