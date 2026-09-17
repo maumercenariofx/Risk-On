@@ -681,12 +681,12 @@
       "band": "DEFENSIVE",
       "band_cuts": "32/49/67/100",
       "condicion": "Suelto el sesgo al dólar si el par recupera el piso de 16.85 o si el crudo devuelve la ganancia y el 10Y regresa debajo de 4.80%.",
-      "spot_t0": null,
-      "mxn5": null,
-      "verdict": null,
+      "spot_t0": 16.890390396118164,
+      "mxn5": 1.5785,
+      "verdict": true,
       "mxn5_fred": null,
       "verdict_fred": null,
-      "evaluated_at": null
+      "evaluated_at": "2026-09-17T12:59:13.860Z"
     },
     "2026-09-11": {
       "slug": "2026-09-11",
@@ -741,6 +741,21 @@
       "band": "CONSTRUCTIVE",
       "band_cuts": "32/49/67/100",
       "condicion": "Suelto el dólar si el 10Y cede debajo de 4.80% o el par cierra bajo 16.85.",
+      "spot_t0": null,
+      "mxn5": null,
+      "verdict": null,
+      "mxn5_fred": null,
+      "verdict_fred": null,
+      "evaluated_at": null
+    },
+    "2026-09-17": {
+      "slug": "2026-09-17",
+      "bias": "pro-dolar",
+      "prior": null,
+      "score": 70,
+      "band": "RISK-ON",
+      "band_cuts": "32/49/67/100",
+      "condicion": "Suelto el sesgo al dólar si el 10Y cierra debajo de 4.80% o el par pierde 16.85.",
       "spot_t0": null,
       "mxn5": null,
       "verdict": null,
