@@ -2,7 +2,7 @@
 import { useEffect, useRef, forwardRef, useImperativeHandle } from "react";
 import {
   genGlobe, genSphere, eio,
-  genRubik, rubikTwistAt, RUBIK_MOVES,
+  genCube, cubeSolveAt, CUBE_MOVES, CUBE_H, TWIST_SLOTS,
   makeDotTexture, makeGeoTexture, makeCountryDataUniform, makeSelIdsUniform, latLonToDir,
   HERO_FORMS, RISK_COUNTRIES, GLOBE_VERTEX_SHADER, GLOBE_FRAGMENT_SHADER,
   ATMO_VERTEX_SHADER, ATMO_FRAGMENT_SHADER,
@@ -56,18 +56,19 @@ const MORPH_S = 1.4;
 const INTRO_MORPH_S = 1.0;
 const BASE_SCALE = 1.3;
 const GLOBE_IDX = HERO_FORMS.findIndex(f => f.id === "GLOBE");
-const RUBIK_IDX = HERO_FORMS.findIndex(f => f.id === "RUBIK");
+const CUBE_IDX  = HERO_FORMS.findIndex(f => f.id === "CUBE");
 
 
-// INTRO (2026-09-21): al abrir el sitio, el cubo Rubik de puntos se arma
-// desde la nube, da INTRO_MOVES giros, se resuelve y se vuelve el mapa.
-// Una vez por sesión (sessionStorage) y nunca con reduced-motion: volver al
-// home no debe costar otros ~4 s de animación. Después, el globo: barrido
-// de screening CONTINUO; al elegir un país el barrido lo "busca", se apaga
-// al enfocar y vuelve al cerrarlo.
-const INTRO_MOVES = 3;
-const INTRO_SPEED = 1.5;  // 0.28 s por cuarto de vuelta
-const INTRO_HOLD  = 0.25; // s con el cubo ya resuelto antes de volverse mapa
+// INTRO (2026-09-21): al abrir el sitio la nube arma un CUBO con el mapa
+// revuelto en sus caras (cuadrícula 3×3); se resuelve giro por giro hasta
+// completar el mapa y se infla hasta volverse el globo. Una vez por sesión
+// (sessionStorage) y nunca con reduced-motion: volver al home no debe
+// costar otros ~5 s. Después, el globo: barrido de screening CONTINUO; al
+// elegir un país el barrido lo "busca", se apaga al enfocar y vuelve al
+// cerrarlo.
+const SCRAMBLED_S = 0.8;  // s mostrando el mapa revuelto antes de resolver
+const SOLVE_SLOT  = 0.4;  // s por giro de la solución
+const SOLVED_S    = 0.45; // s con el mapa completo antes de inflarse
 // Segundos de barrido "buscando el país" antes del acercamiento.
 const SEARCH_S = 1.1;
 
@@ -201,14 +202,13 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274, onUnfocus }, r
         } catch {}
       }
 
-      // Posiciones de cada forma. RUBIK queda quieto en su retícula: el giro
-      // de sus rebanadas lo aplica el shader.
-      const rubik = genRubik(N, R);
+      // Posiciones de cada forma. El cubo queda quieto: los giros de capa los
+      // aplica el shader.
       const HOMES = HERO_FORMS.map(f => {
         switch (f.id) {
           case "GLOBE":   return genGlobe(N, R);
           case "SPHERE":  return genSphere(N, R);
-          case "RUBIK":   return rubik.pos;
+          case "CUBE":    return genCube(N, R);
           default:        return genGlobe(N, R);
         }
       });
@@ -242,7 +242,7 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274, onUnfocus }, r
         scatter[i*3+2] = gauss() * sigmaZ;
       }
 
-      let currentIdx  = playIntro ? RUBIK_IDX : GLOBE_IDX;
+      let currentIdx  = playIntro ? CUBE_IDX : GLOBE_IDX;
       let prevHome    = scatter;
       let currHome    = HOMES[currentIdx];
       let morphT      = 0;
@@ -300,11 +300,11 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274, onUnfocus }, r
           uRippleColor:   { value: new THREE.Color(0.45, 0.75, 0.65) },
           // Barrido de búsqueda mientras no hay score (ver setHalo).
           uScan:          { value: 0 },
-          // Giro del cubo Rubik (forma default) — ver rubikTwistAt.
-          uTwist:         { value: Array.from({ length: RUBIK_MOVES }, () => new THREE.Vector4()) },
+          // Intro del cubo — ver cubeSolveAt.
+          uTwist:         { value: Array.from({ length: TWIST_SLOTS }, () => new THREE.Vector4()) },
           uTwistOn:       { value: 0 },
-          uTwistR:        { value: R },
-          uTwistActive:   { value: -1 },
+          uTwistR:        { value: R * CUBE_H },
+          uCube:          { value: 0 },
         },
         vertexShader: GLOBE_VERTEX_SHADER,
         fragmentShader: GLOBE_FRAGMENT_SHADER,
@@ -451,8 +451,9 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274, onUnfocus }, r
       const tmpV = new THREE.Vector3();
       // focusDelay > 0: el enfoque (acercamiento/relieve/panel) espera a que
       // el cubo se vuelva globo y pase el barrido. twistK: intensidad del giro
-      // del cubo (1 en RUBIK, baja a 0 al volverse globo → se deshace suave).
-      let focusDelay = 0, twistK = 0, introClock = 0;
+      // (1 en el cubo; si se abandona revuelto —un país picado a media intro—
+      // baja a 0 y las capas se deshacen suave). cubeK: 1 cubo → 0 esfera.
+      let focusDelay = 0, twistK = playIntro ? 1 : 0, introClock = 0, cubeK = 0;
       const motionOk =
         typeof matchMedia === "undefined" || !matchMedia("(prefers-reduced-motion: reduce)").matches;
       const selectForm = (idx) => {
@@ -688,22 +689,22 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274, onUnfocus }, r
 
         material.uniforms.uTime.value = elapsed;
 
-        // ── Intro del cubo: el giro corre 100% en shader. Ya armado el cubo
-        // (morph de la nube terminado), revuelve INTRO_MOVES giros, los
-        // deshace en reversa y, resuelto, se vuelve el mapa. Al volverse
-        // globo twistK baja a 0 (las rebanadas ya están en cero: sin salto).
-        twistK += ((currentIdx === RUBIK_IDX ? 1 : 0) - twistK) * 0.15;
-        if (currentIdx === RUBIK_IDX && morphT >= 1) {
-          introClock += dt * INTRO_SPEED;
-          if (introClock >= 2 * INTRO_MOVES * 0.42 + INTRO_HOLD * INTRO_SPEED) selectForm(GLOBE_IDX);
-        }
+        // ── Intro del cubo (100% shader): la nube arma el cubo revuelto,
+        // SCRAMBLED_S con el mapa revuelto, un giro deshecho cada SOLVE_SLOT,
+        // SOLVED_S con el mapa completo y a inflarse en globo.
+        const mtNow = morphT < 1 ? eio(morphT) : 1;
+        cubeK = currentIdx === CUBE_IDX ? mtNow : Math.min(cubeK, 1 - mtNow);
+        material.uniforms.uCube.value = cubeK;
+        twistK += ((currentIdx === CUBE_IDX ? 1 : 0) - twistK) * 0.15;
+        if (currentIdx === CUBE_IDX && morphT >= 1) introClock += dt;
+        const solveT = Math.max(0, introClock - SCRAMBLED_S);
         if (twistK > 0.002) {
-          const active = rubikTwistAt(introClock, material.uniforms.uTwist.value, twistK, INTRO_MOVES);
+          cubeSolveAt(solveT, material.uniforms.uTwist.value, SOLVE_SLOT, twistK);
           material.uniforms.uTwistOn.value = 1;
-          material.uniforms.uTwistActive.value = currentIdx === RUBIK_IDX ? active : -1;
         } else {
           material.uniforms.uTwistOn.value = 0;
         }
+        if (currentIdx === CUBE_IDX && solveT >= CUBE_MOVES * SOLVE_SLOT + SOLVED_S) selectForm(GLOBE_IDX);
 
         // ── Búsqueda → enfoque: vence el barrido y entra el acercamiento.
         if (focusDelay > 0) {
@@ -717,12 +718,15 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274, onUnfocus }, r
         scanTarget = motionOk && currentIdx === GLOBE_IDX && (!focusData || focusDelay > 0) ? 1 : 0;
 
         // Fade the globe-only tint/country highlight in or out as forms change.
-        const colorTarget = currentIdx === GLOBE_IDX && !introActive ? 1 : 0;
+        // El cubo lleva el mapa desde que la nube empieza a armarlo.
+        const colorTarget = currentIdx === CUBE_IDX || (currentIdx === GLOBE_IDX && !introActive) ? 1 : 0;
         material.uniforms.uColorT.value += (colorTarget - material.uniforms.uColorT.value) * 0.05;
         // Atmósfera y fronteras vectoriales siguen el mismo fade que el tinte.
-        atmoMat.uniforms.uIntensity.value = material.uniforms.uColorT.value;
+        // (salvo en el cubo: son capas esféricas que flotarían alrededor).
+        const sphereT = material.uniforms.uColorT.value * (1 - cubeK);
+        atmoMat.uniforms.uIntensity.value = sphereT;
         atmoMat.uniforms.uTime.value      = elapsed;
-        borderMat.uniforms.uColorT.value  = material.uniforms.uColorT.value;
+        borderMat.uniforms.uColorT.value  = sphereT;
 
         // ── Ambiente: día/noche + sesiones (refresco 60s), tormenta, flujos ──
         material.uniforms.uNightAmt.value = material.uniforms.uColorT.value;
@@ -739,7 +743,7 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274, onUnfocus }, r
         material.uniforms.uRippleT.value =
           rippleStart >= 0 && elapsed - rippleStart < 3.2 ? elapsed - rippleStart : -1;
         flowMat.uniforms.uTime.value   = elapsed;
-        flowMat.uniforms.uColorT.value = material.uniforms.uColorT.value;
+        flowMat.uniforms.uColorT.value = sphereT;
 
         // ── Fly-to: tween de cámara + relieve + panel anclado en 3D ──
         focusLift += (focusLiftTarget - focusLift) * 0.07;
@@ -764,11 +768,6 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274, onUnfocus }, r
         }
 
 
-        // Orbes: ~150 partículas por punto en blending aditivo queman con el
-        // bloom — se bajan de opacidad para que no compitan con el titular.
-        const isOrb = currentIdx === RUBIK_IDX;
-        const op = material.uniforms.uOpacity;
-        op.value += ((isOrb ? 0.34 : 0.715) - op.value) * 0.05;
         const sc = material.uniforms.uScan;
         sc.value += (scanTarget - sc.value) * 0.03;
         if (sc.value < 0.002) sc.value = 0;
