@@ -136,6 +136,8 @@ export default function RiskGauge({ prevScore = null, scoreHistory = null, ticke
   const [curve, setCurve]       = useState(null); // /api/curve
   const [display, setDisplay]   = useState(0);
   const [newsCountry, setNewsCountry] = useState(null);
+  // Fase del hero que reporta RiskSphere: "cube" (02 Quant, default) | "globe" (01 Macro).
+  const [sphereMode, setSphereMode] = useState("cube");
   const [news, setNews]               = useState([]);
   const [newsLoading, setNewsLoading] = useState(false);
   const [heroGone, setHeroGone]       = useState(false);
@@ -360,7 +362,7 @@ export default function RiskGauge({ prevScore = null, scoreHistory = null, ticke
             porque una animación con fill pisaría el transform inline del scroll. */}
         <div ref={sphereWrapRef} style={{ position: "absolute", inset: 0, willChange: "transform, opacity" }}>
           <div className="hero-canvas" style={{ position: "absolute", inset: 0 }}>
-            <RiskSphere ref={sphereRef} height="100%" onUnfocus={() => setNewsCountry(null)} />
+            <RiskSphere ref={sphereRef} height="100%" onUnfocus={() => setNewsCountry(null)} onModeChange={setSphereMode} />
           </div>
         </div>
 
@@ -448,6 +450,35 @@ export default function RiskGauge({ prevScore = null, scoreHistory = null, ticke
             gap: 10,
           }}>
             <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 5 }}>
+              {/* Fases del hero (2026-09-21): 01 Macro (mapa, geografía del
+                  riesgo) · 02 Quant (cubo, el modelo que calcula). Elegir un
+                  país lleva al mapa solo. Jerga de mesa, igual en ES/EN. */}
+              <div role="group" aria-label={lang === "es" ? "Vista del hero" : "Hero view"}
+                style={{ display: "flex", gap: 4, pointerEvents: "auto", marginBottom: 2 }}>
+                {[
+                  { id: "globe", n: "01", es: "Macro", en: "Macro" },
+                  { id: "cube",  n: "02", es: "Quant", en: "Quant" },
+                ].map((m) => {
+                  const on = sphereMode === m.id;
+                  return (
+                    <button
+                      key={m.id}
+                      aria-pressed={on}
+                      onClick={() => sphereRef.current?.setMode?.(m.id)}
+                      style={{
+                        fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: 1, textTransform: "uppercase",
+                        padding: "3px 8px", borderRadius: 5, cursor: "pointer",
+                        background: on ? "rgba(245,245,242,0.12)" : "rgba(255,255,255,0.03)",
+                        border: `1px solid ${on ? "rgba(245,245,242,0.6)" : "rgba(255,255,255,0.14)"}`,
+                        color: on ? "#F5F5F2" : "#8A8F98", transition: "background .2s, border-color .2s, color .2s",
+                      }}
+                    >
+                      <span style={{ opacity: 0.55, marginRight: 6 }}>{m.n}</span>
+                      {lang === "es" ? m.es : m.en}
+                    </button>
+                  );
+                })}
+              </div>
               {/* Time-lapse 30d (desktop): rebobina el mes en el globo */}
               {scoreHistory && scoreHistory.length >= 5 && (
                 <div className="hidden md:flex" style={{ alignItems: "center", gap: 8, pointerEvents: "auto", marginBottom: 2 }}>

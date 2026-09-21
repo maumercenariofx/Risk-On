@@ -51,3 +51,4 @@ docs/context/archive/memory/<YYYY-MM-DD>.md, then compact in place. -->
 - `posturaRecord` devuelve las filas más reciente primero con `sort` explícito, sin depender del orden de entrada (2026-09-11).
 - El contraste FRED del ledger pide DEXMXUS con un User-Agent propio y timeout de 20 s; con el UA de navegador FRED no respondía desde Actions.
 - Verde/rojo direccional: `lib/colors.js` (sin dependencias, lo importan cliente, APIs y scripts Node) espejo de `riskon`/`riskoff` en `tailwind.config.js`. Los colores de banda de `lib/riskScore.js` son otra semántica (régimen) y no se tocan. Toda gráfica de Chart.js entra por `loadChart()` (2026-09-15).
+- Hero en dos fases que nunca coexisten: 02 Quant (cubo Rubik, default) y 01 Macro (globo). Toda animación nueva del hero va en shader (uniforms), no en el loop de CPU sobre 72k-220k partículas: el reposo debe costar ~0 CPU (2026-09-21).

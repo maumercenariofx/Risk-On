@@ -1,7 +1,8 @@
 "use client";
 import { useEffect, useRef, forwardRef, useImperativeHandle } from "react";
 import {
-  genGlobe, genSphere, genThomas, genVoronoi, genAtom, tickAtom, eio,
+  genGlobe, genSphere, eio,
+  genRubik, rubikTwistAt, RUBIK_MOVES,
   makeDotTexture, makeGeoTexture, makeCountryDataUniform, makeSelIdsUniform, latLonToDir,
   HERO_FORMS, RISK_COUNTRIES, GLOBE_VERTEX_SHADER, GLOBE_FRAGMENT_SHADER,
   ATMO_VERTEX_SHADER, ATMO_FRAGMENT_SHADER,
@@ -55,20 +56,27 @@ const MORPH_S = 1.4;
 const INTRO_MORPH_S = 1.0;
 const BASE_SCALE = 1.3;
 const GLOBE_IDX = HERO_FORMS.findIndex(f => f.id === "GLOBE");
-const ATOM_IDX  = HERO_FORMS.findIndex(f => f.id === "ATOM");
+const RUBIK_IDX = HERO_FORMS.findIndex(f => f.id === "RUBIK");
 
-// Hover effect: while the cursor is MOVING, nearby particles are pushed
-// outward (repel/crater). El modo "hoyo negro" (cursor quieto absorbía
-// partículas en órbita) se ELIMINÓ el 2026-07-27 a petición del usuario —
-// lo reemplaza el PULSO SÍSMICO de click/tap (onda expansiva en shader,
-// ver uRipple*), que además funciona en móvil.
-const HOVER_RADIUS       = 0.455;
-const HOVER_RADIUS2      = HOVER_RADIUS * HOVER_RADIUS;
-const REPEL_ACCEL        = 14;
-const SPRING_K           = 9;
-const DAMPING            = 0.88;
 
-const RiskSphere = forwardRef(function RiskSphere({ height = 274, onUnfocus }, ref) {
+// Dos FASES del hero (2026-09-21), nunca juntas, que el usuario alterna:
+//  · "02 Quant" — el cubo Rubik de puntos (default): el modelo que calcula.
+//  · "01 Macro" — el globo con el barrido de screening CONTINUO; al
+//    elegir un país el barrido lo "busca", se apaga al enfocar y vuelve al
+//    cerrarlo (se queda en el mapa, no regresa al cubo).
+const DEFAULT_IDX = RUBIK_IDX;
+const MODE_IDX = { cube: RUBIK_IDX, globe: GLOBE_IDX };
+// Segundos de barrido "buscando el país" antes del acercamiento.
+const SEARCH_S = 1.1;
+// Tempo del cubo: 0.5 → 0.84 s por cuarto de vuelta (~25 s por ciclo
+// revolver-resolver). A 1× (0.42 s) se sentía apresurado a tamaño de hero.
+const RUBIK_SPEED = 0.5;
+
+// Sin efecto de cursor: el "hoyo negro" se quitó el 2026-07-27 y el cráter
+// que lo sustituyó, el 2026-09-21 (ambos a petición del usuario). La
+// interacción es el PULSO SÍSMICO de click/tap (onda en shader, uRipple*).
+
+const RiskSphere = forwardRef(function RiskSphere({ height = 274, onUnfocus, onModeChange }, ref) {
   const mountRef    = useRef(null);
   const selectRef   = useRef(null);
   // En ref para no re-montar la escena 3D cuando el padre pasa otra función.
@@ -76,6 +84,10 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274, onUnfocus }, r
   // globo, Esc o el padre): el panel de noticias del hero se cierra con él.
   const onUnfocusRef = useRef(onUnfocus);
   onUnfocusRef.current = onUnfocus;
+  // Avisa al hero cada cambio de fase ("cube" | "globe"), venga del control o
+  // de elegir un país (que lleva al mapa por su cuenta).
+  const onModeChangeRef = useRef(onModeChange);
+  onModeChangeRef.current = onModeChange;
 
   useImperativeHandle(ref, () => ({
     focusCountry: (lat, lon) => selectRef.current?.focusCountry(lat, lon),
@@ -109,6 +121,8 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274, onUnfocus }, r
       return true;
     },
     flyBack: () => selectRef.current?.flyBack?.(),
+    // Cambia de fase: "cube" (02 Quant) | "globe" (01 Macro).
+    setMode: (mode) => selectRef.current?.setMode?.(mode),
     isFocused: () => selectRef.current?.isFocused?.() ?? false,
   }), []);
 
@@ -179,16 +193,19 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274, onUnfocus }, r
 
       const tex = makeDotTexture(THREE);
 
-      // Particle positions for every selectable form. ATOM's home is
-      // continuously re-ticked (orbital motion) while it's active.
-      const atom = genAtom(N, R);
+      // Barrido de screening (orbe "searching"): encendido siempre que el hero
+      // está en el mapa SIN país enfocado (incluida la búsqueda previa al
+      // enfoque). Se decide cada frame en el loop, no con temporizadores.
+      let scanTarget = 0;
+
+      // Posiciones de cada forma. RUBIK queda quieto en su retícula: el giro
+      // de sus rebanadas lo aplica el shader.
+      const rubik = genRubik(N, R);
       const HOMES = HERO_FORMS.map(f => {
         switch (f.id) {
           case "GLOBE":   return genGlobe(N, R);
           case "SPHERE":  return genSphere(N, R);
-          case "THOMAS":  return genThomas(N);
-          case "VORONOI": return genVoronoi(N, R);
-          case "ATOM":    return atom.pos;
+          case "RUBIK":   return rubik.pos;
           default:        return genGlobe(N, R);
         }
       });
@@ -222,18 +239,14 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274, onUnfocus }, r
         scatter[i*3+2] = gauss() * sigmaZ;
       }
 
-      let currentIdx  = GLOBE_IDX;
+      let currentIdx  = DEFAULT_IDX;
       let prevHome    = scatter;
-      let currHome    = HOMES[GLOBE_IDX];
+      let currHome    = HOMES[DEFAULT_IDX];
       let morphT      = 0;
       let morphDur    = INTRO_MORPH_S;
       let introActive = true;
       const baseNow  = scatter.slice();
       const effHome  = scatter.slice();
-
-      // Per-particle hover-displacement state (local space, pre-group-scale).
-      const dispX = new Float32Array(N), dispY = new Float32Array(N), dispZ = new Float32Array(N);
-      const velX  = new Float32Array(N), velY  = new Float32Array(N), velZ  = new Float32Array(N);
 
       const jPhase  = new Float32Array(N);
       for (let i = 0; i < N; i++) jPhase[i] = Math.random() * Math.PI * 2;
@@ -282,6 +295,13 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274, onUnfocus }, r
           uRippleDir:     { value: new THREE.Vector3(0, 0, 1) },
           uRippleT:       { value: -1 },
           uRippleColor:   { value: new THREE.Color(0.45, 0.75, 0.65) },
+          // Barrido de búsqueda mientras no hay score (ver setHalo).
+          uScan:          { value: 0 },
+          // Giro del cubo Rubik (forma default) — ver rubikTwistAt.
+          uTwist:         { value: Array.from({ length: RUBIK_MOVES }, () => new THREE.Vector4()) },
+          uTwistOn:       { value: 0 },
+          uTwistR:        { value: R },
+          uTwistActive:   { value: -1 },
         },
         vertexShader: GLOBE_VERTEX_SHADER,
         fragmentShader: GLOBE_FRAGMENT_SHADER,
@@ -426,20 +446,30 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274, onUnfocus }, r
       let focusData = null, focusLift = 0, focusLiftTarget = 0, camZTarget = 6.5, focusTilt = 0;
       let stormTarget = 0, rippleStart = -1;
       const tmpV = new THREE.Vector3();
+      // focusDelay > 0: el enfoque (acercamiento/relieve/panel) espera a que
+      // el cubo se vuelva globo y pase el barrido. twistK: intensidad del giro
+      // del cubo (1 en RUBIK, baja a 0 al volverse globo → se deshace suave).
+      let focusDelay = 0, twistK = 0;
+      const motionOk =
+        typeof matchMedia === "undefined" || !matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const selectForm = (idx) => {
+        if (idx < 0 || idx >= HOMES.length || idx === currentIdx) return;
+        prevHome   = baseNow.slice();
+        currHome   = HOMES[idx];
+        currentIdx = idx;
+        morphT     = 0;
+        morphDur   = MORPH_S;
+        settled = false;
+        const mode = idx === RUBIK_IDX ? "cube" : idx === GLOBE_IDX ? "globe" : null;
+        if (mode) onModeChangeRef.current?.(mode);
+      };
 
       selectRef.current = {
         focusCountry: (lat, lon) => {
           const d = latLonToDir(lat, lon);
           focusTarget = -Math.atan2(d.x, d.z);
         },
-        select: (idx) => {
-          if (idx < 0 || idx >= HOMES.length || idx === currentIdx) return;
-          prevHome   = baseNow.slice();
-          currHome   = HOMES[idx];
-          currentIdx = idx;
-          morphT     = 0;
-          morphDur   = MORPH_S;
-        },
+        select: selectForm,
         // Halo del color de la banda del día, suavizado hacia blanco (pastel)
         // para que tiña sin gritar — el globo comunica el estado del mercado.
         // score (0-100) modula la respiración: risk-off (bajo) más inquieta
@@ -470,14 +500,38 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274, onUnfocus }, r
           focusTilt = Math.max(-0.62, Math.min(0.62, (lat * Math.PI) / 180));
           focusData = { dirObj: new THREE.Vector3(d.x, d.y, d.z) };
           material.uniforms.uFocusId.value = maskId ?? 0;
-          focusLiftTarget = 1;
-          camZTarget = 5.55; // acercamiento con aire — a 4.9 el globo desbordaba todo el hero
+          // Cubo → globo, y el barrido "busca" el país mientras gira hacia
+          // él; el acercamiento entra después. Sin movimiento: directo.
+          const fromCube = currentIdx !== GLOBE_IDX;
+          selectForm(GLOBE_IDX);
+          if (motionOk) {
+            focusDelay = (fromCube ? MORPH_S : 0) + SEARCH_S;
+            focusLiftTarget = 0;
+            camZTarget = 6.5;
+          } else {
+            focusLiftTarget = 1;
+            camZTarget = 5.55; // acercamiento con aire — a 4.9 el globo desbordaba todo el hero
+          }
           panel.style.borderLeftColor = color;
           panel.innerHTML =
             `<div style="font-size:9px;letter-spacing:2px;color:#8A8F98;text-transform:uppercase;margin-bottom:2px">${title}</div>` +
             lines.map((l) => `<div style="font-size:12px;color:#ECEFF4;line-height:1.5">${l}</div>`).join("");
         },
-        flyBack: () => { focusLiftTarget = 0; camZTarget = 6.5; },
+        flyBack: () => { focusLiftTarget = 0; camZTarget = 6.5; focusDelay = 0; },
+        setMode: (mode) => {
+          const idx = MODE_IDX[mode];
+          if (idx == null || idx === currentIdx) return;
+          if (idx === RUBIK_IDX && focusData) {
+            // Del país en foco directo al cubo: se suelta el foco sin esperar
+            // al regreso animado (el morph ya es la transición).
+            material.uniforms.uFocusId.value = 0;
+            focusData = null; focusDelay = 0;
+            focusLiftTarget = 0; camZTarget = 6.5;
+            panel.style.opacity = "0";
+            onUnfocusRef.current?.();
+          }
+          selectForm(idx);
+        },
         isFocused: () => focusData !== null,
         // Actualiza en vivo el color/pulso de cada país (score 0-100 por id).
         setCountryScores: (map) => {
@@ -509,12 +563,10 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274, onUnfocus }, r
       // 33ms envenenaban la medición adaptativa como "frames lentos".
       let elapsed = 0, animId = 0, lastFrame = 0, nextFrameAt = 0, lastEnvAt = -999;
       let lastScrollAt = -1e9; // el scroll compite por el main thread — no medir ahí
-      let mouseActive = false;
-      let lastMoveAt  = 0;
       // settled = partículas en casa y sin interacción → se SALTA el loop de
       // física (el costo real del jank: N iteraciones + re-subir el buffer al
       // GPU cada frame). La rotación del grupo y el shader siguen animando.
-      let settled = false, settleFrames = 0;
+      let settled = false;
       // visible = false (hero fuera del viewport) → se detiene el rAF entero.
       let visible = true;
       // prefers-reduced-motion: el objeto de movimiento más grande del sitio
@@ -534,38 +586,13 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274, onUnfocus }, r
       // al tocar el piso. Umbral 34ms = 2+ frames de 60Hz perdidos — inmune a
       // la cuantización de 120Hz y al cap de rAF del Low Power Mode de iOS.
       let qFrames = 0, qSlow = 0, qDone = DPR <= 1.5;
-      const mouseNDC    = new THREE.Vector2();
-      const mouseLocal  = new THREE.Vector3();
       const raycaster   = new THREE.Raycaster();
       const hitSphere   = new THREE.Sphere(new THREE.Vector3(0, 0, 0), R);
       const hitPoint    = new THREE.Vector3();
       const localMatrix = new THREE.Matrix4();
 
-      const onPointerMove = (e) => {
-        const rect = container.getBoundingClientRect();
-        const nx = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-        const ny = -((e.clientY - rect.top) / rect.height) * 2 + 1;
-        if (Math.abs(nx - mouseNDC.x) > 1e-4 || Math.abs(ny - mouseNDC.y) > 1e-4) {
-          lastMoveAt = elapsed;
-        }
-        mouseNDC.x = nx; mouseNDC.y = ny;
-        mouseActive = true;
-        settled = false; settleFrames = 0;
-      };
-      const onPointerLeave = () => { mouseActive = false; };
-      const onPointerDown  = (e) => { onPointerMove(e); lastMoveAt = elapsed; };
-      // El efecto cráter/hoyo negro es SOLO desktop (decisión 2026-07-06): en
-      // móvil competía con el scroll, costaba física y no aportaba — sin
-      // listeners, mouseActive nunca se enciende y la simulación no corre.
       const onScroll = () => { lastScrollAt = performance.now(); };
       window.addEventListener("scroll", onScroll, { passive: true });
-      if (!isSmall) {
-        container.addEventListener("pointermove", onPointerMove);
-        container.addEventListener("pointerleave", onPointerLeave);
-        container.addEventListener("pointerdown",   onPointerDown);
-        container.addEventListener("pointerup",     onPointerLeave);
-        container.addEventListener("pointercancel", onPointerLeave);
-      }
 
       // ── Giroscopio (solo móvil): el globo se inclina sutilmente con el
       // teléfono — parallax físico. iOS exige permiso desde un gesto: se pide
@@ -619,7 +646,7 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274, onUnfocus }, r
         // frame de desfase es irrelevante) y sin scroll reciente. Contar la
         // intro/settle degradaba hasta a un iPhone tope de gama — esos costos
         // son transitorios A PROPÓSITO y no representan el costo permanente.
-        const simBusy = mouseActive || morphT < 1 || currentIdx === ATOM_IDX || !settled;
+        const simBusy = morphT < 1 || !settled;
         if (!qDone && rawDt < 500 && !simBusy && ts - lastScrollAt > 300) {
           if (rawDt > 34) qSlow++;
           if (++qFrames >= 90) {
@@ -674,6 +701,28 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274, onUnfocus }, r
 
         material.uniforms.uTime.value = elapsed;
 
+        // ── Cubo Rubik (forma default): el giro corre 100% en shader. Al
+        // volverse globo, twistK baja a 0 y las rebanadas se deshacen suave.
+        twistK += ((currentIdx === RUBIK_IDX && motionOk ? 1 : 0) - twistK) * 0.15;
+        if (twistK > 0.002) {
+          const active = rubikTwistAt(elapsed * RUBIK_SPEED, material.uniforms.uTwist.value, twistK);
+          material.uniforms.uTwistOn.value = 1;
+          material.uniforms.uTwistActive.value = currentIdx === RUBIK_IDX ? active : -1;
+        } else {
+          material.uniforms.uTwistOn.value = 0;
+        }
+
+        // ── Búsqueda → enfoque: vence el barrido y entra el acercamiento.
+        if (focusDelay > 0) {
+          focusDelay -= dt;
+          if (focusDelay <= 0) {
+            focusDelay = 0;
+            if (focusData) { focusLiftTarget = 1; camZTarget = 5.55; }
+          }
+        }
+        // Screening: en el mapa, salvo con un país ya enfocado.
+        scanTarget = motionOk && currentIdx === GLOBE_IDX && (!focusData || focusDelay > 0) ? 1 : 0;
+
         // Fade the globe-only tint/country highlight in or out as forms change.
         const colorTarget = currentIdx === GLOBE_IDX && !introActive ? 1 : 0;
         material.uniforms.uColorT.value += (colorTarget - material.uniforms.uColorT.value) * 0.05;
@@ -704,11 +753,12 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274, onUnfocus }, r
         material.uniforms.uFocusLift.value = focusLift;
         camera.position.z += (camZTarget - camera.position.z) * 0.06;
         if (focusData) {
-          if (focusLiftTarget === 0 && focusLift < 0.04) {
+          if (focusLiftTarget === 0 && focusLift < 0.04 && focusDelay === 0) {
             material.uniforms.uFocusId.value = 0;
             focusData = null;
             panel.style.opacity = "0";
             onUnfocusRef.current?.();
+            // Cerrado el país se queda en el MAPA: el globo retoma su giro.
           } else {
             group.updateMatrixWorld();
             tmpV.copy(focusData.dirObj).multiplyScalar(R * (1 + focusLift * 0.1))
@@ -720,36 +770,23 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274, onUnfocus }, r
           }
         }
 
-        // Re-project the cursor onto the globe's surface every frame, so the
-        // attraction point tracks the cursor even while the group rotates.
-        if (mouseActive) {
-          raycaster.setFromCamera(mouseNDC, camera);
-          const rayLocal = raycaster.ray.clone().applyMatrix4(localMatrix.copy(group.matrixWorld).invert());
-          if (rayLocal.intersectSphere(hitSphere, hitPoint)) {
-            mouseLocal.copy(hitPoint);
-          } else {
-            mouseActive = false;
-          }
-        }
 
-        const idleTime = elapsed - lastMoveAt;
-        // Cursor ESTACIONADO (>1.2s sin moverse): libera el cráter y las
-        // partículas regresan a casa — sin el viejo modo hoyo negro, un
-        // cursor quieto ya no debe sostener ningún efecto.
-        if (mouseActive && idleTime > 1.2) mouseActive = false;
-
-        // Continuously orbit ATOM's ring particles while it's the active form.
-        if (currentIdx === ATOM_IDX) {
-          tickAtom(HOMES[ATOM_IDX], atom.phases, atom.rIdx, elapsed, N, R);
-        }
+        // Orbes: ~150 partículas por punto en blending aditivo queman con el
+        // bloom — se bajan de opacidad para que no compitan con el titular.
+        const isOrb = currentIdx === RUBIK_IDX;
+        const op = material.uniforms.uOpacity;
+        op.value += ((isOrb ? 0.34 : 0.715) - op.value) * 0.05;
+        const sc = material.uniforms.uScan;
+        sc.value += (scanTarget - sc.value) * 0.03;
+        if (sc.value < 0.002) sc.value = 0;
 
         if (morphT < 1) morphT = Math.min(1, morphT + dt / morphDur);
         else introActive = false;
 
         // El loop de N partículas + subir el buffer solo corre cuando hace
-        // falta (interacción, morph o ATOM); en reposo el globo gira vía la
-        // matriz del grupo y el shader — CPU casi en cero.
-        const needsSim = mouseActive || morphT < 1 || currentIdx === ATOM_IDX || !settled;
+        // falta (morph); en reposo el globo/cubo gira vía la matriz del grupo
+        // y el shader — CPU casi en cero.
+        const needsSim = morphT < 1 || !settled;
         if (needsSim) {
         const mt = morphT < 1 ? eio(morphT) : 1;
 
@@ -759,65 +796,14 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274, onUnfocus }, r
           const by = prevHome[iy] + (currHome[iy] - prevHome[iy]) * mt;
           const bz = prevHome[iz] + (currHome[iz] - prevHome[iz]) * mt;
           baseNow[ix] = bx; baseNow[iy] = by; baseNow[iz] = bz;
-          const px = bx + dispX[i], py = by + dispY[i], pz = bz + dispZ[i];
-
-          let fx, fy, fz;
-
-          if (mouseActive) {
-            const dx = mouseLocal.x - px, dy = mouseLocal.y - py, dz = mouseLocal.z - pz;
-            const d2 = dx * dx + dy * dy + dz * dz;
-            if (d2 < HOVER_RADIUS2 && d2 > 1e-8) {
-              const d = Math.sqrt(d2);
-              const falloff = 1 - d / HOVER_RADIUS;
-              const invD = 1 / d;
-              const rx = dx * invD, ry = dy * invD, rz = dz * invD;
-              // Repel: push away from the cursor (crater follows the mouse).
-              const accel = falloff * REPEL_ACCEL;
-              fx = -rx * accel;
-              fy = -ry * accel;
-              fz = -rz * accel;
-            } else {
-              fx = -dispX[i] * SPRING_K;
-              fy = -dispY[i] * SPRING_K;
-              fz = -dispZ[i] * SPRING_K;
-            }
-          } else {
-            fx = -dispX[i] * SPRING_K;
-            fy = -dispY[i] * SPRING_K;
-            fz = -dispZ[i] * SPRING_K;
-          }
-
-          const vx = (velX[i] + fx * dt) * DAMPING;
-          const vy = (velY[i] + fy * dt) * DAMPING;
-          const vz = (velZ[i] + fz * dt) * DAMPING;
-          velX[i] = vx; velY[i] = vy; velZ[i] = vz;
-
-          const ndx = dispX[i] + vx * dt;
-          const ndy = dispY[i] + vy * dt;
-          const ndz = dispZ[i] + vz * dt;
-          dispX[i] = ndx; dispY[i] = ndy; dispZ[i] = ndz;
-
-          effHome[ix] = bx + ndx;
-          effHome[iy] = by + ndy;
-          effHome[iz] = bz + ndz;
+          effHome[ix] = bx; effHome[iy] = by; effHome[iz] = bz;
         }
 
         posAttr.needsUpdate = true;
 
-        // Tras ~1.5s sin interacción los resortes ya convergieron: ancla todo
-        // a su home exacto y deja de simular hasta el próximo toque/morph.
-        if (!mouseActive && morphT >= 1 && currentIdx !== ATOM_IDX) {
-          if (++settleFrames > 90) {
-            for (let i = 0; i < N; i++) {
-              const ix = i * 3;
-              dispX[i] = 0; dispY[i] = 0; dispZ[i] = 0;
-              velX[i] = 0; velY[i] = 0; velZ[i] = 0;
-              effHome[ix] = baseNow[ix]; effHome[ix + 1] = baseNow[ix + 1]; effHome[ix + 2] = baseNow[ix + 2];
-            }
-            posAttr.needsUpdate = true;
-            settled = true;
-          }
-        } else settleFrames = 0;
+        // Morph terminado: las partículas ya están en su home exacto → deja
+        // de simular hasta el próximo morph.
+        if (morphT >= 1) settled = true;
         } // fin needsSim
 
         if (composer) composer.render();
@@ -880,11 +866,6 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274, onUnfocus }, r
         cancelAnimationFrame(animId);
         vio.disconnect();
         window.removeEventListener("resize", onResize);
-        container.removeEventListener("pointermove", onPointerMove);
-        container.removeEventListener("pointerleave", onPointerLeave);
-        container.removeEventListener("pointerdown", onPointerDown);
-        container.removeEventListener("pointerup", onPointerLeave);
-        container.removeEventListener("pointercancel", onPointerLeave);
         container.removeEventListener("touchend", armGyro);
         window.removeEventListener("deviceorientation", onGyro);
         window.removeEventListener("scroll", onScroll);
