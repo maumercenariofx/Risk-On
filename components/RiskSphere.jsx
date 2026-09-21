@@ -460,6 +460,8 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274, onUnfocus, onM
         morphT     = 0;
         morphDur   = MORPH_S;
         settled = false;
+        gesture = null; slab = null; spinVX = 0; spinVY = 0;
+        canvas.style.cursor = idx === RUBIK_IDX ? "grab" : "";
         const mode = idx === RUBIK_IDX ? "cube" : idx === GLOBE_IDX ? "globe" : null;
         if (mode) onModeChangeRef.current?.(mode);
       };
@@ -621,11 +623,111 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274, onUnfocus, onM
         }
       }
 
+      // ── Interacción con el cubo (02 Quant, 2026-09-21) ──────────────────
+      // Flick rápido → gira TODO el cubo con inercia. Arrastre lento sobre el
+      // cubo → gira la REBANADA que tocas y al soltar encaja al cuarto de
+      // vuelta. En táctil el vertical sigue siendo scroll de la página
+      // (touch-action: pan-y): el cubo solo toma gestos horizontales — un
+      // hero a pantalla completa que atrapa el dedo es una trampa de scroll.
+      const FLICK_PX_MS = 0.55;  // px/ms que separan flick de arrastre lento
+      const DECIDE_PX   = 8;     // desplazamiento antes de decidir el gesto
+      const RESUME_S    = 3.5;   // s sin rebanadas para retomar el ciclo solo
+      const SPIN_K      = 0.006; // rad por px arrastrado
+      const SPIN_MAX    = 7;     // rad/s de inercia máxima
+      let gesture = null;        // puntero activo y modo decidido
+      let slab = null;           // rebanada en mano: { axis, lo, p0, angle, target, snapping }
+      let spinVX = 0, spinVY = 0;
+      let cubeClock = 0, idleFor = 99, dragged = false;
+      const AXES = [new THREE.Vector3(1, 0, 0), new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, 0, 1)];
+      const kick = () => { if (!animId && visible) { lastFrame = 0; nextFrameAt = 0; animate(); } };
+      // Punto (espacio local del grupo) bajo el puntero sobre la esfera, o null.
+      const hitLocal = (e, out) => {
+        const r = container.getBoundingClientRect();
+        const nd = new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+        raycaster.setFromCamera(nd, camera);
+        group.updateMatrixWorld();
+        const ray = raycaster.ray.clone().applyMatrix4(localMatrix.copy(group.matrixWorld).invert());
+        return ray.intersectSphere(hitSphere, out) ? out : null;
+      };
+      // Congela en la retícula (CPU, una vez por gesto) los giros que hoy pinta
+      // el shader: la rebanada parte del estado VISIBLE, no del de origen.
+      // Misma matemática que rubikTwist en GLOBE_VERTEX_SHADER.
+      const bakeTwist = () => {
+        if (!material.uniforms.uTwistOn.value) return;
+        const tw = material.uniforms.uTwist.value;
+        const pos = rubik.pos;
+        for (let i = 0; i < N; i++) {
+          const ix = i * 3;
+          let x = pos[ix] / R, y = pos[ix + 1] / R, z = pos[ix + 2] / R;
+          for (const mv of tw) {
+            if (mv.w === 0) continue;
+            const c = mv.x < 0.5 ? x : mv.x < 1.5 ? y : z;
+            if (c < mv.y || c >= mv.z) continue;
+            const ca = Math.cos(mv.w), sa = Math.sin(mv.w);
+            if (mv.x < 0.5)      { const y2 = y * ca - z * sa; z = y * sa + z * ca; y = y2; }
+            else if (mv.x < 1.5) { const x2 = x * ca + z * sa; z = -x * sa + z * ca; x = x2; }
+            else                 { const x2 = x * ca - y * sa; y = x * sa + y * ca; x = x2; }
+          }
+          pos[ix] = x * R; pos[ix + 1] = y * R; pos[ix + 2] = z * R;
+        }
+        for (const v of tw) v.set(0, 0, 0, 0);
+        material.uniforms.uTwistOn.value = 0;
+        cubeClock = 0;   // el ciclo automático renace desde el estado congelado
+        settled = false; // un pase del loop sube la retícula nueva al buffer
+      };
+      // Eje y rebanada: el eje cuyo giro mueve el punto tocado más a favor del
+      // arrastre (|eje × p| grande = lejos del eje, donde el giro se nota).
+      const startSlab = (e) => {
+        const p0 = gesture.hit;
+        const p1 = hitLocal(e, new THREE.Vector3());
+        if (!p0 || !p1) return false;
+        const D = p1.clone().sub(p0);
+        let axis = -1, best = 0;
+        for (let a = 0; a < 3; a++) {
+          const score = Math.abs(AXES[a].clone().cross(p0).dot(D));
+          if (score > best) { best = score; axis = a; }
+        }
+        if (axis < 0) return false;
+        bakeTwist();
+        const c = p0.getComponent(axis) / R;
+        const lo = Math.min(3, Math.max(0, Math.floor((c + 1) / 0.5))) * 0.5 - 1;
+        slab = { axis, lo, p0: p0.clone(), angle: 0, target: 0, snapping: false };
+        idleFor = 0;
+        return true;
+      };
+      // Ángulo firmado (regla de la mano derecha, igual que el shader) entre
+      // el punto de agarre y el punto actual, proyectados al plano de giro.
+      const updateSlab = (e) => {
+        const pc = hitLocal(e, new THREE.Vector3());
+        if (!pc) return; // fuera de la esfera: se queda el último ángulo
+        const A = AXES[slab.axis];
+        const a0 = slab.p0.clone().projectOnPlane(A), a1 = pc.projectOnPlane(A);
+        slab.angle = Math.atan2(A.dot(a0.clone().cross(a1)), a0.dot(a1));
+      };
+      // Encaje con intención: basta pasar ~18° (un quinto del cuarto de
+      // vuelta) para que complete el giro en esa dirección; exigir 45° se
+      // sentía duro con el dedo.
+      const releaseSlab = () => {
+        if (!slab) return;
+        const q = slab.angle / (Math.PI / 2);
+        slab.target = Math.sign(q) * Math.max(0, Math.ceil(Math.abs(q) - 0.2)) * (Math.PI / 2);
+        slab.snapping = true;
+      };
+      // Un toque nuevo mientras la rebanada anterior encaja: se termina el
+      // encaje de golpe en vez de ignorar el toque.
+      const finishSlab = () => {
+        if (!slab) return;
+        material.uniforms.uTwist.value[0].set(slab.axis, slab.lo, slab.lo + 0.5, slab.target);
+        material.uniforms.uTwistOn.value = 1;
+        bakeTwist();
+        slab = null;
+      };
+
       function animate(ts = 0) {
         if (!visible) { animId = 0; return; } // pausa total fuera de pantalla
         // Escena ya armada y el lector pidió no ver movimiento → último render y
         // se corta el bucle. Queda un globo nítido y quieto, no un hueco negro.
-        if (reducedMotion && settled && morphT >= 1) {
+        if (reducedMotion && settled && morphT >= 1 && !gesture && !slab) {
           animId = 0;
           if (composer) composer.render();
           else renderer.render(scene, camera);
@@ -693,8 +795,16 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274, onUnfocus, onM
           // Con un país en foco el globo se DETIENE y lo sostiene al frente
           // (la rotación decorativa lo sacaría de cámara en segundos).
           group.rotation.x += (focusTilt - group.rotation.x) * FOCUS_LERP;
+        } else if (gesture) {
+          // Con el dedo encima el cubo NO gira solo: en flick el dedo manda
+          // (onGestureMove); en rebanada, el giro de fondo se "comía" el
+          // ángulo del arrastre (medido: 180 px daban 0.13 rad).
         } else {
-          group.rotation.y += 0.216 * dt; // por dt (0.0036×60): fluida aunque el pacing varíe
+          // Giro base + inercia del último flick, que se apaga por fricción.
+          group.rotation.y += (0.216 + spinVY) * dt; // por dt (0.0036×60): fluida aunque el pacing varíe
+          group.rotation.x += spinVX * dt;
+          const fr = Math.exp(-dt * 2.4);
+          spinVY *= fr; spinVX *= fr;
           // Idle wobble alrededor de 0 + inclinación del giroscopio (móvil).
           group.rotation.x += (Math.sin(elapsed * 0.2) * 0.07 + gyroTilt - group.rotation.x) * 0.03;
         }
@@ -704,8 +814,22 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274, onUnfocus, onM
         // ── Cubo Rubik (forma default): el giro corre 100% en shader. Al
         // volverse globo, twistK baja a 0 y las rebanadas se deshacen suave.
         twistK += ((currentIdx === RUBIK_IDX && motionOk ? 1 : 0) - twistK) * 0.15;
-        if (twistK > 0.002) {
-          const active = rubikTwistAt(elapsed * RUBIK_SPEED, material.uniforms.uTwist.value, twistK);
+        if (slab) {
+          // Rebanada del usuario: sigue al dedo; al soltar encaja al cuarto de
+          // vuelta y se congela en la retícula.
+          if (slab.snapping) {
+            const d = slab.target - slab.angle;
+            slab.angle = motionOk && Math.abs(d) > 0.002 ? slab.angle + d * 0.22 : slab.target;
+          }
+          material.uniforms.uTwist.value[0].set(slab.axis, slab.lo, slab.lo + 0.5, slab.angle);
+          material.uniforms.uTwistOn.value = 1;
+          material.uniforms.uTwistActive.value = 0;
+          if (slab.snapping && slab.angle === slab.target) { bakeTwist(); slab = null; idleFor = 0; }
+        } else if (twistK > 0.002) {
+          // Ciclo automático; tras mover una rebanada espera RESUME_S.
+          if (!gesture) idleFor += dt;
+          if (idleFor > RESUME_S) cubeClock += dt * RUBIK_SPEED;
+          const active = rubikTwistAt(cubeClock, material.uniforms.uTwist.value, twistK);
           material.uniforms.uTwistOn.value = 1;
           material.uniforms.uTwistActive.value = currentIdx === RUBIK_IDX ? active : -1;
         } else {
@@ -817,6 +941,7 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274, onUnfocus, onM
       // (reemplazo del viejo hoyo negro; en móvil es el único efecto táctil).
       const onKeyDown = (e) => { if (e.key === "Escape" && focusData) selectRef.current?.flyBack?.(); };
       const onCanvasClick = (e) => {
+        if (dragged) { dragged = false; return; } // terminó un arrastre, no es clic
         if (focusData) { selectRef.current?.flyBack?.(); return; }
         const rect = container.getBoundingClientRect();
         const nd = new THREE.Vector2(
@@ -832,6 +957,72 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274, onUnfocus, onM
       };
       window.addEventListener("keydown", onKeyDown);
       canvas.addEventListener("click", onCanvasClick);
+
+      const onGestureDown = (e) => {
+        if (currentIdx !== RUBIK_IDX || morphT < 1 || e.button > 0) return;
+        if (slab) { if (!slab.snapping) return; finishSlab(); }
+        // e.timeStamp = cuándo OCURRIÓ el toque, no cuándo se procesó: con el
+        // hilo ocupado un flick procesado tarde parecía arrastre lento.
+        const now = e.timeStamp;
+        gesture = {
+          id: e.pointerId, x0: e.clientX, y0: e.clientY, t0: now,
+          lx: e.clientX, ly: e.clientY, lt: now, mode: null,
+          touch: e.pointerType !== "mouse", hit: hitLocal(e, new THREE.Vector3()),
+        };
+        dragged = false;
+        kick();
+      };
+      const onGestureMove = (e) => {
+        if (!gesture || e.pointerId !== gesture.id) return;
+        const now = e.timeStamp;
+        if (!gesture.mode) {
+          const dx = e.clientX - gesture.x0, dy = e.clientY - gesture.y0;
+          const dist = Math.hypot(dx, dy);
+          if (dist < DECIDE_PX) return;
+          // Táctil + vertical = el lector quiere bajar por la página.
+          if (gesture.touch && Math.abs(dy) > Math.abs(dx)) { gesture = null; return; }
+          const speed = dist / Math.max(1, now - gesture.t0);
+          gesture.mode = speed > FLICK_PX_MS || !gesture.hit ? "spin" : "slab";
+          if (gesture.mode === "slab" && !startSlab(e)) gesture.mode = "spin";
+          dragged = true;
+          spinVX = 0; spinVY = 0;
+          canvas.style.cursor = "grabbing";
+          try { canvas.setPointerCapture(e.pointerId); } catch {}
+        }
+        if (gesture.mode === "spin") {
+          const ddx = e.clientX - gesture.lx, ddy = e.clientY - gesture.ly;
+          const dts = Math.max(0.008, (now - gesture.lt) / 1000);
+          group.rotation.y += ddx * SPIN_K;
+          spinVY = spinVY * 0.5 + ((ddx * SPIN_K) / dts) * 0.5;
+          if (!gesture.touch) {
+            group.rotation.x = Math.max(-0.9, Math.min(0.9, group.rotation.x + ddy * SPIN_K));
+            spinVX = spinVX * 0.5 + ((ddy * SPIN_K) / dts) * 0.5;
+          }
+        } else if (slab) {
+          updateSlab(e);
+        }
+        gesture.lx = e.clientX; gesture.ly = e.clientY; gesture.lt = now;
+      };
+      const onGestureUp = (e) => {
+        if (!gesture || e.pointerId !== gesture.id) return;
+        if (gesture.mode === "slab") releaseSlab();
+        if (gesture.mode === "spin") {
+          // Soltar tras detenerse (>90 ms quieto) no lanza; sin movimiento
+          // permitido, tampoco.
+          if (e.timeStamp - gesture.lt > 90 || !motionOk) { spinVX = 0; spinVY = 0; }
+          spinVY = Math.max(-SPIN_MAX, Math.min(SPIN_MAX, spinVY));
+          spinVX = Math.max(-SPIN_MAX, Math.min(SPIN_MAX, spinVX));
+        }
+        gesture = null;
+        if (currentIdx === RUBIK_IDX) canvas.style.cursor = "grab";
+        kick();
+      };
+      canvas.style.cursor = currentIdx === RUBIK_IDX ? "grab" : "";
+      canvas.addEventListener("pointerdown", onGestureDown);
+      canvas.addEventListener("pointermove", onGestureMove);
+      canvas.addEventListener("pointerup", onGestureUp);
+      // pointercancel = el navegador tomó el gesto (scroll): se suelta igual.
+      canvas.addEventListener("pointercancel", onGestureUp);
 
       // Fuera del viewport se detiene el rAF completo (render + física): el
       // globo dejaba de verse pero seguía costando frames a toda la página.
@@ -871,6 +1062,10 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274, onUnfocus, onM
         window.removeEventListener("scroll", onScroll);
         window.removeEventListener("keydown", onKeyDown);
         canvas.removeEventListener("click", onCanvasClick);
+        canvas.removeEventListener("pointerdown", onGestureDown);
+        canvas.removeEventListener("pointermove", onGestureMove);
+        canvas.removeEventListener("pointerup", onGestureUp);
+        canvas.removeEventListener("pointercancel", onGestureUp);
         geometry.dispose();
         tex.dispose(); geoTex.dispose();
         material.dispose();
