@@ -381,10 +381,6 @@ export default function RiskGauge({ prevScore = null, scoreHistory = null, ticke
           fontSize: "clamp(30px, 6.5vw, 84px)",
           letterSpacing: "-0.03em",
           pointerEvents: "none",
-          // Cede su lugar al panel de noticias mientras hay un país en foco.
-          opacity: newsCountry ? 0 : 1,
-          visibility: newsCountry ? "hidden" : "visible",
-          transition: "opacity .3s, visibility .3s",
         }}>
           {/* h1 semántico (la landing no tenía ninguno — SEO 2026-07-13);
               hereda todo el estilo del wrapper, cero cambio visual. */}
@@ -414,27 +410,6 @@ export default function RiskGauge({ prevScore = null, scoreHistory = null, ticke
           </div>
         </div>
 
-
-        {/* Noticias del país en foco, en el lugar del título. El alto deja libre
-            la franja inferior (sparkline a la izquierda, chips y score a la
-            derecha); la lista hace scroll adentro. */}
-        {newsCountry && (
-          <div style={{
-            position: "absolute", top: 104, left: 20,
-            width: "min(400px, calc(100% - 40px))",
-            maxHeight: "max(180px, calc(100% - 104px - 290px))",
-            display: "flex", zIndex: 2,
-          }}>
-            <CountryNews
-              country={COUNTRY_UNIVERSE.find((rc) => rc.id === newsCountry)}
-              color={tensionColor(countriesByRisk.find((rc) => rc.id === newsCountry)?.live ?? 0)}
-              items={news}
-              loading={newsLoading}
-              lang={lang}
-              onClose={() => { sphereRef.current?.flyBack?.(); setNewsCountry(null); }}
-            />
-          </div>
-        )}
 
         {/* Bottom-right: alert countries + score + label — score-blink starts after counter settles */}
         {result && (
@@ -594,11 +569,45 @@ export default function RiskGauge({ prevScore = null, scoreHistory = null, ticke
         </div>
         </div>
 
-        {/* Hint de scroll: el hero llena la pantalla, esto invita a bajar */}
-        <div style={{ position: "absolute", bottom: 10, left: 0, right: 0, display: "flex", justifyContent: "center", pointerEvents: "none" }}>
-          <span className="scroll-hint" style={{ color: "#8A8A8E", fontSize: 13, lineHeight: 1 }}>▼</span>
+        {/* Hint de scroll: el hero llena la pantalla, esto invita a bajar. Con
+            un país en foco anuncia sus noticias —que se abren DEBAJO del hero
+            (2026-09-21)— y lleva a ellas: el 15-sep se aprendió que un panel
+            fuera de pantalla hacía parecer que el chip no hacía nada. */}
+        <div style={{ position: "absolute", bottom: 24, left: 0, right: 0, display: "flex", justifyContent: "center", pointerEvents: "none" }}>
+          {newsCountry ? (
+            <button
+              onClick={() => document.getElementById("country-news")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+              className="scroll-hint"
+              style={{
+                pointerEvents: "auto", cursor: "pointer", background: "none", border: "none", padding: "4px 8px",
+                fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: 1.5, textTransform: "uppercase",
+                color: tensionColor(countriesByRisk.find((rc) => rc.id === newsCountry)?.live ?? 0),
+              }}
+            >
+              {lang === "en" ? "News" : "Noticias"} · {lang === "en"
+                ? COUNTRY_UNIVERSE.find((rc) => rc.id === newsCountry)?.name_en
+                : COUNTRY_UNIVERSE.find((rc) => rc.id === newsCountry)?.name_es} ▼
+            </button>
+          ) : (
+            <span className="scroll-hint" style={{ color: "#8A8A8E", fontSize: 13, lineHeight: 1 }}>▼</span>
+          )}
         </div>
       </div>
+
+      {/* Noticias del país en foco: DEBAJO del hero (2026-09-21, a pedido de
+          Mauricio: que no tapen el globo). El hint del hero lleva hasta aquí. */}
+      {newsCountry && (
+        <div id="country-news" style={{ margin: "0 0 28px", scrollMarginTop: 80 }}>
+          <CountryNews
+            country={COUNTRY_UNIVERSE.find((rc) => rc.id === newsCountry)}
+            color={tensionColor(countriesByRisk.find((rc) => rc.id === newsCountry)?.live ?? 0)}
+            items={news}
+            loading={newsLoading}
+            lang={lang}
+            onClose={() => { sphereRef.current?.flyBack?.(); setNewsCountry(null); }}
+          />
+        </div>
+      )}
 
       {/* Ticker: vive justo debajo del hero (llega como prop desde la página) */}
       {ticker}

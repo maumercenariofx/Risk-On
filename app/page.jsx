@@ -54,9 +54,13 @@ export default async function Home() {
     : null;
 
   return (
+    <>
+    {/* Mini-tape de progreso: USD/MXN 6m trazándose con el avance de página.
+        FUERA del space-y-10 (2026-09-21): es position:fixed pero como primer
+        hijo le regalaba 40 px de margen al hero, que dejaba su pie —el ▼ y
+        el aviso de noticias— debajo del borde de la pantalla. */}
+    <TapeWidget score={posts[0]?.score} />
     <div className="space-y-10">
-      {/* Mini-tape de progreso: USD/MXN 6m trazándose con el avance de página */}
-      <TapeWidget score={posts[0]?.score} />
 
       {/* 1-3 · Score vivo, ancla publicada, termómetro, strip y drivers.
           El ticker vive DENTRO del gauge, justo bajo el hero a pantalla completa. */}
@@ -112,5 +116,6 @@ export default async function Home() {
         </div>
       </div>
     </div>
+    </>
   );
 }

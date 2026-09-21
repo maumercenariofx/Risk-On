@@ -19,3 +19,4 @@ One line per session, newest at top. Format: `[YYYY-MM-DD]: what happened`.
 - [2026-09-21]: Pruebas de salidas (07) y portafolio v2 en /indice: stop 3 ATR + línea de siempre pro-peso.
 - [2026-09-21]: La intro pasa de "cubo de puntos" a cubo Rubik con el mapa revuelto en sus caras que se resuelve y se infla en globo. Subido a main.
 - [2026-09-21]: Intro final: esfera Rubik revuelta que se resuelve en el globo con América de frente, en cada refresh. Subido a main.
+- [2026-09-21]: Intro sin nube (esfera Rubik desde el primer cuadro), noticias del país debajo del hero con aviso "Noticias · país ▼", y fix del hero desplazado 40 px por el TapeWidget. Subido a main.

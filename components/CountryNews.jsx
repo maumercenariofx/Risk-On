@@ -1,9 +1,10 @@
 "use client";
 // components/CountryNews.jsx
-// Noticias de las últimas 48h del país enfocado en el globo. Vive DENTRO del
-// hero, en el lugar del título (2026-09-15): antes se abría debajo del ticker y
-// del termómetro, fuera de pantalla, y el clic en el chip parecía no hacer nada
-// más que girar el globo.
+// Noticias de las últimas 48h del país enfocado en el globo. Se abre DEBAJO del
+// hero, antes del ticker (2026-09-21: dentro del hero tapaba el globo). El
+// 15-sep vivía en el lugar del título porque abajo del ticker y del termómetro
+// quedaba fuera de pantalla y el chip parecía no hacer nada: por eso el hint
+// del hero ahora dice "Noticias · país ▼" y baja hasta aquí.
 import { T } from "./Lang";
 
 function newsAge(pubDate, lang) {
