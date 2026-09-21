@@ -2,7 +2,7 @@
 import { useEffect, useRef, forwardRef, useImperativeHandle } from "react";
 import {
   genGlobe, genSphere, eio,
-  genCube, cubeSolveAt, CUBE_MOVES, CUBE_H, TWIST_SLOTS,
+  cubeSolveAt, CUBE_MOVES, TWIST_SLOTS,
   makeDotTexture, makeGeoTexture, makeCountryDataUniform, makeSelIdsUniform, latLonToDir,
   HERO_FORMS, RISK_COUNTRIES, GLOBE_VERTEX_SHADER, GLOBE_FRAGMENT_SHADER,
   ATMO_VERTEX_SHADER, ATMO_FRAGMENT_SHADER,
@@ -59,16 +59,17 @@ const GLOBE_IDX = HERO_FORMS.findIndex(f => f.id === "GLOBE");
 const CUBE_IDX  = HERO_FORMS.findIndex(f => f.id === "CUBE");
 
 
-// INTRO (2026-09-21): al abrir el sitio la nube arma un CUBO con el mapa
-// revuelto en sus caras (cuadrícula 3×3); se resuelve giro por giro hasta
-// completar el mapa y se infla hasta volverse el globo. Una vez por sesión
-// (sessionStorage) y nunca con reduced-motion: volver al home no debe
-// costar otros ~5 s. Después, el globo: barrido de screening CONTINUO; al
-// elegir un país el barrido lo "busca", se apaga al enfocar y vuelve al
-// cerrarlo.
+// INTRO (2026-09-21): en CADA carga (salvo reduced-motion) la nube arma una
+// ESFERA RUBIK —el globo partido como un cubo 3×3— con el mapa revuelto; se
+// resuelve giro por giro y, completa, ya es el globo: la cuadrícula se
+// desvanece sin mover una partícula. Arranca rotada para que, al
+// completarse, quede de frente América (no el Pacífico). Después, el
+// globo: barrido de screening CONTINUO; al elegir un país el barrido lo
+// "busca", se apaga al enfocar y vuelve al cerrarlo.
 const SCRAMBLED_S = 0.8;  // s mostrando el mapa revuelto antes de resolver
 const SOLVE_SLOT  = 0.4;  // s por giro de la solución
-const SOLVED_S    = 0.45; // s con el mapa completo antes de inflarse
+const SOLVED_S    = 0.45; // s con el mapa completo antes de soltar la cuadrícula
+const INTRO_FACE  = { lat: 15, lon: -90 }; // de frente al completarse
 // Segundos de barrido "buscando el país" antes del acercamiento.
 const SEARCH_S = 1.1;
 
@@ -192,15 +193,8 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274, onUnfocus }, r
       // enfoque). Se decide cada frame en el loop, no con temporizadores.
       let scanTarget = 0;
 
-      // ¿Toca la intro del cubo? try/catch: sessionStorage puede lanzar
-      // (modo privado, sitio bloqueado) — entonces se muestra la intro.
-      let playIntro = typeof matchMedia === "undefined" || !matchMedia("(prefers-reduced-motion: reduce)").matches;
-      if (playIntro) {
-        try {
-          if (sessionStorage.getItem("riskon-intro") === "1") playIntro = false;
-          else sessionStorage.setItem("riskon-intro", "1");
-        } catch {}
-      }
+      // Intro en cada carga, salvo que el lector pida no ver movimiento.
+      const playIntro = typeof matchMedia === "undefined" || !matchMedia("(prefers-reduced-motion: reduce)").matches;
 
       // Posiciones de cada forma. El cubo queda quieto: los giros de capa los
       // aplica el shader.
@@ -208,7 +202,7 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274, onUnfocus }, r
         switch (f.id) {
           case "GLOBE":   return genGlobe(N, R);
           case "SPHERE":  return genSphere(N, R);
-          case "CUBE":    return genCube(N, R);
+          case "CUBE":    return genGlobe(N, R); // misma geometría: resuelta, es el globo
           default:        return genGlobe(N, R);
         }
       });
@@ -303,7 +297,7 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274, onUnfocus }, r
           // Intro del cubo — ver cubeSolveAt.
           uTwist:         { value: Array.from({ length: TWIST_SLOTS }, () => new THREE.Vector4()) },
           uTwistOn:       { value: 0 },
-          uTwistR:        { value: R * CUBE_H },
+          uTwistR:        { value: R },
           uCube:          { value: 0 },
         },
         vertexShader: GLOBE_VERTEX_SHADER,
@@ -319,6 +313,13 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274, onUnfocus }, r
 
       const group = new THREE.Group();
       group.add(new THREE.Points(geometry, material));
+      if (playIntro) {
+        // Se descuenta lo que el globo gira (0.216 rad/s) hasta completarse
+        // el mapa, para que en ese momento quede INTRO_FACE de frente.
+        const d = latLonToDir(INTRO_FACE.lat, INTRO_FACE.lon);
+        const solvedAt = INTRO_MORPH_S + SCRAMBLED_S + CUBE_MOVES * SOLVE_SLOT;
+        group.rotation.y = -Math.atan2(d.x, d.z) - 0.216 * solvedAt;
+      }
 
       // Atmósfera: halo fresnel en el limbo (solo visible en modo GLOBE — su
       // intensidad sigue a uColorT, igual que las fronteras).
@@ -689,9 +690,10 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274, onUnfocus }, r
 
         material.uniforms.uTime.value = elapsed;
 
-        // ── Intro del cubo (100% shader): la nube arma el cubo revuelto,
+        // ── Intro (100% shader): la nube arma la esfera Rubik revuelta,
         // SCRAMBLED_S con el mapa revuelto, un giro deshecho cada SOLVE_SLOT,
-        // SOLVED_S con el mapa completo y a inflarse en globo.
+        // SOLVED_S con el mapa completo y se suelta la cuadrícula (el "morph"
+        // a GLOBE es entre posiciones idénticas: solo desvanece uCube).
         const mtNow = morphT < 1 ? eio(morphT) : 1;
         cubeK = currentIdx === CUBE_IDX ? mtNow : Math.min(cubeK, 1 - mtNow);
         material.uniforms.uCube.value = cubeK;
@@ -722,8 +724,9 @@ const RiskSphere = forwardRef(function RiskSphere({ height = 274, onUnfocus }, r
         const colorTarget = currentIdx === CUBE_IDX || (currentIdx === GLOBE_IDX && !introActive) ? 1 : 0;
         material.uniforms.uColorT.value += (colorTarget - material.uniforms.uColorT.value) * 0.05;
         // Atmósfera y fronteras vectoriales siguen el mismo fade que el tinte.
-        // (salvo en el cubo: son capas esféricas que flotarían alrededor).
-        const sphereT = material.uniforms.uColorT.value * (1 - cubeK);
+        // Durante la intro se apagan del todo (antes se asomaba el halo en el
+        // armado y desaparecía): entran una sola vez, con la cuadrícula.
+        const sphereT = currentIdx === CUBE_IDX ? 0 : material.uniforms.uColorT.value * (1 - cubeK);
         atmoMat.uniforms.uIntensity.value = sphereT;
         atmoMat.uniforms.uTime.value      = elapsed;
         borderMat.uniforms.uColorT.value  = sphereT;
