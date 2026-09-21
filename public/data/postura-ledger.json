@@ -711,12 +711,12 @@
       "band": "DEFENSIVE",
       "band_cuts": "32/49/67/100",
       "condicion": "Suelto el dólar si el 10Y cede debajo de 4.80% o el par cierra bajo 16.85.",
-      "spot_t0": null,
-      "mxn5": null,
-      "verdict": null,
+      "spot_t0": 16.97559928894043,
+      "mxn5": 1.2218,
+      "verdict": true,
       "mxn5_fred": null,
       "verdict_fred": null,
-      "evaluated_at": null
+      "evaluated_at": "2026-09-21T12:54:17.541Z"
     },
     "2026-09-15": {
       "slug": "2026-09-15",
@@ -771,6 +771,21 @@
       "band": "CONSTRUCTIVE",
       "band_cuts": "32/49/67/100",
       "condicion": "Regreso al dólar si el USD/MXN cierra arriba de 17.2740.",
+      "spot_t0": null,
+      "mxn5": null,
+      "verdict": null,
+      "mxn5_fred": null,
+      "verdict_fred": null,
+      "evaluated_at": null
+    },
+    "2026-09-21": {
+      "slug": "2026-09-21",
+      "bias": "pro-peso",
+      "prior": null,
+      "score": 69,
+      "band": "RISK-ON",
+      "band_cuts": "32/49/67/100",
+      "condicion": "Regreso al dólar si el USD/MXN cierra arriba de 17.2711.",
       "spot_t0": null,
       "mxn5": null,
       "verdict": null,
