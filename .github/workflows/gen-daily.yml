@@ -132,7 +132,11 @@ jobs:
           # sea que a esta altura el remoto ya avanzó y el clon local está atrás.
           git pull --rebase origin main
           node scripts/update-ledger.mjs
-          git add public/data/postura-ledger.json
+          # Portafolio simulado de 1 MDP para /indice (2026-09-21). Mismo paso
+          # porque comparte las garantías: después del envío, best-effort (el
+          # script sale con 0 aunque falle) y congela lo ya cerrado.
+          node scripts/update-portfolio.mjs
+          git add public/data/postura-ledger.json public/data/portafolio.json
           if git diff --cached --quiet; then
             echo "Ledger sin cambios"
           else

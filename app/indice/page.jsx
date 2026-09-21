@@ -10,6 +10,10 @@ import PosturaRecord from "../../components/PosturaRecord";
 import BandEvidence from "../../components/BandEvidence";
 import SignalAudit from "../../components/SignalAudit";
 import RiskBands from "../../components/RiskBands";
+import PortafolioRecord from "../../components/PortafolioRecord";
+import PortafolioBacktest from "../../components/PortafolioBacktest";
+import fs from "node:fs";
+import path from "node:path";
 import { T } from "../../components/Lang";
 
 // La página se regenera con el redeploy diario del cron; el revalidate cubre
@@ -22,6 +26,18 @@ export const metadata = {
     "Histórico completo del Índice Risk On: el score publicado cada mañana antes de las 7:00, día por día, contra el mercado. Sin ediciones retroactivas.",
   alternates: { canonical: "/indice" },
 };
+
+// Portafolio simulado (2026-09-21). JSON estáticos escritos por el bot después
+// del envío (scripts/update-portfolio.mjs) y por la suite de validación
+// (06-esperanza-portafolio.mjs --json). Si faltan o no parsean, la tarjeta
+// simplemente no aparece: nunca tumban la página.
+function leerJson(nombre) {
+  try {
+    return JSON.parse(fs.readFileSync(path.join(process.cwd(), "public", "data", nombre), "utf8"));
+  } catch {
+    return null;
+  }
+}
 
 export default async function IndicePage() {
   const points = getAllPostsMeta()
@@ -40,6 +56,8 @@ export default async function IndicePage() {
     computeForwardReturns(points),
     posturaRecord(points),
   ]);
+  const portafolio = leerJson("portafolio.json");
+  const backtest = leerJson("portafolio-backtest.json");
 
   return (
     <div className="space-y-6 pt-4">
@@ -65,6 +83,12 @@ export default async function IndicePage() {
         </div>
       )}
 
+      {portafolio && (
+        <div className="reveal">
+          <PortafolioRecord data={portafolio} />
+        </div>
+      )}
+
       {fwd && (
         <div className="reveal">
           <WhatHappenedNext data={fwd} />
@@ -87,6 +111,12 @@ export default async function IndicePage() {
           </p>
         </div>
       </div>
+
+      {backtest && (
+        <div className="reveal">
+          <PortafolioBacktest data={backtest} />
+        </div>
+      )}
 
       <div className="reveal">
         <BandEvidence />

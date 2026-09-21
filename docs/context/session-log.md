@@ -14,3 +14,5 @@ One line per session, newest at top. Format: `[YYYY-MM-DD]: what happened`.
 - [2026-09-21]: Orbes de thinking-orbs llevados al hero. Iteración con Mauricio en localhost: barrido "searching" (A) gustó; giro Rubik sobre el globo al elegir país no. Quedó: dos fases 01 Macro (globo + barrido continuo) / 02 Quant (cubo Rubik, default), sin ATOM/VORONOI/THOMAS ni cráter del cursor. Subido a main.
 - [2026-09-21]: Cubo del hero interactivo (flick = giro con inercia, arrastre lento = rebanada con encaje). Subido a main; falta calibrar el umbral del flick en teléfono.
 - [2026-09-21]: Tras probarlo, el cubo interactivo y las dos fases no convencieron; el cubo queda como intro de carga (una vez por sesión) que se resuelve en el mapa Macro. Subido a main.
+- [2026-09-21]: Backtest de esperanza/Sharpe/portafolio 1 MDP (21 años + posturas reales con ejecución a las 7:00). Scripts nuevos sin commitear.
+- [2026-09-21]: Portafolio simulado de 1 MDP en /indice (track real diario/mensual + backtest 3/5 años de seguir el índice). Condiciones de invalidación probadas: no suman. Sin commitear.
