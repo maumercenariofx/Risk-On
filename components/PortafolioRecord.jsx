@@ -29,7 +29,9 @@ export function fmtDate(slug, lang, conAño = false) {
 }
 
 // Línea del capital contra la referencia de 1 MDP (punteada). Un solo eje.
-export function EquityChart({ puntos, base, lang, height = 220, conAño = false }) {
+export function EquityChart({ puntos, base, lang, height = 220, conAño = false, etiquetaBase }) {
+  // Referencia opcional (p.b): "siempre pro-peso" con la misma ejecución.
+  const conBase = puntos?.some((p) => p.b != null);
   const ref = useRef(null);
   const chartRef = useRef(null);
   useEffect(() => {
@@ -53,6 +55,11 @@ export function EquityChart({ puntos, base, lang, height = 220, conAño = false 
               tension: 0.2, pointRadius: 0, pointHitRadius: 10, pointHoverRadius: 4,
               pointHoverBackgroundColor: color, pointHoverBorderColor: "#000", pointHoverBorderWidth: 2,
             },
+            ...(conBase ? [{
+              data: puntos.map((p) => p.b), borderColor: "#9CA3AF", borderWidth: 1.5,
+              borderDash: [2, 3], tension: 0.2, pointRadius: 0, pointHoverRadius: 3, pointHitRadius: 0,
+              pointHoverBackgroundColor: "#9CA3AF",
+            }] : []),
             {
               data: puntos.map(() => base), borderColor: "#8A8A8E66", borderWidth: 1,
               borderDash: [4, 4], pointRadius: 0, pointHoverRadius: 0, pointHitRadius: 0,
@@ -72,6 +79,7 @@ export function EquityChart({ puntos, base, lang, height = 220, conAño = false 
                 label: (i) => {
                   const p = puntos[i.dataIndex];
                   const lines = [`${mxn(p.v)}  (${mxn(p.v - base, true)})`];
+                  if (p.b != null) lines.push(`${etiquetaBase}: ${mxn(p.b)}`);
                   if (p.px) lines.push(`USD/MXN ${p.px.toFixed(4)}`);
                   return lines;
                 },
@@ -86,7 +94,7 @@ export function EquityChart({ puntos, base, lang, height = 220, conAño = false 
       });
     })();
     return () => { cancelled = true; chartRef.current?.destroy(); chartRef.current = null; };
-  }, [puntos, base, lang, conAño]);
+  }, [puntos, base, lang, conAño, conBase, etiquetaBase]);
   return (
     <div style={{ position: "relative", width: "100%", height }}>
       <canvas ref={ref} role="img" aria-label={lang === "en" ? "Simulated portfolio value over time" : "Valor del portafolio simulado en el tiempo"} />
@@ -113,7 +121,7 @@ export default function PortafolioRecord({ data }) {
   if (!data?.daily?.length) return null;
   const r = data.resumen;
   const base = data.regla.capital;
-  const mesLabel = (m) => new Date(`${m}-15T12:00:00Z`).toLocaleDateString(lang === "en" ? "en-US" : "es-MX", { month: "long", year: "numeric", timeZone: "UTC" });
+  const mesLabel = (m) => new Date(`${m}-15T12:00:00Z`).toLocaleDateString(lang === "en" ? "en-US" : "es-MX", { month: "short", year: "numeric", timeZone: "UTC" });
   const mesActual = data.daily[data.daily.length - 1].d.slice(0, 7);
 
   return (
@@ -142,15 +150,34 @@ export default function PortafolioRecord({ data }) {
           sub={<T es={`${r.dias_habiles} días hábiles: no extrapolable`} en={`${r.dias_habiles} trading days: not extrapolable`} />} />
         <Kpi label={<T es="Caída máxima" en="Max drawdown" />} value={`−${r.max_dd_pct.toFixed(2)}%`}
           sub={<T es="de pico a valle, a las 7:00" en="peak to trough, at 7:00" />} />
+        {r.ventaja != null && (
+          <Kpi label={<T es="vs siempre pro-peso" en="vs always pro-peso" />} value={mxn(r.ventaja, true)} color={colorPnl(r.ventaja)}
+            sub={<T es={`pro-peso solo: ${mxn(r.base_pnl, true)}`} en={`pro-peso alone: ${mxn(r.base_pnl, true)}`} />} />
+        )}
       </div>
 
-      <EquityChart puntos={data.daily} base={base} lang={lang} />
+      {/* La referencia va en la MISMA gráfica y el mismo eje: es la misma
+          unidad (pesos), así que no hay doble escala. La diferencia entre las
+          dos curvas es lo que aporta el redactor sobre el carry. */}
+      {r.ventaja != null && (
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 16, fontSize: 11.5, color: "#9CA3AF", marginBottom: 6 }}>
+          <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <span style={{ width: 14, height: 2, background: colorPnl(r.pnl) }} />
+            <T es="Nuestras posturas" en="Our stances" />
+          </span>
+          <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <span style={{ width: 14, borderTop: "2px dashed #9CA3AF" }} />
+            <T es="Siempre pro-peso, misma ejecución" en="Always pro-peso, same execution" />
+          </span>
+        </div>
+      )}
+      <EquityChart puntos={data.daily} base={base} lang={lang} etiquetaBase={lang === "en" ? "Always pro-peso" : "Siempre pro-peso"} />
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 18, marginTop: 16 }}>
         <div style={{ overflowX: "auto" }}>
           <div style={{ ...sectionLabel, fontSize: 10.5, marginBottom: 6 }}><T es="Por mes" en="By month" /></div>
           <table style={{ borderCollapse: "collapse", width: "100%" }}>
-            <thead><tr><th style={{ ...th, textAlign: "left" }}><T es="Mes" en="Month" /></th><th style={th}>P&amp;L</th><th style={{ ...th, paddingRight: 0 }}>%</th></tr></thead>
+            <thead><tr><th style={{ ...th, textAlign: "left" }}><T es="Mes" en="Month" /></th><th style={th}><T es="Posturas" en="Stances" /></th><th style={{ ...th, paddingRight: 0 }}>Pro-peso</th></tr></thead>
             <tbody>
               {data.mensual.map((m) => (
                 <tr key={m.mes}>
@@ -158,7 +185,7 @@ export default function PortafolioRecord({ data }) {
                     {mesLabel(m.mes)}{m.mes === mesActual && <span style={{ color: "#8A8A8E" }}> · <T es="en curso" en="ongoing" /></span>}
                   </td>
                   <td style={{ ...td, color: colorPnl(m.pnl) }}>{mxn(m.pnl, true)}</td>
-                  <td style={{ ...td, paddingRight: 0, color: colorPnl(m.pnl) }}>{m.ret_pct > 0 ? "+" : ""}{m.ret_pct.toFixed(2)}%</td>
+                  <td style={{ ...td, paddingRight: 0, color: "#9CA3AF" }}>{m.pnl_base == null ? "—" : mxn(m.pnl_base, true)}</td>
                 </tr>
               ))}
             </tbody>
@@ -184,7 +211,9 @@ export default function PortafolioRecord({ data }) {
                     </td>
                     <td style={td}>{a.S0.toFixed(4)}</td>
                     <td style={{ ...td, color: "#9CA3AF" }}>{fmtDate(a.vence, lang)}</td>
-                    <td style={{ ...td, paddingRight: 0, color: colorPnl(a.pnl) }}>{mxn(a.pnl, true)}</td>
+                    <td style={{ ...td, paddingRight: 0, color: a.stop ? "#9CA3AF" : colorPnl(a.pnl) }}>
+                      {a.stop ? <T es="stop · en caja" en="stopped · cash" /> : mxn(a.pnl, true)}
+                    </td>
                   </tr>
                 );
               })}
@@ -199,8 +228,8 @@ export default function PortafolioRecord({ data }) {
 
       <p style={{ fontSize: 11.5, color: "#8A8A8E", lineHeight: 1.6, margin: "14px 0 0" }}>
         <T
-          es={`Cuando gana, una postura gana en promedio ${mxn(r.ganancia_media)} por tramo; cuando pierde, pierde ${mxn(Math.abs(r.perdida_media))}. Incluye carry Banxico − Fed (${data.regla.carry_pct.toFixed(2)} pp) y ${data.regla.costo_rt_pct}% de costo al cambiar de lado; no incluye lo que el millón ganaría en CETES. La condición de invalidación de cada postura no dispara salidas anticipadas: probamos cuatro formas de ejecutarla y todas rindieron menos que mantener los 5 días. Precios: velas de 1 hora de Yahoo (MXN=X). Simulación hipotética con muestra chica, no una recomendación de inversión.`}
-          en={`When a stance wins, it makes ${mxn(r.ganancia_media)} per tranche on average; when it loses, it loses ${mxn(Math.abs(r.perdida_media))}. Includes Banxico − Fed carry (${data.regla.carry_pct.toFixed(2)} pp) and a ${data.regla.costo_rt_pct}% cost when switching sides; excludes what the million would earn in CETES. Each stance's invalidation condition does not trigger early exits: we tested four ways to execute it and all returned less than holding the 5 days. Prices: Yahoo 1-hour bars (MXN=X). Hypothetical simulation on a small sample, not investment advice.`}
+          es={`Cuando gana, una postura gana en promedio ${mxn(r.ganancia_media)} por tramo; cuando pierde, pierde ${mxn(Math.abs(r.perdida_media))}. Incluye carry Banxico − Fed (${data.regla.carry_pct.toFixed(2)} pp) y ${data.regla.costo_rt_pct}% de costo al cambiar de lado; no incluye lo que el millón ganaría en CETES. Regla de riesgo de la simulación: si a las 7:00 el par va ${data.regla.stop_atr ?? 3} ATR en contra, el tramo sale y queda en caja hasta su vencimiento (${r.stops ?? 0} de ${r.cerradas} veces hasta hoy); es un freno de catástrofe, no un nivel que publiquemos por postura. La condición de invalidación del view no dispara salidas: sus cuatro formas de ejecutarla rindieron menos que mantener. Precios: velas de 1 hora de Yahoo (MXN=X). Simulación hipotética con muestra chica, no una recomendación de inversión.`}
+          en={`When a stance wins, it makes ${mxn(r.ganancia_media)} per tranche on average; when it loses, it loses ${mxn(Math.abs(r.perdida_media))}. Includes Banxico − Fed carry (${data.regla.carry_pct.toFixed(2)} pp) and a ${data.regla.costo_rt_pct}% cost when switching sides; excludes what the million would earn in CETES. Simulation risk rule: if at 7:00 the pair is ${data.regla.stop_atr ?? 3} ATR against the stance, the tranche exits and stays in cash until it matures (${r.stops ?? 0} of ${r.cerradas} times so far); it is a catastrophe brake, not a level we publish per stance. The view's invalidation condition does not trigger exits: its four execution variants returned less than holding. Prices: Yahoo 1-hour bars (MXN=X). Hypothetical simulation on a small sample, not investment advice.`}
         />
       </p>
     </div>
