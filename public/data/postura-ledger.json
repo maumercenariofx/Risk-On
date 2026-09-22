@@ -625,8 +625,8 @@
       "mxn5": 0.1552,
       "verdict": false,
       "evaluated_at": "2026-09-11T12:57:01.495Z",
-      "mxn5_fred": null,
-      "verdict_fred": null
+      "mxn5_fred": 1.4671,
+      "verdict_fred": false
     },
     "2026-09-07": {
       "slug": "2026-09-07",
@@ -654,8 +654,8 @@
       "spot_t0": 16.94729995727539,
       "mxn5": 0.9305,
       "verdict": false,
-      "mxn5_fred": null,
-      "verdict_fred": null,
+      "mxn5_fred": 1.3338,
+      "verdict_fred": false,
       "evaluated_at": "2026-09-15T12:54:30.857Z"
     },
     "2026-09-09": {
@@ -669,8 +669,8 @@
       "spot_t0": 16.909799575805664,
       "mxn5": 1.2963,
       "verdict": false,
-      "mxn5_fred": null,
-      "verdict_fred": null,
+      "mxn5_fred": 1.4319,
+      "verdict_fred": false,
       "evaluated_at": "2026-09-16T12:54:48.752Z"
     },
     "2026-09-10": {
@@ -684,8 +684,8 @@
       "spot_t0": 16.890390396118164,
       "mxn5": 1.5785,
       "verdict": true,
-      "mxn5_fred": null,
-      "verdict_fred": null,
+      "mxn5_fred": 1.2367,
+      "verdict_fred": true,
       "evaluated_at": "2026-09-17T12:59:13.860Z"
     },
     "2026-09-11": {
@@ -699,8 +699,8 @@
       "spot_t0": 16.984939575195312,
       "mxn5": 1.116,
       "verdict": true,
-      "mxn5_fred": null,
-      "verdict_fred": null,
+      "mxn5_fred": 1.6205,
+      "verdict_fred": true,
       "evaluated_at": "2026-09-18T12:55:02.602Z"
     },
     "2026-09-14": {
@@ -726,12 +726,12 @@
       "band": "CONSTRUCTIVE",
       "band_cuts": "32/49/67/100",
       "condicion": "Suelto el dólar si el 10Y cede debajo de 4.80% o el par cierra bajo 16.85.",
-      "spot_t0": null,
-      "mxn5": null,
-      "verdict": null,
+      "spot_t0": 17.120800018310547,
+      "mxn5": 0.7198,
+      "verdict": true,
       "mxn5_fred": null,
       "verdict_fred": null,
-      "evaluated_at": null
+      "evaluated_at": "2026-09-22T12:57:36.268Z"
     },
     "2026-09-16": {
       "slug": "2026-09-16",
@@ -786,6 +786,21 @@
       "band": "RISK-ON",
       "band_cuts": "32/49/67/100",
       "condicion": "Regreso al dólar si el USD/MXN cierra arriba de 17.2711.",
+      "spot_t0": null,
+      "mxn5": null,
+      "verdict": null,
+      "mxn5_fred": null,
+      "verdict_fred": null,
+      "evaluated_at": null
+    },
+    "2026-09-22": {
+      "slug": "2026-09-22",
+      "bias": "pro-dolar",
+      "prior": null,
+      "score": 53,
+      "band": "CONSTRUCTIVE",
+      "band_cuts": "32/49/67/100",
+      "condicion": "Suelto el sesgo pro-dólar si el USD/MXN cierra debajo de 17.10.",
       "spot_t0": null,
       "mxn5": null,
       "verdict": null,
