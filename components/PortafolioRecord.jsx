@@ -5,7 +5,7 @@
 // dinero habría hecho o perdido un lector que las siguiera a las 7:00, con la
 // regla completa a la vista. Los datos los escribe scripts/update-portfolio.mjs
 // después del envío. Desde el 2026-09-23 las abiertas se re-marcan en el
-// navegador con el spot de /api/spot cada 30s (lib/portafolioLive.js); si ese
+// navegador con el spot de /api/spot cada 15s (lib/portafolioLive.js); si ese
 // endpoint falla, la tarjeta muestra el JSON tal cual: la página de
 // credibilidad nunca se cae con Yahoo (lección del ledger, 2026-08-21).
 import { useEffect, useRef, useState } from "react";
@@ -32,9 +32,15 @@ export function fmtDate(slug, lang, conAño = false) {
 }
 
 // Línea del capital contra la referencia de 1 MDP (punteada). Un solo eje.
-export function EquityChart({ puntos, base, lang, height = 220, conAño = false }) {
+// `punto` es el valor en vivo (opcional): se dibuja como último punto ("ahora")
+// y se actualiza EN SITIO cada vez que cambia, sin destruir la gráfica — con
+// sondeo de 15s, redibujarla animada cada vez era un parpadeo constante.
+export function EquityChart({ puntos, punto = null, base, lang, height = 220, conAño = false }) {
   const ref = useRef(null);
   const chartRef = useRef(null);
+  const todosRef = useRef(puntos);
+  const etiqueta = (p) => (p.live ? (lang === "en" ? "now" : "ahora") : fmtDate(p.d, lang, conAño));
+  const conVivo = !!punto;
   useEffect(() => {
     if (!puntos?.length) return;
     let cancelled = false;
@@ -42,22 +48,24 @@ export function EquityChart({ puntos, base, lang, height = 220, conAño = false 
       const Chart = await loadChart();
       if (cancelled || !ref.current) return;
       chartRef.current?.destroy();
-      const ultimo = puntos[puntos.length - 1].v;
+      const todos = punto ? [...puntos, punto] : puntos;
+      todosRef.current = todos;
+      const ultimo = todos[todos.length - 1].v;
       const color = ultimo >= base ? GREEN : RED;
       chartRef.current = new Chart(ref.current, {
         type: "line",
         plugins: [crosshairPlugin],
         data: {
-          labels: puntos.map((p) => (p.live ? (lang === "en" ? "now" : "ahora") : fmtDate(p.d, lang, conAño))),
+          labels: todos.map(etiqueta),
           datasets: [
             {
-              data: puntos.map((p) => p.v), borderColor: color, borderWidth: 2,
+              data: todos.map((p) => p.v), borderColor: color, borderWidth: 2,
               backgroundColor: color + "1A", fill: { target: { value: base } },
               tension: 0.2, pointRadius: 0, pointHitRadius: 10, pointHoverRadius: 4,
               pointHoverBackgroundColor: color, pointHoverBorderColor: "#000", pointHoverBorderWidth: 2,
             },
             {
-              data: puntos.map(() => base), borderColor: "#8A8A8E66", borderWidth: 1,
+              data: todos.map(() => base), borderColor: "#8A8A8E66", borderWidth: 1,
               borderDash: [4, 4], pointRadius: 0, pointHoverRadius: 0, pointHitRadius: 0,
             },
           ],
@@ -73,7 +81,7 @@ export function EquityChart({ puntos, base, lang, height = 220, conAño = false 
               bodyFont: monoFont(12),
               callbacks: {
                 label: (i) => {
-                  const p = puntos[i.dataIndex];
+                  const p = todosRef.current[i.dataIndex];
                   const lines = [`${mxn(p.v)}  (${mxn(p.v - base, true)})`];
                   if (p.px) lines.push(`USD/MXN ${p.px.toFixed(4)}`);
                   return lines;
@@ -89,7 +97,24 @@ export function EquityChart({ puntos, base, lang, height = 220, conAño = false 
       });
     })();
     return () => { cancelled = true; chartRef.current?.destroy(); chartRef.current = null; };
-  }, [puntos, base, lang, conAño]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [puntos, base, lang, conAño, conVivo]);
+
+  // Cambió el spot: se mueve solo el último punto y su color, sin animación.
+  useEffect(() => {
+    const ch = chartRef.current;
+    if (!ch || !punto) return;
+    const todos = [...puntos, punto];
+    todosRef.current = todos;
+    const color = punto.v >= base ? GREEN : RED;
+    ch.data.labels = todos.map(etiqueta);
+    ch.data.datasets[0].data = todos.map((p) => p.v);
+    ch.data.datasets[0].borderColor = color;
+    ch.data.datasets[0].backgroundColor = color + "1A";
+    ch.data.datasets[0].pointHoverBackgroundColor = color;
+    ch.update("none");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [punto]);
   return (
     <div style={{ position: "relative", width: "100%", height }}>
       <canvas ref={ref} role="img" aria-label={lang === "en" ? "Simulated portfolio value over time" : "Valor del portafolio simulado en el tiempo"} />
@@ -111,9 +136,9 @@ const th = { padding: "6px 10px 6px 0", fontSize: 10.5, letterSpacing: 1, color:
 const td = { padding: "7px 10px 7px 0", textAlign: "right", fontFamily: "var(--font-mono)", fontSize: 12, color: "#F5F5F2", fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap", borderTop: "1px solid rgba(255,255,255,0.05)" };
 const colorPnl = (v) => (v > 0 ? GREEN : v < 0 ? RED : "#9CA3AF");
 
-const SPOT_MS = 30_000;
+const SPOT_MS = 15_000;
 
-// Spot en vivo: se pide al montar y cada 30s mientras la pestaña esté visible.
+// Spot en vivo: se pide al montar y cada 15s mientras la pestaña esté visible.
 // Cualquier fallo deja `spot` en null y la UI se queda con los datos del bot.
 function useSpotVivo() {
   const [spot, setSpot] = useState(null);
@@ -150,7 +175,6 @@ export default function PortafolioRecord({ data }) {
   const r = live ? { ...data.resumen, valor: live.valor, pnl: live.pnl, ret_pct: live.ret_pct } : data.resumen;
   const abiertas = live ? live.abiertas : data.abiertas;
   const mensual = live ? live.mensual : data.mensual;
-  const puntos = live ? [...data.daily, live.punto] : data.daily;
   const spotPx = live ? spot.px : data.spot.px;
   const spotTs = live ? spot.ts : data.spot.ts;
   const base = data.regla.capital;
@@ -189,7 +213,7 @@ export default function PortafolioRecord({ data }) {
           La referencia "siempre pro-peso" se sigue calculando en
           portafolio.json (resumen.base_*, daily[].b) para la revisión interna
           de enero 2027, pero no se muestra. */}
-      <EquityChart puntos={puntos} base={base} lang={lang} />
+      <EquityChart puntos={data.daily} punto={live?.punto ?? null} base={base} lang={lang} />
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 18, marginTop: 16 }}>
         <div style={{ overflowX: "auto" }}>
@@ -241,7 +265,7 @@ export default function PortafolioRecord({ data }) {
             {live && <PuntoVivo />}
             USD/MXN {spotPx.toFixed(4)} ·{" "}
             {live && <><T es="en vivo" en="live" /> · </>}
-            {new Date(spotTs).toLocaleString(lang === "en" ? "en-US" : "es-MX", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "America/Mexico_City" })} CDMX
+            {new Date(spotTs).toLocaleString(lang === "en" ? "en-US" : "es-MX", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", ...(live ? { second: "2-digit" } : {}), timeZone: "America/Mexico_City" })} CDMX
           </div>
         </div>
       </div>

@@ -1,14 +1,17 @@
 // app/api/spot/route.js
 // Spot USD/MXN en vivo para el portafolio simulado de /indice (2026-09-23):
-// último candle de 1 minuto de MXN=X en Yahoo, el mismo dato que usa
+// último tick de MXN=X en Yahoo (el candle de 1 minuto en curso trae el
+// último precio con su segundo exacto), el mismo dato que usa
 // /api/market?live=1 para el correo. Respuesta mínima ({px, ts}) porque se
-// consulta cada 30s desde el navegador; la caché de 30s en el edge hace que
-// N lectores cuesten una sola llamada a Yahoo.
+// consulta cada 15s desde el navegador; la caché de 10s en el edge hace que
+// N lectores cuesten una sola llamada a Yahoo. El 23-sep con 30s + 120s de
+// stale-while-revalidate Vercel servía STALE con Age 33 y el lector veía el
+// número quieto por minutos: la caché tiene que ser más corta que el sondeo.
 // Best-effort: si Yahoo falla responde 503 y la tarjeta se queda con el JSON
 // del bot (nunca rompe la página de credibilidad, lección del 2026-08-21).
 
 export const dynamic = "force-dynamic";
-const REVALIDATE = 30;
+const REVALIDATE = 10;
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
 
 export async function GET() {
@@ -28,7 +31,7 @@ export async function GET() {
     if (i < 0) throw new Error("sin candles");
     return Response.json(
       { px: Math.round(closes[i] * 10000) / 10000, ts: new Date(ts[i] * 1000).toISOString() },
-      { headers: { "Cache-Control": `s-maxage=${REVALIDATE}, stale-while-revalidate=120` } },
+      { headers: { "Cache-Control": `s-maxage=${REVALIDATE}, stale-while-revalidate=20` } },
     );
   } catch (e) {
     return Response.json({ error: String(e?.message ?? e) }, { status: 503, headers: { "Cache-Control": "no-store" } });
