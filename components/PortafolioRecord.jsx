@@ -4,10 +4,13 @@
 // Complementa al marcador: el marcador dice si acertamos; esto dice cuánto
 // dinero habría hecho o perdido un lector que las siguiera a las 7:00, con la
 // regla completa a la vista. Los datos los escribe scripts/update-portfolio.mjs
-// después del envío; esta vista no llama a ninguna API (si Yahoo cae, la página
-// de credibilidad no se cae con él — lección del ledger, 2026-08-21).
-import { useEffect, useRef } from "react";
+// después del envío. Desde el 2026-09-23 las abiertas se re-marcan en el
+// navegador con el spot de /api/spot cada 30s (lib/portafolioLive.js); si ese
+// endpoint falla, la tarjeta muestra el JSON tal cual: la página de
+// credibilidad nunca se cae con Yahoo (lección del ledger, 2026-08-21).
+import { useEffect, useRef, useState } from "react";
 import { useLang, T } from "./Lang";
+import { marcarEnVivo } from "../lib/portafolioLive";
 import {
   crosshairPlugin, tooltipDefaults, xScaleDefaults, yScaleDefaults,
   cardStyle, sectionLabel, monoFont, loadChart, GREEN, RED,
@@ -45,7 +48,7 @@ export function EquityChart({ puntos, base, lang, height = 220, conAño = false 
         type: "line",
         plugins: [crosshairPlugin],
         data: {
-          labels: puntos.map((p) => fmtDate(p.d, lang, conAño)),
+          labels: puntos.map((p) => (p.live ? (lang === "en" ? "now" : "ahora") : fmtDate(p.d, lang, conAño))),
           datasets: [
             {
               data: puntos.map((p) => p.v), borderColor: color, borderWidth: 2,
@@ -108,10 +111,48 @@ const th = { padding: "6px 10px 6px 0", fontSize: 10.5, letterSpacing: 1, color:
 const td = { padding: "7px 10px 7px 0", textAlign: "right", fontFamily: "var(--font-mono)", fontSize: 12, color: "#F5F5F2", fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap", borderTop: "1px solid rgba(255,255,255,0.05)" };
 const colorPnl = (v) => (v > 0 ? GREEN : v < 0 ? RED : "#9CA3AF");
 
+const SPOT_MS = 30_000;
+
+// Spot en vivo: se pide al montar y cada 30s mientras la pestaña esté visible.
+// Cualquier fallo deja `spot` en null y la UI se queda con los datos del bot.
+function useSpotVivo() {
+  const [spot, setSpot] = useState(null);
+  useEffect(() => {
+    let dead = false;
+    const load = () => {
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
+      fetch("/api/spot")
+        .then((r) => (r.ok ? r.json() : null))
+        .then((j) => { if (!dead && j?.px) setSpot(j); })
+        .catch(() => {});
+    };
+    load();
+    const id = setInterval(load, SPOT_MS);
+    document.addEventListener("visibilitychange", load);
+    return () => { dead = true; clearInterval(id); document.removeEventListener("visibilitychange", load); };
+  }, []);
+  return spot;
+}
+
+function PuntoVivo() {
+  return (
+    <span aria-hidden="true" className="animate-pulse" style={{ display: "inline-block", width: 6, height: 6, borderRadius: 3, background: GREEN, marginRight: 5, verticalAlign: "middle" }} />
+  );
+}
+
 export default function PortafolioRecord({ data }) {
   const { lang } = useLang();
+  const spot = useSpotVivo();
   if (!data?.daily?.length) return null;
-  const r = data.resumen;
+  const live = spot ? marcarEnVivo(data, spot) : null;
+  // Con spot vivo, `r`, `abiertas` y `mensual` traen los números re-marcados;
+  // anualizado y caída máxima siguen siendo los de las 7:00 (ver lib/portafolioLive.js).
+  const r = live ? { ...data.resumen, valor: live.valor, pnl: live.pnl, ret_pct: live.ret_pct } : data.resumen;
+  const abiertas = live ? live.abiertas : data.abiertas;
+  const mensual = live ? live.mensual : data.mensual;
+  const puntos = live ? [...data.daily, live.punto] : data.daily;
+  const spotPx = live ? spot.px : data.spot.px;
+  const spotTs = live ? spot.ts : data.spot.ts;
   const base = data.regla.capital;
   const mesLabel = (m) => new Date(`${m}-15T12:00:00Z`).toLocaleDateString(lang === "en" ? "en-US" : "es-MX", { month: "short", year: "numeric", timeZone: "UTC" });
   const mesActual = data.daily[data.daily.length - 1].d.slice(0, 7);
@@ -148,7 +189,7 @@ export default function PortafolioRecord({ data }) {
           La referencia "siempre pro-peso" se sigue calculando en
           portafolio.json (resumen.base_*, daily[].b) para la revisión interna
           de enero 2027, pero no se muestra. */}
-      <EquityChart puntos={data.daily} base={base} lang={lang} />
+      <EquityChart puntos={puntos} base={base} lang={lang} />
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 18, marginTop: 16 }}>
         <div style={{ overflowX: "auto" }}>
@@ -156,7 +197,7 @@ export default function PortafolioRecord({ data }) {
           <table style={{ borderCollapse: "collapse", width: "100%" }}>
             <thead><tr><th style={{ ...th, textAlign: "left" }}><T es="Mes" en="Month" /></th><th style={th}>P&amp;L</th><th style={{ ...th, paddingRight: 0 }}>%</th></tr></thead>
             <tbody>
-              {data.mensual.map((m) => (
+              {mensual.map((m) => (
                 <tr key={m.mes}>
                   <td style={{ ...td, textAlign: "left", fontFamily: "inherit", fontSize: 12.5, color: "#C0C0BC" }}>
                     {mesLabel(m.mes)}{m.mes === mesActual && <span style={{ color: "#8A8A8E" }}> · <T es="en curso" en="ongoing" /></span>}
@@ -178,7 +219,7 @@ export default function PortafolioRecord({ data }) {
               <th style={{ ...th, paddingRight: 0 }}>P&amp;L</th>
             </tr></thead>
             <tbody>
-              {data.abiertas.map((a) => {
+              {abiertas.map((a) => {
                 const b = BIAS[a.bias] ?? BIAS.neutral;
                 return (
                   <tr key={a.slug}>
@@ -197,8 +238,10 @@ export default function PortafolioRecord({ data }) {
             </tbody>
           </table>
           <div style={{ fontSize: 11, color: "#8A8A8E", marginTop: 6 }}>
-            USD/MXN {data.spot.px.toFixed(4)} ·{" "}
-            {new Date(data.spot.ts).toLocaleString(lang === "en" ? "en-US" : "es-MX", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "America/Mexico_City" })} CDMX
+            {live && <PuntoVivo />}
+            USD/MXN {spotPx.toFixed(4)} ·{" "}
+            {live && <><T es="en vivo" en="live" /> · </>}
+            {new Date(spotTs).toLocaleString(lang === "en" ? "en-US" : "es-MX", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "America/Mexico_City" })} CDMX
           </div>
         </div>
       </div>
