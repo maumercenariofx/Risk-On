@@ -756,12 +756,12 @@
       "band": "RISK-ON",
       "band_cuts": "32/49/67/100",
       "condicion": "Suelto el sesgo al dólar si el 10Y cierra debajo de 4.80% o el par pierde 16.85.",
-      "spot_t0": null,
-      "mxn5": null,
-      "verdict": null,
+      "spot_t0": 17.240280151367188,
+      "mxn5": 2.0227,
+      "verdict": true,
       "mxn5_fred": null,
       "verdict_fred": null,
-      "evaluated_at": null
+      "evaluated_at": "2026-09-24T12:53:36.656Z"
     },
     "2026-09-18": {
       "slug": "2026-09-18",
@@ -816,6 +816,21 @@
       "band": "DEFENSIVE",
       "band_cuts": "32/49/67/100",
       "condicion": "Suelto el dólar si el USD/MXN cierra debajo de 17.29.",
+      "spot_t0": null,
+      "mxn5": null,
+      "verdict": null,
+      "mxn5_fred": null,
+      "verdict_fred": null,
+      "evaluated_at": null
+    },
+    "2026-09-24": {
+      "slug": "2026-09-24",
+      "bias": "pro-dolar",
+      "prior": null,
+      "score": 41,
+      "band": "DEFENSIVE",
+      "band_cuts": "32/49/67/100",
+      "condicion": "Suelto el sesgo al dólar si el USD/MXN cierra debajo de 17.29.",
       "spot_t0": null,
       "mxn5": null,
       "verdict": null,
