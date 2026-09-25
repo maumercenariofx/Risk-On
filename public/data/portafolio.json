@@ -12,28 +12,28 @@
   "carry_pct": 2.87,
   "fuente": "Yahoo Finance · MXN=X, velas de 1 hora"
  },
- "generado": "2026-09-24T17:50:12.182Z",
+ "generado": "2026-09-25T12:55:31.003Z",
  "spot": {
-  "px": 17.689,
-  "ts": "2026-09-24T17:50:11.000Z"
+  "px": 17.7136,
+  "ts": "2026-09-25T12:55:29.000Z"
  },
  "resumen": {
   "desde": "2026-07-10",
-  "valor": 1038556,
-  "pnl": 38556,
-  "ret_pct": 3.86,
+  "valor": 1039389,
+  "pnl": 39389,
+  "ret_pct": 3.94,
   "pnl_cerrado": 28579,
   "dias_habiles": 54,
-  "anualizado_pct": 19.3,
+  "anualizado_pct": 19.8,
   "max_dd_pct": 0.57,
   "cerradas": 47,
   "ganadoras": 28,
   "stops": 4,
   "ganancia_media": 1716,
   "perdida_media": -1025,
-  "base_valor": 1003213,
-  "base_pnl": 3213,
-  "ventaja": 35343
+  "base_valor": 1002677,
+  "base_pnl": 2677,
+  "ventaja": 36712
  },
  "mensual": [
   {
@@ -80,7 +80,7 @@
    "S0": 17.2415,
    "vence": "2026-09-29",
    "capital": 205202.39,
-   "pnl": 5293.25,
+   "pnl": 5570.28,
    "stop": null
   },
   {
@@ -89,7 +89,7 @@
    "S0": 17.436,
    "vence": "2026-09-30",
    "capital": 207556.81,
-   "pnl": 2995.13,
+   "pnl": 3272.02,
    "stop": null
   },
   {
@@ -98,7 +98,7 @@
    "S0": 17.5484,
    "vence": "2026-10-01",
    "capital": 210695.82,
-   "pnl": 1688.1,
+   "pnl": 1967.27,
    "stop": null
   }
  ],
