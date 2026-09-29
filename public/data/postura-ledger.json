@@ -714,8 +714,8 @@
       "spot_t0": 16.97559928894043,
       "mxn5": 1.2218,
       "verdict": true,
-      "mxn5_fred": null,
-      "verdict_fred": null,
+      "mxn5_fred": 0.6709,
+      "verdict_fred": true,
       "evaluated_at": "2026-09-21T12:54:17.541Z"
     },
     "2026-09-15": {
@@ -729,8 +729,8 @@
       "spot_t0": 17.120800018310547,
       "mxn5": 0.7198,
       "verdict": true,
-      "mxn5_fred": null,
-      "verdict_fred": null,
+      "mxn5_fred": 0.9504,
+      "verdict_fred": true,
       "evaluated_at": "2026-09-22T12:57:36.268Z"
     },
     "2026-09-16": {
@@ -744,8 +744,8 @@
       "spot_t0": 17.146400451660156,
       "mxn5": 1.7864,
       "verdict": true,
-      "mxn5_fred": null,
-      "verdict_fred": null,
+      "mxn5_fred": 2.0372,
+      "verdict_fred": true,
       "evaluated_at": "2026-09-23T12:54:52.706Z"
     },
     "2026-09-17": {
@@ -759,8 +759,8 @@
       "spot_t0": 17.240280151367188,
       "mxn5": 2.0227,
       "verdict": true,
-      "mxn5_fred": null,
-      "verdict_fred": null,
+      "mxn5_fred": 2.8371,
+      "verdict_fred": true,
       "evaluated_at": "2026-09-24T12:53:36.656Z"
     },
     "2026-09-18": {
@@ -774,8 +774,8 @@
       "spot_t0": 17.163440704345703,
       "mxn5": 3.2057,
       "verdict": false,
-      "mxn5_fred": null,
-      "verdict_fred": null,
+      "mxn5_fred": 2.5966,
+      "verdict_fred": false,
       "evaluated_at": "2026-09-25T12:55:30.685Z"
     },
     "2026-09-21": {
@@ -801,12 +801,12 @@
       "band": "CONSTRUCTIVE",
       "band_cuts": "32/49/67/100",
       "condicion": "Suelto el sesgo pro-dólar si el USD/MXN cierra debajo de 17.10.",
-      "spot_t0": null,
-      "mxn5": null,
-      "verdict": null,
+      "spot_t0": 17.21596908569336,
+      "mxn5": 4.2917,
+      "verdict": true,
       "mxn5_fred": null,
       "verdict_fred": null,
-      "evaluated_at": null
+      "evaluated_at": "2026-09-29T12:55:31.887Z"
     },
     "2026-09-23": {
       "slug": "2026-09-23",
@@ -861,6 +861,21 @@
       "band": "DEFENSIVE",
       "band_cuts": "32/49/67/100",
       "condicion": "Regreso a neutral si el USD/MXN cierra debajo de 17.60.",
+      "spot_t0": null,
+      "mxn5": null,
+      "verdict": null,
+      "mxn5_fred": null,
+      "verdict_fred": null,
+      "evaluated_at": null
+    },
+    "2026-09-29": {
+      "slug": "2026-09-29",
+      "bias": "pro-dolar",
+      "prior": null,
+      "score": 55,
+      "band": "CONSTRUCTIVE",
+      "band_cuts": "32/49/67/100",
+      "condicion": "Vuelvo a neutral si el USD/MXN cierra debajo de 17.60.",
       "spot_t0": null,
       "mxn5": null,
       "verdict": null,
