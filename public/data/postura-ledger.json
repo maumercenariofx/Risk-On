@@ -831,12 +831,12 @@
       "band": "DEFENSIVE",
       "band_cuts": "32/49/67/100",
       "condicion": "Suelto el sesgo al dólar si el USD/MXN cierra debajo de 17.29.",
-      "spot_t0": null,
-      "mxn5": null,
-      "verdict": null,
+      "spot_t0": 17.54129981994629,
+      "mxn5": 3.6669,
+      "verdict": true,
       "mxn5_fred": null,
       "verdict_fred": null,
-      "evaluated_at": null
+      "evaluated_at": "2026-10-01T12:57:34.019Z"
     },
     "2026-09-25": {
       "slug": "2026-09-25",
@@ -891,6 +891,21 @@
       "band": "CONSTRUCTIVE",
       "band_cuts": "32/49/67/100",
       "condicion": "Vuelvo a una postura direccional si el USD/MXN cierra fuera del rango 17.90–18.15.",
+      "spot_t0": null,
+      "mxn5": null,
+      "verdict": null,
+      "mxn5_fred": null,
+      "verdict_fred": null,
+      "evaluated_at": null
+    },
+    "2026-10-01": {
+      "slug": "2026-10-01",
+      "bias": "pro-dolar",
+      "prior": null,
+      "score": 46,
+      "band": "DEFENSIVE",
+      "band_cuts": "32/49/67/100",
+      "condicion": "Abandono el sesgo al dólar si el USD/MXN cierra de vuelta debajo de 18.15.",
       "spot_t0": null,
       "mxn5": null,
       "verdict": null,
