@@ -160,7 +160,7 @@ html.io .reveal.in-view {
     opacity: 1;
     transform: none;
   }
-  .ticker-track, .tron-glow, .score-blink { animation: none; }
+  .ticker-track, .tron-glow { animation: none; }
   .flip-inner, .needle, .card-glass { transition: none; }
   .flip:hover .flip-inner { transform: none; }
   .drivers-bar, .drivers-tick { transition: none; }
@@ -233,16 +233,6 @@ html.io .reveal.in-view {
 }
 .ticker-pause:hover { color: #F5F5F2; border-color: #62626A; }
 .ticker-pause:focus-visible { outline: 2px solid rgba(255,255,255,0.5); outline-offset: 2px; }
-
-/* Score pulse — antes parpadeaba a 0.18 (leía como glitch); ahora es una
-   respiración suave y lenta */
-@keyframes score-blink {
-  0%, 100% { opacity: 1; }
-  50%       { opacity: 0.55; }
-}
-.score-blink {
-  animation: score-blink 5s ease-in-out 2s infinite;
-}
 
 /* Aguja del medidor */
 .needle {

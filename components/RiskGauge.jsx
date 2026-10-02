@@ -398,7 +398,7 @@ export default function RiskGauge({ prevScore = null, scoreHistory = null, ticke
         </div>
 
 
-        {/* Bottom-right: alert countries + score + label — score-blink starts after counter settles */}
+        {/* Bottom-right: alert countries + score + label */}
         {result && (
           // .hero-data, no .hero-late: este bloque se monta al resolver
           // /api/market, y el delay de 0.85s contaba desde ahí (latencia +
@@ -507,7 +507,7 @@ export default function RiskGauge({ prevScore = null, scoreHistory = null, ticke
               letterSpacing: "-0.03em",
               pointerEvents: "none",
             }}>
-              <div className="score-blink" style={{ color: accentColor, fontVariantNumeric: "tabular-nums" }}>{score}.</div>
+              <div style={{ color: accentColor, fontVariantNumeric: "tabular-nums" }}>{score}.</div>
               <div style={{ color: "#8A8A8E" }}>
                 <T es={label.es} en={label.en} />
               </div>
