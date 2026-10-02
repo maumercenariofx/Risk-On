@@ -13,6 +13,12 @@
      SubscribeForm como parche del popup claro). Auditoría UI 2026-10-02. */
   color-scheme: dark;
 }
+/* Las <option> heredan el color del <select>: en "¿Cómo nos conociste?" sin
+   elegir es el gris de placeholder (#8A8A8E), y sobre el popup oscuro que
+   pintan Chrome, Edge y Firefox de escritorio (≈#3B3B3B) queda en 3.3:1, abajo
+   de AA. Color y fondo propios, sin importar el del select. iOS y Android usan
+   su selector nativo e ignoran esto (revisión 2026-10-02). */
+select option { color: #F5F5F2; background-color: #0B0B0C; }
 
 html { overflow-x: hidden; }
 
