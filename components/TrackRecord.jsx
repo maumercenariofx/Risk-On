@@ -12,11 +12,12 @@ import SourceTag from "./SourceTag";
 import {
   crosshairPlugin, makeGlowPlugin, makeTerminalDotPlugin, makeGradientFn,
   semanticColor, tooltipDefaults, xScaleDefaults, yScaleDefaults,
-  cardStyle, sectionLabel, progressiveLine, monoFont, reducedMotion, loadChart,
+  cardStyle, sectionLabel, monoFont, loadChart,
 } from "../lib/chartHelpers";
 
-// Draw-on solo si el sistema no pide reduced-motion.
-const lineAnim = (count) => (reducedMotion() ? false : progressiveLine(count));
+// Sin draw-on (auditoría UI 2026-10-02): el marcador se LEE, no se dibuja. El
+// trazo lineal de 900ms además se repetía al llegar `fx` (deps del efecto de
+// las gráficas), así que el score se dibujaba dos veces en cada carga.
 
 // Líneas punteadas en los cortes de banda (29/48/72) con etiqueta discreta.
 const bandLinesPlugin = {
@@ -142,7 +143,7 @@ function SyncedScoreFx({ points, range }) {
         options: {
           responsive:          true,
           maintainAspectRatio: false,
-          animation:           lineAnim(points.length),
+          animation:           false,
           interaction:         { intersect: false, mode: "index" },
           onClick:             goView,
           onHover:             hoverCursor,
@@ -202,7 +203,7 @@ function SyncedScoreFx({ points, range }) {
           options: {
             responsive:          true,
             maintainAspectRatio: false,
-            animation:           lineAnim(points.length),
+            animation:           false,
             interaction:         { intersect: false, mode: "index" },
             onClick:             goView,
             onHover:             hoverCursor,

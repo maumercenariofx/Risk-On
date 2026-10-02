@@ -94,6 +94,7 @@ export default function MarketsClient({ embed = false }) {
   const canvasRef  = useRef(null);
   const chartRef   = useRef(null);
   const dataCache  = useRef({});
+  const revealedRef = useRef(false); // el revelado de la línea solo en el primer montaje
 
   const [range,        setRange]        = useState("1d");
   const [pair,         setPair]         = useState("USDMXN");
@@ -187,7 +188,12 @@ export default function MarketsClient({ embed = false }) {
 
       const plugins = [crosshairPlugin, makeTerminalDotPlugin(dotColor, 0)];
       if (!isIntraday) plugins.push(makeGlowPlugin(color, 0));
-      plugins.push(makeRevealPlugin({ fadeLeft: 0.08 }));
+      // Revelado solo la PRIMERA vez y en 250ms (auditoría UI 2026-10-02):
+      // cambiar de par, rango o idioma es la acción repetida de /markets y
+      // destruía y re-revelaba la gráfica en 700ms cada vez. El desvanecido
+      // del borde izquierdo se queda siempre.
+      plugins.push(makeRevealPlugin({ duration: revealedRef.current ? 0 : 250, fadeLeft: 0.08 }));
+      revealedRef.current = true;
 
       // Ejes en #8A8A8E (los de chartHelpers): el #4B5563 que traía esta copia
       // local daba ~2.6:1 sobre negro y reprobaba AA (2026-09-15).
