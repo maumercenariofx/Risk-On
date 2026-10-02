@@ -100,12 +100,21 @@ export default function Ticker() {
         textDecoration: "none",
       };
       const href = HREF[t[0]];
+      // Las copias b y c son decorado del bucle (auditoría UI 2026-10-02):
+      // fuera del árbol de accesibilidad y del tab — el lector de pantalla
+      // recorría la cinta 3 veces y el tab pasaba por 30 links que se mueven.
+      // `data-copy` además deja ocultarlas con reduced-motion (globals.css).
+      const copy = {
+        "data-copy": key,
+        "aria-hidden": key !== "a" || undefined,
+        tabIndex: key !== "a" ? -1 : undefined,
+      };
       return href ? (
-        <Link key={`${key}-${i}`} href={href} className="ticker-item" style={style}>
+        <Link key={`${key}-${i}`} href={href} className="ticker-item" style={style} {...copy}>
           {inner}
         </Link>
       ) : (
-        <span key={`${key}-${i}`} style={style}>{inner}</span>
+        <span key={`${key}-${i}`} style={style} {...copy}>{inner}</span>
       );
     });
 

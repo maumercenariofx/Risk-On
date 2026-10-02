@@ -208,6 +208,16 @@ html.io .reveal.in-view {
 /* Pausa explícita (botón). El :hover de arriba sirve en escritorio, pero en
    táctil no existe y WCAG 2.2.2 pide un control real (auditoría 2026-08-21). */
 .ticker-track.is-paused { animation-play-state: paused; }
+/* Con reduced-motion la pista se congelaba en translateX(0) y el overflow
+   recortaba el resto: a 375px solo se veían S&P 500 y NASDAQ, y USD/MXN (el
+   4º) nunca. Menos movimiento, no menos información: una sola copia que se
+   desplaza a mano (auditoría UI 2026-10-02). */
+@media (prefers-reduced-motion: reduce) {
+  .ticker-band { overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x proximity; }
+  /* !important: cada item trae display: inline-flex inline (Ticker.jsx). */
+  .ticker-track > [data-copy]:not([data-copy="a"]) { display: none !important; }
+  .ticker-item { scroll-snap-align: start; }
+}
 
 .ticker-pause {
   position: absolute;
