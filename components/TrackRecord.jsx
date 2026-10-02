@@ -81,7 +81,10 @@ function SyncedScoreFx({ points, range }) {
   const chartsRef = useRef({});
   const [fx, setFx]     = useState(null); // cierres USD/MXN alineados a points
   const [asOf, setAsOf] = useState(null); // momento real de la carga (veracidad)
+  const [coarse, setCoarse] = useState(false); // dedo: el aviso de doble toque
   const { lang } = useLang();
+
+  useEffect(() => { setCoarse(matchMedia("(pointer: coarse)").matches); }, []);
 
   useEffect(() => {
     fetch(`/api/history?range=${range}&symbol=USDMXN`)
@@ -113,9 +116,18 @@ function SyncedScoreFx({ points, range }) {
 
       const labels     = points.map((p) => fmtDate(p.slug, lang));
       const scoreColor = riskBand(points[points.length - 1].score).color;
+      // En táctil, primer toque = solo tooltip; el segundo en el MISMO punto
+      // abre el view (auditoría UI 2026-10-02). Chart.js muestra el tooltip en
+      // touchstart y luego recibe el click sintetizado; con intersect:false
+      // todo toque resolvía a un índice y navegaba: no había forma de leer un
+      // punto sin salir de /indice. `armed` es compartido por los dos paneles.
+      const coarsePtr = matchMedia("(pointer: coarse)").matches;
+      let armed = null;
       const goView = (_e, els) => {
         const i = els?.[0]?.index;
-        if (i != null) window.location.href = `/archive/${points[i].slug}`;
+        if (i == null) return;
+        if (coarsePtr && armed !== i) { armed = i; return; }
+        window.location.href = `/archive/${points[i].slug}`;
       };
       const hoverCursor = (e, els) => { e.native.target.style.cursor = els?.length ? "pointer" : "default"; };
       const hasFx = Array.isArray(fx) && fx.some((v) => v != null);
@@ -281,6 +293,12 @@ function SyncedScoreFx({ points, range }) {
         </>
       ) : (
         <Skeleton height={130} />
+      )}
+      {coarse && (
+        <p style={{ fontSize: 12, color: "#8A8A8E", lineHeight: 1.5, margin: "8px 0 0 0" }}>
+          <T es="Toca un punto para leerlo; tócalo otra vez para abrir su view."
+             en="Tap a point to read it; tap it again to open that day's view." />
+        </p>
       )}
     </>
   );
