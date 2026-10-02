@@ -310,6 +310,9 @@ a { color: inherit; }
 
 /* Bloques laterales (subtítulo, score, chips, timestamp): entran al final */
 .hero-late { opacity: 0; animation: fadeInUp 0.7s ease 0.85s forwards; }
+/* Bloque del score (2026-10-02): depende del fetch, así que ya llega tarde por
+   sí solo; entra en 250ms ease-out sin delay. La coreografía del título no cambia. */
+.hero-data { animation: fadeInUp 250ms cubic-bezier(0.23, 1, 0.32, 1) both; }
 
 /* Invitación a scrollear al pie del hero */
 @keyframes hint-bob {
@@ -320,7 +323,7 @@ a { color: inherit; }
 
 @media (prefers-reduced-motion: reduce) {
   .scroll-hint { animation: none; opacity: 0.45; }
-  .hero-line > span, .hero-canvas, .hero-late { animation: none; transform: none; opacity: 1; }
+  .hero-line > span, .hero-canvas, .hero-late, .hero-data { animation: none; transform: none; opacity: 1; }
 }
 
 /* Links del nav (desktop): subrayado animado + estado activo */

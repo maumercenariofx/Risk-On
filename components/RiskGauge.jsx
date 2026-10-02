@@ -350,7 +350,10 @@ export default function RiskGauge({ prevScore = null, scoreHistory = null, ticke
   }, [result, accentColor, score, data]);
 
   return (
-    <section className="reveal" style={{ animationDelay: "0.05s" }}>
+    // Sin .reveal (auditoría UI 2026-10-02): con html.io dejaba h1, globo y
+    // score en opacity 0 hasta que RevealObserver hidrataba — en un Android
+    // medio, pantalla negra. Lo de arriba del pliegue no espera al bundle.
+    <section>
 
       {/* ── Hero — pantalla COMPLETA: full-bleed, bajo el nav transparente ── */}
       <div ref={heroRef} className="full-bleed hero-full" style={{ position: "relative", marginBottom: 28 }}>
@@ -413,7 +416,10 @@ export default function RiskGauge({ prevScore = null, scoreHistory = null, ticke
 
         {/* Bottom-right: alert countries + score + label — score-blink starts after counter settles */}
         {result && (
-          <div className="hero-late" style={{
+          // .hero-data, no .hero-late: este bloque se monta al resolver
+          // /api/market, y el delay de 0.85s contaba desde ahí (latencia +
+          // 0.85s + 0.7s). Entrada propia de 250ms sin delay (2026-10-02).
+          <div className="hero-data" style={{
             position: "absolute",
             bottom: 28,
             right: 20,
