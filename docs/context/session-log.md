@@ -22,3 +22,4 @@ One line per session, newest at top. Format: `[YYYY-MM-DD]: what happened`.
 - [2026-09-21]: Intro sin nube (esfera Rubik desde el primer cuadro), noticias del país debajo del hero con aviso "Noticias · país ▼", y fix del hero desplazado 40 px por el TapeWidget. Subido a main.
 - [2026-09-23]: Portafolio simulado de /indice marcado a mercado en vivo (spot cada 30s vía /api/spot, fórmula compartida con el bot, vencidas congeladas). Verificado en preview. Subido a main.
 - [2026-10-02]: Auditoría UI aplicada en worktree aparte (13 de 16 hallazgos; RO-02, RO-10 y RO-13 quedan en todo.md). Sin push.
+- [2026-10-02]: Revisión de la auditoría UI: 5 correcciones (doble toque con tolerancia, ticker que por fin se detiene con reduced-motion, opciones del select, campos opcionales sin brinco y con foco, badge con visibility). Sin push.
