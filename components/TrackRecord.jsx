@@ -111,22 +111,37 @@ function SyncedScoreFx({ points, range }) {
       const Chart = await loadChart();
       if (cancelled || !scoreRef.current) return;
       chartsRef.current.unlink?.();
+      chartsRef.current.unarm?.();
       chartsRef.current.score?.destroy();
       chartsRef.current.fx?.destroy();
 
       const labels     = points.map((p) => fmtDate(p.slug, lang));
       const scoreColor = riskBand(points[points.length - 1].score).color;
-      // En táctil, primer toque = solo tooltip; el segundo en el MISMO punto
-      // abre el view (auditoría UI 2026-10-02). Chart.js muestra el tooltip en
-      // touchstart y luego recibe el click sintetizado; con intersect:false
-      // todo toque resolvía a un índice y navegaba: no había forma de leer un
-      // punto sin salir de /indice. `armed` es compartido por los dos paneles.
+      // En táctil, primer toque = solo tooltip; el segundo abre el view
+      // (auditoría UI 2026-10-02). Chart.js muestra el tooltip en touchstart y
+      // luego recibe el click sintetizado; con intersect:false todo toque
+      // resolvía a un índice y navegaba: no había forma de leer un punto sin
+      // salir de /indice.
+      // El segundo toque abre el punto que el tooltip YA enseñaba al bajar el
+      // dedo, si cae a ≤16px de él. Antes se exigía el mismo índice exacto, y a
+      // 375px los puntos quedan a ~4px: un pulgar que se corre armaba otro punto
+      // y hacía falta un tercer toque (revisión 2026-10-02, Playwright táctil).
+      // `shown` se lee en pointerdown nativo porque Chart.js procesa sus eventos
+      // en el siguiente frame: ahí el tooltip aún es el del toque anterior o el
+      // del arrastre, y si se tocó fuera de la gráfica ya no hay ninguno.
       const coarsePtr = matchMedia("(pointer: coarse)").matches;
-      let armed = null;
-      const goView = (_e, els) => {
-        const i = els?.[0]?.index;
+      let shown = null;
+      const readShown = (e) => {
+        shown = Chart.getChart(e.currentTarget)?.tooltip?.getActiveElements()[0]?.index ?? null;
+      };
+      const goView = (_e, els, chart) => {
+        let i = els?.[0]?.index;
         if (i == null) return;
-        if (coarsePtr && armed !== i) { armed = i; return; }
+        if (coarsePtr) {
+          const x = chart.scales.x;
+          if (shown == null || Math.abs(x.getPixelForValue(i) - x.getPixelForValue(shown)) > 16) return;
+          i = shown;
+        }
         window.location.href = `/archive/${points[i].slug}`;
       };
       const hoverCursor = (e, els) => { e.native.target.style.cursor = els?.length ? "pointer" : "default"; };
@@ -266,10 +281,17 @@ function SyncedScoreFx({ points, range }) {
         const un2 = link(chartsRef.current.fx, chartsRef.current.score);
         chartsRef.current.unlink = () => { un1(); un2(); };
       }
+
+      if (coarsePtr) {
+        const canvases = [chartsRef.current.score?.canvas, chartsRef.current.fx?.canvas].filter(Boolean);
+        canvases.forEach((c) => c.addEventListener("pointerdown", readShown));
+        chartsRef.current.unarm = () => canvases.forEach((c) => c.removeEventListener("pointerdown", readShown));
+      }
     })();
     return () => {
       cancelled = true;
       chartsRef.current.unlink?.();
+      chartsRef.current.unarm?.();
       chartsRef.current.score?.destroy();
       chartsRef.current.fx?.destroy();
       chartsRef.current = {};
