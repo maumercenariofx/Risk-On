@@ -198,7 +198,9 @@ export default function TapeWidget({ score }) {
       aria-label={lang === "en" ? "USD/MXN, last 6 months — open in Markets" : "USD/MXN últimos 6 meses — ver en Markets"}
       style={{
         position: "fixed",
-        bottom: 24,
+        // Mismo borde inferior que el badge del score (RiskGauge); env() vale 0
+        // mientras no haya viewport-fit=cover (2026-10-02).
+        bottom: "calc(24px + env(safe-area-inset-bottom, 0px))",
         left: 20,
         zIndex: 200,
         display: "block",

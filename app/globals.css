@@ -458,6 +458,20 @@ button, a[class*="rounded"] { transition-property: color, background-color, bord
   .badge-full { display: none; }
   .badge-mini { display: flex !important; }
 }
+/* ≤400px la píldora con "CONSTRUCTIVO" (~168px) se encimaba ~9px con el
+   mini-tape fijo de abajo-izquierda (TapeWidget, ~172px): la palabra de banda
+   sale de la vista (el color del número ya la codifica) y se queda para lector
+   de pantalla. El tape NO se oculta: cubre la lectura intradía en móvil
+   (IntradaySpark.jsx). Auditoría UI 2026-10-02. */
+@media (max-width: 400px) {
+  .badge-mini .badge-band {
+    position: absolute; width: 1px; height: 1px; overflow: hidden;
+    clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .badge-cta { translate: none !important; }
+}
 
 /* Heat-strip: los tooltips ocultos de [data-tip] ocupan layout (visibility:
    hidden deja la caja) y en las celdas del borde derecho desbordaban el

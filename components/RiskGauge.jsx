@@ -708,10 +708,16 @@ export default function RiskGauge({ prevScore = null, scoreHistory = null, ticke
 
       {/* ── Sticky score badge (aparece al scrollear fuera del hero) ──
           Ahora es CTA: click → form de suscripción. Si ya se suscribió
-          (localStorage riskon-sub) el renglón "Suscríbete" no se muestra. */}
-      {heroGone && result && (
+          (localStorage riskon-sub) el renglón "Suscríbete" no se muestra.
+          Siempre montado (auditoría UI 2026-10-02): antes se montaba con un
+          keyframe y se desmontaba en seco con heroGone; ahora entra y sale
+          con transiciones interrumpibles, y la salida es más corta. Oculto,
+          sale del tab y del árbol de accesibilidad. */}
+      {result && (
         <a
           href="/suscribete"
+          aria-hidden={heroGone ? undefined : true}
+          tabIndex={heroGone ? undefined : -1}
           onClick={(e) => {
             // Solo interceptamos si el form está en esta pantalla. Antes el href
             // era "#subscribe" con preventDefault incondicional: en la landing
@@ -725,7 +731,9 @@ export default function RiskGauge({ prevScore = null, scoreHistory = null, ticke
           className="badge-cta"
           style={{
             position: "fixed",
-            bottom: 24,
+            // env(): sin viewport-fit=cover vale 0 — no cambia nada hoy, pero
+            // deja listo el borde inferior del iPhone si algún día se activa.
+            bottom: "calc(24px + env(safe-area-inset-bottom, 0px))",
             right: 24,
             zIndex: 200,
             background: "rgba(9,9,11,0.96)",
@@ -740,7 +748,13 @@ export default function RiskGauge({ prevScore = null, scoreHistory = null, ticke
             boxShadow: `0 4px 32px rgba(0,0,0,0.7), 0 0 0 1px ${accentColor}18`,
             textDecoration: "none",
             cursor: "pointer",
-            animation: "fadeInUp .25s ease both",
+            // `translate` (no `transform`): no pisa el :hover/:active de .badge-cta.
+            opacity: heroGone ? 1 : 0,
+            translate: heroGone ? "0 0" : "0 8px",
+            pointerEvents: heroGone ? "auto" : "none",
+            transition: heroGone
+              ? "opacity 200ms cubic-bezier(0.23, 1, 0.32, 1), translate 200ms cubic-bezier(0.23, 1, 0.32, 1), transform 0.2s ease, box-shadow 0.2s ease"
+              : "opacity 150ms cubic-bezier(0.23, 1, 0.32, 1), translate 150ms cubic-bezier(0.23, 1, 0.32, 1), transform 0.2s ease, box-shadow 0.2s ease",
           }}
         >
           {/* Versión completa (desktop) */}
@@ -773,7 +787,7 @@ export default function RiskGauge({ prevScore = null, scoreHistory = null, ticke
             <span style={{ fontFamily: "var(--font-sans)", fontWeight: 800, fontSize: 17, lineHeight: 1, color: accentColor, fontVariantNumeric: "tabular-nums" }}>
               {score}
             </span>
-            <span style={{ fontSize: 11, letterSpacing: 1.2, color: accentColor, textTransform: "uppercase", fontFamily: "var(--font-mono)" }}>
+            <span className="badge-band" style={{ fontSize: 11, letterSpacing: 1.2, color: accentColor, textTransform: "uppercase", fontFamily: "var(--font-mono)" }}>
               {lang === "en" ? label.en : label.es}
             </span>
             {!isSub && <span style={{ color: "#F5F5F2", fontSize: 12, lineHeight: 1 }}>→</span>}
