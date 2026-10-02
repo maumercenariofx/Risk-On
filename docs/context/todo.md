@@ -32,3 +32,10 @@ to results.md. Format: `- [ ] (pending|in_progress) task - short note`.
 ## Pendientes de arquitectura
 - [ ] (pending) Añadir `docs/references/` reales conforme se necesiten y cablearlos como reglas de una línea en `CLAUDE.md`.
 - [ ] (pending) Evaluar si vale definir agentes en `docs/agents/` (candidatos naturales: un agente "redactor/editorial" dueño del tono, y uno "quant" dueño del índice y los backtests).
+
+## UI (auditoría UI 2026-10-02; hallazgos en `Expansion-USA/docs/references/auditoria-ui-2026-10-02.json`)
+- [ ] (pending) RO-02: veracidad de "ÍNDICE EN VIVO" — `RiskGauge` hace un solo fetch a /api/market; falta sondeo de 60s con guarda de visibilidad, tick de 30s para `dataFreshness`, hora absoluta después de 60 min y no decir "EN VIVO" con dato de más de 10 min. Ojo con lessons (caché del endpoint más corta que el sondeo). RO-03 ya quitó el conteo, así que el sondeo no lo reinicia.
+- [ ] (pending) RO-10: hover pegado en táctil — `future.hoverOnlyWhenSupported` en `tailwind.config.js` (63 utilidades `hover:` en 25 archivos) y los `:hover` de `globals.css` dentro de `@media (hover: hover) and (pointer: fine)`. Incluye ProfileCard: la cara trasera no se alcanza en iPhone, con teclado ni con reduced-motion (`.flip:hover .flip-inner { transform: none }`).
+- [ ] (pending) RO-13: muescas de `NotchGauge` desde `scale(0)` con rebote y barras de `ScoreDrivers` que transicionan `width`/`left` 0.9s. Sube de prioridad si se hace RO-02.
+- [ ] (pending) Con un país en foco, el hint "NOTICIAS · MÉXICO ▼" (centrado, bottom 24) se encima en móvil con la última línea del bloque del score ("DATOS AHORA MISMO"); antes chocaba igual con la frescura del bloque izquierdo. Lo resuelve la variante robusta de RO-05 (un solo contenedor para el pie del hero) o subir el hint.
+- [ ] (pending) Fuera de la auditoría, vistos de paso: el error de `SubscribeForm` usa #A32D2D (2.97:1, reprueba AA; el token es `riskoff` #CE5555); el texto de WhatsApp dice "ya funcionan en beta abierta" en ES y "we're building" en EN; el botón de pausa del ticker no hace nada con reduced-motion; `progressiveLine` de `chartHelpers` quedó sin uso.
