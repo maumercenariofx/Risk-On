@@ -520,9 +520,11 @@ export default function RiskGauge({ prevScore = null, scoreHistory = null, ticke
                   <T es={anchor.es} en={anchor.en} />
                 </div>
               )}
+              {/* Vivo/cerrado es parte de la veracidad (ver fxClosed): token
+                  `faint` (4.92:1 sobre ink). Antes #2A2A30: 1.39:1, casi invisible. */}
               <div style={{
                 fontSize: 11, letterSpacing: 2.5, fontWeight: 400,
-                color: "#2A2A30", marginTop: 6, lineHeight: 1,
+                color: "#7E7E86", marginTop: 6, lineHeight: 1,
               }}>
                 {fxClosed() ? (
                   <T es="MERCADO CERRADO · CIERRE DEL VIERNES" en="MARKET CLOSED · FRIDAY'S CLOSE" />

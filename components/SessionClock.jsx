@@ -88,7 +88,7 @@ export default function SessionClock() {
                 gap: 4,
                 fontSize: 11,
                 letterSpacing: 1.5,
-                color: s.isOpen ? "#8A8F98" : "#3E3E44",
+                color: s.isOpen ? "#8A8F98" : "#7E7E86",
                 borderBottom: "none", // anula el dotted de [data-tip]
                 cursor: "default",
               }}

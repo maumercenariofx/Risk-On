@@ -302,8 +302,8 @@ export default function MarketsClient({ embed = false }) {
                   cursor:        "pointer",
                   border:        `1px solid ${active ? "rgba(245,245,242,0.25)" : "rgba(255,255,255,0.07)"}`,
                   background:    active ? "rgba(245,245,242,0.10)" : "transparent",
-                  color:         active ? "#F5F5F2" : "#6B7280",
-                  transition:    "all 0.18s",
+                  color:         active ? "#F5F5F2" : "#8A8A8E",
+                  transition:    "color 0.18s ease, background-color 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease",
                 }}
               >
                 {p.label}
@@ -395,9 +395,9 @@ export default function MarketsClient({ embed = false }) {
                     cursor:       "pointer",
                     border:       "none",
                     background:   active ? GREEN : "rgba(255,255,255,0.06)",
-                    color:        active ? "#000" : "#6B7280",
+                    color:        active ? "#000" : "#8A8A8E",
                     boxShadow:    active ? `0 0 14px ${GREEN}66` : "none",
-                    transition:   "all 0.18s",
+                    transition:   "color 0.18s ease, background-color 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease",
                     letterSpacing: 0.5,
                   }}
                 >
