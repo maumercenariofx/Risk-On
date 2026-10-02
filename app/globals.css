@@ -169,7 +169,8 @@ html.io .reveal.in-view {
     opacity: 1;
     transform: none;
   }
-  .ticker-track, .tron-glow { animation: none; }
+  /* .ticker-track va más abajo, después de su regla base: aquí perdía. */
+  .tron-glow { animation: none; }
   .flip-inner, .needle, .card-glass { transition: none; }
   .flip:hover .flip-inner { transform: none; }
   .drivers-bar, .drivers-tick { transition: none; }
@@ -252,6 +253,21 @@ html.io .reveal.in-view {
 }
 .ticker-pause:hover { color: #F5F5F2; border-color: #62626A; }
 .ticker-pause:focus-visible { outline: 2px solid rgba(255,255,255,0.5); outline-offset: 2px; }
+/* Reduced-motion, parte 2 (revisión 2026-10-02). El `animation: none` de la
+   pista vivía en el bloque general de reduced-motion, ANTES de la regla base
+   de .ticker-track: misma especificidad, gana la última, así que la cinta
+   nunca se detuvo (medido con Playwright: −107 → −135px en 2s), y sin las
+   copias b/c el bucle de −1/3 ya no empalma: por construcción, la copia
+   única salta de vuelta al inicio en cada vuelta. Por eso
+   va aquí, después de .ticker-track y de .ticker-pause. Quieta, la pausa
+   sería un control muerto (se anuncia y alterna aria-pressed sin efecto)
+   encima del borde derecho de la banda que ahora se desplaza. Los 20px (el
+   margen de la página) despegan del borde el primer y el último item. */
+@media (prefers-reduced-motion: reduce) {
+  .ticker-track { animation: none; padding-inline: 20px; }
+  .ticker-band { scroll-padding-inline: 20px; }
+  .ticker-pause { display: none; }
+}
 
 /* Aguja del medidor */
 .needle {
