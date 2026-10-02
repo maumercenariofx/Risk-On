@@ -1,11 +1,16 @@
 "use client";
 // components/SubscribeForm.jsx
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { track } from "@vercel/analytics";
 import { useLang, T } from "./Lang";
 
 const FIELD_CLS =
   "min-w-0 flex-1 rounded-md border border-line bg-transparent px-3 py-2 text-sm text-bone outline-none placeholder:text-muted focus:border-bone/50";
+// Plegar/crecer con grid-rows 0fr↔1fr: 200ms y la curva ease-out del sistema
+// (antes duration-300 ease-out de Tailwind = cubic-bezier(0,0,0.2,1), que no
+// es la del sistema y quedaba en el tope de 300ms; revisión 2026-10-02).
+const GROW_CLS =
+  "grid transition-[grid-template-rows,opacity] duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] motion-reduce:transition-none";
 
 export default function SubscribeForm() {
   const { lang } = useLang();
@@ -18,6 +23,7 @@ export default function SubscribeForm() {
   const [whatsapp,  setWhatsapp]  = useState(""); // opcional — futuras alertas intradía
   const [fuente,    setFuente]    = useState(""); // canal de adquisición (opcional)
   const [count,     setCount]     = useState(null); // social proof (lectores activos)
+  const tratoRef = useRef(null);
 
   useEffect(() => {
     fetch("/api/subscribe").then((r) => r.json()).then((d) => setCount(d?.count ?? null)).catch(() => {});
@@ -139,25 +145,37 @@ export default function SubscribeForm() {
           </select>
 
           {/* Personalización opcional: saludo por nombre + WhatsApp para alertas. */}
-          {!showMore && (
-            <button
-              type="button"
-              onClick={() => setShowMore(true)}
-              className="text-xs text-muted underline-offset-2 hover:text-bone hover:underline"
-            >
-              <T es="¿Saludo por tu nombre? ¿Alertas por WhatsApp? (opcional)"
-                 en="Greeting by name? WhatsApp alerts? (optional)" />
-            </button>
-          )}
+          {/* El botón se pliega con la misma curva mientras los campos crecen
+              (revisión 2026-10-02): desmontado en seco, el form se encogía
+              19px en un cuadro antes de empezar a crecer. Los márgenes del
+              space-y se compensan (este pierde 8px y el de abajo los gana en
+              el mismo cuadro). overflow-hidden solo al plegarse, para no
+              recortar el anillo de foco del botón; `block` para que el alto
+              sea el del botón y no el de una línea de texto de 24px. */}
+          <div className={`${GROW_CLS} ${showMore ? "!mt-0 grid-rows-[0fr]" : "grid-rows-[1fr]"}`}>
+            <div className={`min-h-0 ${showMore ? "overflow-hidden" : ""}`} style={{ visibility: showMore ? "hidden" : "visible" }}>
+              <button
+                type="button"
+                onClick={(e) => {
+                  // Al ocultarse, el foco caería a <body>: si el botón lo tenía
+                  // (teclado, o clic en Chrome) pasa al primer campo. En iOS un
+                  // toque no enfoca el botón, así que ahí no se abre el selector.
+                  const hadFocus = document.activeElement === e.currentTarget;
+                  setShowMore(true);
+                  if (hadFocus) requestAnimationFrame(() => tratoRef.current?.focus({ preventScroll: true }));
+                }}
+                className="block text-xs text-muted underline-offset-2 hover:text-bone hover:underline"
+              >
+                <T es="¿Saludo por tu nombre? ¿Alertas por WhatsApp? (opcional)"
+                   en="Greeting by name? WhatsApp alerts? (optional)" />
+              </button>
+            </div>
+          </div>
           {/* Los campos opcionales crecen con grid-rows 0fr→1fr (mismo patrón
               que Collapse.jsx) en vez de montarse de golpe (auditoría UI
               2026-10-02). Cerrado: sin margen del space-y y con visibility
               hidden, para que no entren al tab ni al lector de pantalla. */}
-          <div
-            className={`grid transition-[grid-template-rows,opacity] duration-300 ease-out motion-reduce:transition-none ${
-              showMore ? "grid-rows-[1fr] opacity-100" : "!mt-0 grid-rows-[0fr] opacity-0"
-            }`}
-          >
+          <div className={`${GROW_CLS} ${showMore ? "grid-rows-[1fr] opacity-100" : "!mt-0 grid-rows-[0fr] opacity-0"}`}>
             <div className="min-h-0 overflow-hidden" style={{ visibility: showMore ? "visible" : "hidden" }}>
               <div className="space-y-2 pt-1">
                 <p className="text-xs text-muted">
@@ -166,6 +184,7 @@ export default function SubscribeForm() {
                 </p>
                 <div className="flex flex-wrap gap-2">
                   <select
+                    ref={tratoRef}
                     value={trato}
                     onChange={(e) => setTrato(e.target.value)}
                     className="rounded-md border border-edge bg-transparent px-3 py-2 text-sm text-bone outline-none focus:border-bone/50"
