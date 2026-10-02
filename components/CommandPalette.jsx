@@ -194,7 +194,8 @@ export default function CommandPalette() {
         position: "fixed", inset: 0, zIndex: 400,
         background: "rgba(0,0,0,0.6)",
         backdropFilter: "blur(10px)", WebkitBackdropFilter: "blur(10px)",
-        animation: "pageFade 0.18s ease both",
+        // Sin animación de entrada (2026-10-02): ⌘K es acción de teclado y se
+        // abre decenas de veces; aparece al instante, como Raycast.
       }}
     >
       <div
