@@ -522,3 +522,16 @@ button, a[class*="rounded"] { transition-property: color, background-color, bord
 }
 .notch-on { animation-delay: calc(300ms + var(--i) * 18ms); }
 @media (prefers-reduced-motion: reduce) { .notch { animation: none; } }
+
+/* Suscripción completada (SubscribeForm): el form se cambiaba en seco por una
+   línea. Entra con fade + 6px y el check se traza (auditoría UI 2026-10-02).
+   Ocurre una vez por lector: aquí sí cabe un detalle. @starting-style va a
+   nivel raíz porque postcss (tailwind + autoprefixer) no procesa anidado. */
+.sub-done { transition: opacity 250ms cubic-bezier(0.23, 1, 0.32, 1), transform 250ms cubic-bezier(0.23, 1, 0.32, 1); }
+@starting-style { .sub-done { opacity: 0; transform: translateY(6px); } }
+.sub-done path { stroke-dasharray: 24; stroke-dashoffset: 24; animation: sub-check 300ms cubic-bezier(0.23, 1, 0.32, 1) 120ms forwards; }
+@keyframes sub-check { to { stroke-dashoffset: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .sub-done { transform: none; }
+  .sub-done path { animation: none; stroke-dashoffset: 0; }
+}

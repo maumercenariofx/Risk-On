@@ -90,7 +90,10 @@ export default function SubscribeForm() {
       </p>
 
       {status === "done" ? (
-        <p className="text-sm text-bone">
+        <p className="sub-done flex items-center gap-2 text-sm text-bone">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <path d="M4 12l5 5L20 6" />
+          </svg>
           <T es="Listo — revisa tu correo." en="Done — check your inbox." />
         </p>
       ) : (
@@ -136,7 +139,7 @@ export default function SubscribeForm() {
           </select>
 
           {/* Personalización opcional: saludo por nombre + WhatsApp para alertas. */}
-          {!showMore ? (
+          {!showMore && (
             <button
               type="button"
               onClick={() => setShowMore(true)}
@@ -145,54 +148,65 @@ export default function SubscribeForm() {
               <T es="¿Saludo por tu nombre? ¿Alertas por WhatsApp? (opcional)"
                  en="Greeting by name? WhatsApp alerts? (optional)" />
             </button>
-          ) : (
-            <div className="space-y-2 pt-1">
-              <p className="text-xs text-muted">
-                <T es="Opcional. Si lo dejas, el correo te saludará así: «¡Buenos días, Mauricio!»."
-                   en="Optional. If you fill it in, the email will greet you like: “Good morning, Mauricio!”." />
-              </p>
-              <div className="flex flex-wrap gap-2">
-                <select
-                  value={trato}
-                  onChange={(e) => setTrato(e.target.value)}
-                  className="rounded-md border border-edge bg-transparent px-3 py-2 text-sm text-bone outline-none focus:border-bone/50"
-                  style={{ flex: "0 0 auto" }}
-                >
-                  {tratoOptions.map((o) => (
-                    <option key={o.v} value={o.v}>
-                      {lang === "en" ? o.en : o.es}
-                    </option>
-                  ))}
-                </select>
+          )}
+          {/* Los campos opcionales crecen con grid-rows 0fr→1fr (mismo patrón
+              que Collapse.jsx) en vez de montarse de golpe (auditoría UI
+              2026-10-02). Cerrado: sin margen del space-y y con visibility
+              hidden, para que no entren al tab ni al lector de pantalla. */}
+          <div
+            className={`grid transition-[grid-template-rows,opacity] duration-300 ease-out motion-reduce:transition-none ${
+              showMore ? "grid-rows-[1fr] opacity-100" : "!mt-0 grid-rows-[0fr] opacity-0"
+            }`}
+          >
+            <div className="min-h-0 overflow-hidden" style={{ visibility: showMore ? "visible" : "hidden" }}>
+              <div className="space-y-2 pt-1">
+                <p className="text-xs text-muted">
+                  <T es="Opcional. Si lo dejas, el correo te saludará así: «¡Buenos días, Mauricio!»."
+                     en="Optional. If you fill it in, the email will greet you like: “Good morning, Mauricio!”." />
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <select
+                    value={trato}
+                    onChange={(e) => setTrato(e.target.value)}
+                    className="rounded-md border border-edge bg-transparent px-3 py-2 text-sm text-bone outline-none focus:border-bone/50"
+                    style={{ flex: "0 0 auto" }}
+                  >
+                    {tratoOptions.map((o) => (
+                      <option key={o.v} value={o.v}>
+                        {lang === "en" ? o.en : o.es}
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    type="text"
+                    value={nombre}
+                    onChange={(e) => setNombre(e.target.value)}
+                    placeholder={lang === "en" ? "First name" : "Nombre"}
+                    className={FIELD_CLS}
+                  />
+                </div>
                 <input
                   type="text"
-                  value={nombre}
-                  onChange={(e) => setNombre(e.target.value)}
-                  placeholder={lang === "en" ? "First name" : "Nombre"}
-                  className={FIELD_CLS}
+                  value={apellidos}
+                  onChange={(e) => setApellidos(e.target.value)}
+                  placeholder={lang === "en" ? "Last name(s)" : "Apellidos"}
+                  className="w-full rounded-md border border-line bg-transparent px-3 py-2 text-sm text-bone outline-none placeholder:text-muted focus:border-bone/50"
+                />
+                <p className="pt-1 text-xs text-muted">
+                  <T es="WhatsApp (opcional): las alertas intradía de niveles clave ya funcionan en beta abierta — deja tu número y te damos acceso."
+                     en="WhatsApp (optional): we're building intraday key-level alerts — leave your number to join the early-access list." />
+                </p>
+                <input
+                  type="tel"
+                  value={whatsapp}
+                  onChange={(e) => setWhatsapp(e.target.value)}
+                  placeholder={lang === "en" ? "+52 55 1234 5678" : "+52 55 1234 5678"}
+                  autoComplete="tel"
+                  className="w-full rounded-md border border-line bg-transparent px-3 py-2 text-sm text-bone outline-none placeholder:text-muted focus:border-bone/50"
                 />
               </div>
-              <input
-                type="text"
-                value={apellidos}
-                onChange={(e) => setApellidos(e.target.value)}
-                placeholder={lang === "en" ? "Last name(s)" : "Apellidos"}
-                className="w-full rounded-md border border-line bg-transparent px-3 py-2 text-sm text-bone outline-none placeholder:text-muted focus:border-bone/50"
-              />
-              <p className="pt-1 text-xs text-muted">
-                <T es="WhatsApp (opcional): las alertas intradía de niveles clave ya funcionan en beta abierta — deja tu número y te damos acceso."
-                   en="WhatsApp (optional): we're building intraday key-level alerts — leave your number to join the early-access list." />
-              </p>
-              <input
-                type="tel"
-                value={whatsapp}
-                onChange={(e) => setWhatsapp(e.target.value)}
-                placeholder={lang === "en" ? "+52 55 1234 5678" : "+52 55 1234 5678"}
-                autoComplete="tel"
-                className="w-full rounded-md border border-line bg-transparent px-3 py-2 text-sm text-bone outline-none placeholder:text-muted focus:border-bone/50"
-              />
             </div>
-          )}
+          </div>
         </form>
       )}
 
