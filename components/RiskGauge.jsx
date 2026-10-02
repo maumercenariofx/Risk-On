@@ -530,11 +530,25 @@ export default function RiskGauge({ prevScore = null, scoreHistory = null, ticke
                   <>▲ <T es="ÍNDICE EN VIVO" en="LIVE INDEX" /></>
                 )}
               </div>
+              {/* Frescura del dato: vivía en el bloque izquierdo, a la misma
+                  altura que este, y en fin de semana "MERCADO CERRADO…" le caía
+                  encima. Aquí queda pegada al estado que matiza (2026-10-02). */}
+              {data?.asOf && (
+                <div style={{
+                  fontSize: 11, letterSpacing: 2, fontWeight: 400,
+                  color: "#8A8A8E", marginTop: 6, lineHeight: 1,
+                }}>
+                  {dataFreshness(data.asOf, lang)}
+                </div>
+              )}
             </div>
           </div>
         )}
 
-        {/* Bottom-left: sparkline intradía vivo + reloj de sesiones + timestamp */}
+        {/* Bottom-left: sparkline intradía vivo + reloj de sesiones. En móvil
+            (<640px) los dos se ocultan: el bloque derecho mide hasta ~355px y
+            "CONSTRUCTIVO" (30px/800) caía sobre la fila SYD·TYO·LDN·NYC en todo
+            teléfono de 412px o menos (auditoría UI 2026-10-02). */}
         <div className="hero-late" style={{
           position: "absolute",
           bottom: 28,
@@ -545,17 +559,7 @@ export default function RiskGauge({ prevScore = null, scoreHistory = null, ticke
           pointerEvents: "none",
         }}>
           <IntradaySpark />
-          <SessionClock />
-          {data?.asOf && (
-            <div style={{
-              fontSize: 11,
-              letterSpacing: 2,
-              textTransform: "uppercase",
-              color: "#8A8A8E",
-            }}>
-              {dataFreshness(data.asOf, lang)}
-            </div>
-          )}
+          <div className="hidden sm:block"><SessionClock /></div>
         </div>
         </div>
 
