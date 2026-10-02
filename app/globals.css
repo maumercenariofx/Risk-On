@@ -8,6 +8,10 @@
 :root {
   --font-sans: var(--font-geist-sans, system-ui, -apple-system, sans-serif);
   --font-mono: var(--font-geist-mono, 'SF Mono', monospace);
+  /* El sitio solo es oscuro: controles nativos, popup del <select> y barras
+     de scroll oscuros de raíz (antes: <option style="color:#111"> en
+     SubscribeForm como parche del popup claro). Auditoría UI 2026-10-02. */
+  color-scheme: dark;
 }
 
 html { overflow-x: hidden; }
@@ -360,8 +364,13 @@ a { color: inherit; }
   input:not([type="range"]):not([type="checkbox"]):not([type="radio"]), select, textarea { font-size: 16px !important; }
 }
 
-/* Feedback táctil: sin flash azul en móvil + presión sutil en botones/links tipo botón */
+/* Feedback táctil: sin flash azul en móvil + presión sutil en botones/links tipo botón.
+   (El preflight de Tailwind 3.4 ya pone el tap highlight transparente en html.) */
 a, button { -webkit-tap-highlight-color: transparent; }
+/* Sin doble-tap-zoom en controles, y un long-press en un botón o en la cinta
+   no selecciona su texto (auditoría UI 2026-10-02). */
+button, a, [role="button"], summary { touch-action: manipulation; }
+button, [role="button"], .ticker-item { -webkit-user-select: none; user-select: none; }
 button:active, a[class*="rounded"]:active { transform: scale(0.98); }
 button, a[class*="rounded"] { transition-property: color, background-color, border-color, box-shadow, transform; transition-duration: 0.2s; }
 

@@ -129,7 +129,7 @@ export default function SubscribeForm() {
             aria-label={lang === "en" ? "How did you find us?" : "¿Cómo nos conociste?"}
           >
             {fuenteOptions.map((o) => (
-              <option key={o.v} value={o.v} style={{ color: "#111" }}>
+              <option key={o.v} value={o.v}>
                 {lang === "en" ? o.en : o.es}
               </option>
             ))}
@@ -159,7 +159,7 @@ export default function SubscribeForm() {
                   style={{ flex: "0 0 auto" }}
                 >
                   {tratoOptions.map((o) => (
-                    <option key={o.v} value={o.v} style={{ color: "#111" }}>
+                    <option key={o.v} value={o.v}>
                       {lang === "en" ? o.en : o.es}
                     </option>
                   ))}

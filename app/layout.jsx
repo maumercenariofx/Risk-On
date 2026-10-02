@@ -51,6 +51,14 @@ export const metadata = {
   },
 };
 
+// theme-color y color-scheme del sitio (auditoría UI 2026-10-02): el de
+// app/manifest.js solo aplica a la PWA instalada; en el navegador la barra
+// salía clara. El sitio solo es oscuro, así que un valor basta. SIN
+// viewportFit: "cover": con él, en horizontal el texto (px-5 = 20px) quedaría
+// bajo la notch o la Dynamic Island si no se protege nav y <main> con
+// env(safe-area-inset-*) en el mismo cambio. Next conserva width/initialScale.
+export const viewport = { themeColor: "#000000", colorScheme: "dark" };
+
 // JSON-LD del sitio (Organization + WebSite) — datos estructurados para Google.
 const SITE_LD = {
   "@context": "https://schema.org",
