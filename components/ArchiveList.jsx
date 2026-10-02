@@ -43,6 +43,7 @@ export default function ArchiveList({ posts }) {
       <div className="reveal flex flex-wrap items-center gap-2">
         <input
           type="search"
+          enterKeyHint="search"
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder={lang === "en" ? "Search views…" : "Buscar views…"}

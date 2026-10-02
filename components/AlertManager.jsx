@@ -103,6 +103,9 @@ export default function AlertManager() {
             <input
               type="email"
               required
+              autoComplete="email"
+              autoCapitalize="none"
+              enterKeyHint="send"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder={label("tu@correo.com", "you@email.com")}
@@ -173,14 +176,18 @@ export default function AlertManager() {
           }}
           className="mb-4 flex flex-wrap items-center gap-2"
         >
+          {/* type="text" + inputMode="decimal" (auditoría UI 2026-10-02): con
+              type="number" iOS abre el teclado de números y símbolos, no el
+              decimal, y acepta "e". El rango 10–30 lo valida el servidor
+              (app/api/alerts/route.js); la coma decimal se normaliza a punto. */}
           <input
-            type="number"
-            step="0.0001"
-            min="10"
-            max="30"
+            type="text"
+            inputMode="decimal"
+            enterKeyHint="done"
+            autoComplete="off"
             required
             value={level}
-            onChange={(e) => setLevel(e.target.value)}
+            onChange={(e) => setLevel(e.target.value.replace(",", "."))}
             placeholder="17.6500"
             className="w-32 rounded-md border border-line bg-black px-3 py-2 text-sm text-bone outline-none focus:border-bone/40"
             style={MONO}

@@ -99,6 +99,9 @@ export default function SubscribeForm() {
             <input
               type="email"
               required
+              autoComplete="email"
+              autoCapitalize="none"
+              enterKeyHint="send"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder={lang === "en" ? "you@email.com" : "tu@correo.com"}

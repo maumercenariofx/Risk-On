@@ -213,6 +213,9 @@ export default function CommandPalette() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={onKeyDown}
+          enterKeyHint="go"
+          autoCapitalize="none"
+          autoCorrect="off"
           placeholder={lang === "en" ? "Search pages, assets, views…" : "Busca páginas, activos, views…"}
           aria-label={lang === "en" ? "Search" : "Buscar"}
           style={{

@@ -126,6 +126,10 @@ export default function TechnicalAnalysis() {
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
+            autoCapitalize="characters"
+            autoCorrect="off"
+            spellCheck={false}
+            enterKeyHint="search"
             placeholder={t(lang, "Símbolo (AAPL, TSLA…)", "Symbol (AAPL, TSLA…)")}
             className="w-full rounded-md border border-edge bg-black px-3 py-1.5 text-sm text-bone placeholder:text-muted focus:border-bone/50 focus:outline-none sm:w-48"
           />

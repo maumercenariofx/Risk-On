@@ -336,6 +336,15 @@ a { color: inherit; }
   border-radius: 2px;
 }
 
+/* iOS Safari hace zoom al enfocar un campo de menos de 16px y no regresa al
+   salir: le pasaba al correo de /suscribete (text-sm = 14px), que es la
+   conversión. Por capacidad (dedo), no por ancho; !important porque text-sm,
+   text-xs y el inline de CommandPalette ganan a un selector de elemento. El
+   arreglo es el tamaño, nunca maximum-scale (auditoría UI 2026-10-02). */
+@media (pointer: coarse) {
+  input:not([type="range"]):not([type="checkbox"]):not([type="radio"]), select, textarea { font-size: 16px !important; }
+}
+
 /* Feedback táctil: sin flash azul en móvil + presión sutil en botones/links tipo botón */
 a, button { -webkit-tap-highlight-color: transparent; }
 button:active, a[class*="rounded"]:active { transform: scale(0.98); }
