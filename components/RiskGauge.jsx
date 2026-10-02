@@ -134,7 +134,6 @@ export default function RiskGauge({ prevScore = null, scoreHistory = null, ticke
   const [data, setData]         = useState(null); // /api/market
   const [rates, setRates]       = useState(null); // /api/rates
   const [curve, setCurve]       = useState(null); // /api/curve
-  const [display, setDisplay]   = useState(0);
   const [newsCountry, setNewsCountry] = useState(null);
   const [news, setNews]               = useState([]);
   const [newsLoading, setNewsLoading] = useState(false);
@@ -257,25 +256,10 @@ export default function RiskGauge({ prevScore = null, scoreHistory = null, ticke
   const score = result?.score ?? 0;
   const label = riskBand(score);
 
-  useEffect(() => {
-    if (!result) return;
-    // El número titular del producto animaba también para quien pidió que nada
-    // animara: este setInterval no tenía guarda, mientras lib/useCountUp.js —que
-    // sí la tiene— existía a un import de distancia (auditoría 2026-08-21).
-    // No se migra a useCountUp porque `display` alimenta además la aguja del
-    // medidor; aquí basta con saltar al valor final.
-    if (typeof matchMedia !== "undefined" && matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      setDisplay(score);
-      return;
-    }
-    let n = 0;
-    const iv = setInterval(() => {
-      n += 2;
-      if (n >= score) { n = score; clearInterval(iv); }
-      setDisplay(n);
-    }, 22);
-    return () => clearInterval(iv);
-  }, [result, score]);
+  // Sin conteo 0 → score (auditoría UI 2026-10-02): `result` es nuevo cada vez
+  // que llega market, rates o curve, y cada llegada reiniciaba el conteo en 0
+  // — el titular podía leerse 58 → 2 → … → 61. Un dato que se lee para decidir
+  // no se mueve por estilo: el score se pinta tal cual, en cifras tabulares.
 
   const accentColor = accent(score);
   // F2: si /api/market cayó, `data` es el objeto de respaldo marcado con
@@ -523,7 +507,7 @@ export default function RiskGauge({ prevScore = null, scoreHistory = null, ticke
               letterSpacing: "-0.03em",
               pointerEvents: "none",
             }}>
-              <div className="score-blink" style={{ color: accentColor }}>{display}.</div>
+              <div className="score-blink" style={{ color: accentColor, fontVariantNumeric: "tabular-nums" }}>{score}.</div>
               <div style={{ color: "#8A8A8E" }}>
                 <T es={label.es} en={label.en} />
               </div>
@@ -756,8 +740,8 @@ export default function RiskGauge({ prevScore = null, scoreHistory = null, ticke
           {/* Versión completa (desktop) */}
           <div className="badge-full">
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <div style={{ fontFamily: "var(--font-sans)", fontWeight: 800, fontSize: 30, lineHeight: 1, color: accentColor, letterSpacing: "-0.02em" }}>
-                {display}
+              <div style={{ fontFamily: "var(--font-sans)", fontWeight: 800, fontSize: 30, lineHeight: 1, color: accentColor, letterSpacing: "-0.02em", fontVariantNumeric: "tabular-nums" }}>
+                {score}
               </div>
               <div style={{ lineHeight: 1.5 }}>
                 <div style={{ fontSize: 11, letterSpacing: 2, color: "#8A8A8E", textTransform: "uppercase", fontFamily: "var(--font-mono)" }}>
@@ -780,8 +764,8 @@ export default function RiskGauge({ prevScore = null, scoreHistory = null, ticke
           </div>
           {/* Mini-píldora (móvil): una sola línea, no tapa el contenido */}
           <div className="badge-mini" style={{ display: "none", alignItems: "center", gap: 7 }}>
-            <span style={{ fontFamily: "var(--font-sans)", fontWeight: 800, fontSize: 17, lineHeight: 1, color: accentColor }}>
-              {display}
+            <span style={{ fontFamily: "var(--font-sans)", fontWeight: 800, fontSize: 17, lineHeight: 1, color: accentColor, fontVariantNumeric: "tabular-nums" }}>
+              {score}
             </span>
             <span style={{ fontSize: 11, letterSpacing: 1.2, color: accentColor, textTransform: "uppercase", fontFamily: "var(--font-mono)" }}>
               {lang === "en" ? label.en : label.es}
