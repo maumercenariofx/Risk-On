@@ -711,13 +711,16 @@ export default function RiskGauge({ prevScore = null, scoreHistory = null, ticke
           (localStorage riskon-sub) el renglón "Suscríbete" no se muestra.
           Siempre montado (auditoría UI 2026-10-02): antes se montaba con un
           keyframe y se desmontaba en seco con heroGone; ahora entra y sale
-          con transiciones interrumpibles, y la salida es más corta. Oculto,
-          sale del tab y del árbol de accesibilidad. */}
+          con transiciones interrumpibles, y la salida es más corta.
+          Al terminar la salida queda en visibility: hidden (revisión
+          2026-10-02): con solo opacity 0 seguía en el árbol de pintado, y
+          según el motor su blur(16px) fijo sobre el globo WebGL podía
+          recalcularse en cada frame (sospecha, no medido). hidden no se
+          pinta en ningún motor y además lo saca del tab y del árbol de
+          accesibilidad sin depender de aria-hidden ni tabIndex. */}
       {result && (
         <a
           href="/suscribete"
-          aria-hidden={heroGone ? undefined : true}
-          tabIndex={heroGone ? undefined : -1}
           onClick={(e) => {
             // Solo interceptamos si el form está en esta pantalla. Antes el href
             // era "#subscribe" con preventDefault incondicional: en la landing
@@ -752,9 +755,11 @@ export default function RiskGauge({ prevScore = null, scoreHistory = null, ticke
             opacity: heroGone ? 1 : 0,
             translate: heroGone ? "0 0" : "0 8px",
             pointerEvents: heroGone ? "auto" : "none",
+            // Entra visible al instante; al salir, hidden justo al acabar el fade.
+            visibility: heroGone ? "visible" : "hidden",
             transition: heroGone
-              ? "opacity 200ms cubic-bezier(0.23, 1, 0.32, 1), translate 200ms cubic-bezier(0.23, 1, 0.32, 1), transform 0.2s ease, box-shadow 0.2s ease"
-              : "opacity 150ms cubic-bezier(0.23, 1, 0.32, 1), translate 150ms cubic-bezier(0.23, 1, 0.32, 1), transform 0.2s ease, box-shadow 0.2s ease",
+              ? "opacity 200ms cubic-bezier(0.23, 1, 0.32, 1), translate 200ms cubic-bezier(0.23, 1, 0.32, 1), visibility 0s, transform 0.2s ease, box-shadow 0.2s ease"
+              : "opacity 150ms cubic-bezier(0.23, 1, 0.32, 1), translate 150ms cubic-bezier(0.23, 1, 0.32, 1), visibility 0s linear 150ms, transform 0.2s ease, box-shadow 0.2s ease",
           }}
         >
           {/* Versión completa (desktop) */}
