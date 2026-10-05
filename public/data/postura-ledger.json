@@ -861,12 +861,12 @@
       "band": "DEFENSIVE",
       "band_cuts": "32/49/67/100",
       "condicion": "Regreso a neutral si el USD/MXN cierra debajo de 17.60.",
-      "spot_t0": null,
-      "mxn5": null,
-      "verdict": null,
+      "spot_t0": 17.748659133911133,
+      "mxn5": 2.0522,
+      "verdict": true,
       "mxn5_fred": null,
       "verdict_fred": null,
-      "evaluated_at": null
+      "evaluated_at": "2026-10-05T12:54:51.568Z"
     },
     "2026-09-29": {
       "slug": "2026-09-29",
@@ -921,6 +921,21 @@
       "band": "CONSTRUCTIVE",
       "band_cuts": "32/49/67/100",
       "condicion": "Regreso al sesgo al dólar si el USD/MXN recupera y cierra de nuevo arriba de 18.30.",
+      "spot_t0": null,
+      "mxn5": null,
+      "verdict": null,
+      "mxn5_fred": null,
+      "verdict_fred": null,
+      "evaluated_at": null
+    },
+    "2026-10-05": {
+      "slug": "2026-10-05",
+      "bias": "neutral",
+      "prior": null,
+      "score": 50,
+      "band": "CONSTRUCTIVE",
+      "band_cuts": "32/49/67/100",
+      "condicion": "Me reinclino por el peso si el USD/MXN rompe debajo de 18.00; regreso al dólar si cierra arriba de 18.30.",
       "spot_t0": null,
       "mxn5": null,
       "verdict": null,
