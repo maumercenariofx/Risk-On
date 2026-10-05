@@ -12,10 +12,10 @@
   "carry_pct": 2.87,
   "fuente": "Yahoo Finance · MXN=X, velas de 1 hora"
  },
- "generado": "2026-10-05T21:00:13.942Z",
+ "generado": "2026-10-05T21:09:59.598Z",
  "spot": {
   "px": 18.052,
-  "ts": "2026-10-05T21:00:06.000Z"
+  "ts": "2026-10-05T21:07:13.000Z"
  },
  "resumen": {
   "desde": "2026-07-10",
@@ -103,7 +103,7 @@
    "bias": "neutral",
    "S0": 18.109,
    "vence": "2026-10-12",
-   "capital": 205456.62,
+   "capital": 205456.64,
    "pnl": 0,
    "stop": null
   }
