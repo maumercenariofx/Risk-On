@@ -789,8 +789,8 @@
       "spot_t0": 17.227500915527344,
       "mxn5": 3.2593,
       "verdict": false,
-      "mxn5_fred": null,
-      "verdict_fred": null,
+      "mxn5_fred": 3.5918,
+      "verdict_fred": false,
       "evaluated_at": "2026-09-28T12:54:00.026Z"
     },
     "2026-09-22": {
@@ -804,8 +804,8 @@
       "spot_t0": 17.21596908569336,
       "mxn5": 4.2917,
       "verdict": true,
-      "mxn5_fred": null,
-      "verdict_fred": null,
+      "mxn5_fred": 4.3416,
+      "verdict_fred": true,
       "evaluated_at": "2026-09-29T12:55:31.887Z"
     },
     "2026-09-23": {
@@ -819,8 +819,8 @@
       "spot_t0": 17.285600662231445,
       "mxn5": 4.1394,
       "verdict": true,
-      "mxn5_fred": null,
-      "verdict_fred": null,
+      "mxn5_fred": 3.2931,
+      "verdict_fred": true,
       "evaluated_at": "2026-09-30T12:55:08.238Z"
     },
     "2026-09-24": {
@@ -834,8 +834,8 @@
       "spot_t0": 17.54129981994629,
       "mxn5": 3.6669,
       "verdict": true,
-      "mxn5_fred": null,
-      "verdict_fred": null,
+      "mxn5_fred": 4.1295,
+      "verdict_fred": true,
       "evaluated_at": "2026-10-01T12:57:34.019Z"
     },
     "2026-09-25": {
@@ -849,8 +849,8 @@
       "spot_t0": 17.738679885864258,
       "mxn5": 2.5792,
       "verdict": true,
-      "mxn5_fred": null,
-      "verdict_fred": null,
+      "mxn5_fred": 2.8192,
+      "verdict_fred": true,
       "evaluated_at": "2026-10-02T12:54:28.264Z"
     },
     "2026-09-28": {

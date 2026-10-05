@@ -12,28 +12,28 @@
   "carry_pct": 2.87,
   "fuente": "Yahoo Finance · MXN=X, velas de 1 hora"
  },
- "generado": "2026-10-05T12:54:52.027Z",
+ "generado": "2026-10-05T21:00:13.942Z",
  "spot": {
-  "px": 18.1131,
-  "ts": "2026-10-05T12:54:51.000Z"
+  "px": 18.052,
+  "ts": "2026-10-05T21:00:06.000Z"
  },
  "resumen": {
   "desde": "2026-07-10",
-  "valor": 1060951,
-  "pnl": 60951,
-  "ret_pct": 6.1,
-  "pnl_cerrado": 56075,
-  "dias_habiles": 60,
-  "anualizado_pct": 28.2,
+  "valor": 1060104,
+  "pnl": 60104,
+  "ret_pct": 6.01,
+  "pnl_cerrado": 59533,
+  "dias_habiles": 61,
+  "anualizado_pct": 27.3,
   "max_dd_pct": 0.57,
-  "cerradas": 51,
-  "ganadoras": 32,
+  "cerradas": 52,
+  "ganadoras": 33,
   "stops": 4,
-  "ganancia_media": 2361,
+  "ganancia_media": 2394,
   "perdida_media": -1025,
-  "base_valor": 993107,
-  "base_pnl": -6893,
-  "ventaja": 67845
+  "base_valor": 996422,
+  "base_pnl": -3578,
+  "ventaja": 63682
  },
  "mensual": [
   {
@@ -56,28 +56,19 @@
   },
   {
    "mes": "2026-10",
-   "pnl": 7928,
-   "ret_pct": 0.75,
-   "pnl_base": -5771
+   "pnl": 6491,
+   "ret_pct": 0.62,
+   "pnl_base": -3180
   }
  ],
  "abiertas": [
-  {
-   "slug": "2026-09-28",
-   "bias": "pro-dolar",
-   "S0": 17.791,
-   "vence": "2026-10-05",
-   "capital": 201999.19,
-   "pnl": 3544.4,
-   "stop": null
-  },
   {
    "slug": "2026-09-29",
    "bias": "pro-dolar",
    "S0": 17.9658,
    "vence": "2026-10-06",
    "capital": 213708.25,
-   "pnl": 1649.96,
+   "pnl": 923.16,
    "stop": null
   },
   {
@@ -95,7 +86,7 @@
    "S0": 18.186,
    "vence": "2026-10-08",
    "capital": 218233.62,
-   "pnl": -944.41,
+   "pnl": -1677.61,
    "stop": null
   },
   {
@@ -104,7 +95,16 @@
    "S0": 18.1634,
    "vence": "2026-10-09",
    "capital": 208098.5,
-   "pnl": 626.07,
+   "pnl": 1326.09,
+   "stop": null
+  },
+  {
+   "slug": "2026-10-05",
+   "bias": "neutral",
+   "S0": 18.109,
+   "vence": "2026-10-12",
+   "capital": 205456.62,
+   "pnl": 0,
    "stop": null
   }
  ],
@@ -474,6 +474,12 @@
    "v": 1062250,
    "px": 18.1634,
    "b": 990696
+  },
+  {
+   "d": "2026-10-05",
+   "v": 1060813,
+   "px": 18.109,
+   "b": 993287
   }
  ],
  "trades": {
@@ -1092,6 +1098,17 @@
    "atr": 0.06314,
    "ret_pct": 2.4484,
    "pnl": 4973.4
+  },
+  "2026-09-28": {
+   "bias": "pro-dolar",
+   "S0": 17.791,
+   "exit": "2026-10-05",
+   "S1": 18.109,
+   "vence": "2026-10-05",
+   "motivo": "tiempo",
+   "atr": 0.07506,
+   "ret_pct": 1.7116,
+   "pnl": 3457.44
   }
  },
  "trades_base": {
