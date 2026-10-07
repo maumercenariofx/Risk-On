@@ -891,12 +891,12 @@
       "band": "CONSTRUCTIVE",
       "band_cuts": "32/49/67/100",
       "condicion": "Vuelvo a una postura direccional si el USD/MXN cierra fuera del rango 17.90–18.15.",
-      "spot_t0": null,
-      "mxn5": null,
-      "verdict": null,
+      "spot_t0": 18.04361915588379,
+      "mxn5": 0.2467,
+      "verdict": true,
       "mxn5_fred": null,
       "verdict_fred": null,
-      "evaluated_at": null
+      "evaluated_at": "2026-10-07T12:56:14.896Z"
     },
     "2026-10-01": {
       "slug": "2026-10-01",
@@ -951,6 +951,21 @@
       "band": "CONSTRUCTIVE",
       "band_cuts": "32/49/67/100",
       "condicion": "Sostengo el peso mientras el USD/MXN siga debajo de 18.00; un cierre de vuelta arriba de 18.30 me regresa al dólar.",
+      "spot_t0": null,
+      "mxn5": null,
+      "verdict": null,
+      "mxn5_fred": null,
+      "verdict_fred": null,
+      "evaluated_at": null
+    },
+    "2026-10-07": {
+      "slug": "2026-10-07",
+      "bias": "neutral",
+      "prior": null,
+      "score": 39,
+      "band": "DEFENSIVE",
+      "band_cuts": "32/49/67/100",
+      "condicion": "Giro a pro-dólar si el par cierra arriba de 18.30; recupero el peso si vuelve a cerrar debajo de 18.00.",
       "spot_t0": null,
       "mxn5": null,
       "verdict": null,
