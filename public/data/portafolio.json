@@ -12,28 +12,28 @@
   "carry_pct": 2.87,
   "fuente": "Yahoo Finance · MXN=X, velas de 1 hora"
  },
- "generado": "2026-10-09T12:54:10.976Z",
+ "generado": "2026-10-09T18:33:06.328Z",
  "spot": {
-  "px": 18.2739,
-  "ts": "2026-10-09T12:54:09.000Z"
+  "px": 18.4346,
+  "ts": "2026-10-09T18:33:04.000Z"
  },
  "resumen": {
   "desde": "2026-07-10",
-  "valor": 1055113,
-  "pnl": 55113,
-  "ret_pct": 5.51,
-  "pnl_cerrado": 56963,
-  "dias_habiles": 64,
-  "anualizado_pct": 23.5,
-  "max_dd_pct": 0.58,
-  "cerradas": 54,
+  "valor": 1059969,
+  "pnl": 59969,
+  "ret_pct": 6,
+  "pnl_cerrado": 52689,
+  "dias_habiles": 65,
+  "anualizado_pct": 25.3,
+  "max_dd_pct": 0.75,
+  "cerradas": 56,
   "ganadoras": 33,
-  "stops": 4,
+  "stops": 5,
   "ganancia_media": 2394,
-  "perdida_media": -1050,
-  "base_valor": 984370,
-  "base_pnl": -15630,
-  "ventaja": 70743
+  "perdida_media": -1144,
+  "base_valor": 977673,
+  "base_pnl": -22327,
+  "ventaja": 82296
  },
  "mensual": [
   {
@@ -56,21 +56,12 @@
   },
   {
    "mes": "2026-10",
-   "pnl": 3762,
-   "ret_pct": 0.36,
-   "pnl_base": 2329
+   "pnl": 1095,
+   "ret_pct": 0.1,
+   "pnl_base": -10251
   }
  ],
  "abiertas": [
-  {
-   "slug": "2026-10-02",
-   "bias": "pro-peso",
-   "S0": 18.1634,
-   "vence": "2026-10-09",
-   "capital": 208098.5,
-   "pnl": -1149.85,
-   "stop": null
-  },
   {
    "slug": "2026-10-05",
    "bias": "neutral",
@@ -85,9 +76,9 @@
    "bias": "pro-peso",
    "S0": 17.9468,
    "vence": "2026-10-13",
-   "capital": 213362.98,
-   "pnl": -3838.33,
-   "stop": null
+   "capital": 209888.55,
+   "pnl": 0,
+   "stop": "2026-10-09"
   },
   {
    "slug": "2026-10-07",
@@ -104,7 +95,16 @@
    "S0": 18.0108,
    "vence": "2026-10-15",
    "capital": 216009.42,
-   "pnl": 3138.22,
+   "pnl": 5065.09,
+   "stop": null
+  },
+  {
+   "slug": "2026-10-09",
+   "bias": "pro-dolar",
+   "S0": 18.2397,
+   "vence": "2026-10-16",
+   "capital": 207298.84,
+   "pnl": 2214.64,
    "stop": null
   }
  ],
@@ -498,6 +498,12 @@
    "v": 1058084,
    "px": 18.0108,
    "b": 998796
+  },
+  {
+   "d": "2026-10-09",
+   "v": 1055417,
+   "px": 18.2397,
+   "b": 986216
   }
  ],
  "trades": {
@@ -1160,6 +1166,28 @@
    "atr": 0.0806,
    "ret_pct": -1.0192,
    "pnl": -2224.22
+  },
+  "2026-10-02": {
+   "bias": "pro-peso",
+   "S0": 18.1634,
+   "exit": "2026-10-09",
+   "S1": 18.2397,
+   "vence": "2026-10-09",
+   "motivo": "tiempo",
+   "atr": 0.09094,
+   "ret_pct": -0.3843,
+   "pnl": -799.66
+  },
+  "2026-10-06": {
+   "bias": "pro-peso",
+   "S0": 17.9468,
+   "exit": "2026-10-09",
+   "S1": 18.2397,
+   "vence": null,
+   "motivo": "stop",
+   "atr": 0.08159,
+   "ret_pct": -1.6284,
+   "pnl": -3474.42
   }
  },
  "trades_base": {
@@ -1822,6 +1850,28 @@
    "atr": 0.0806,
    "ret_pct": 0.9992,
    "pnl": 1983.77
+  },
+  "2026-10-02": {
+   "bias": "pro-peso",
+   "S0": 18.1634,
+   "exit": "2026-10-09",
+   "S1": 18.2397,
+   "vence": "2026-10-09",
+   "motivo": "tiempo",
+   "atr": 0.09094,
+   "ret_pct": -0.3843,
+   "pnl": -766.56
+  },
+  "2026-10-06": {
+   "bias": "pro-peso",
+   "S0": 17.9468,
+   "exit": "2026-10-09",
+   "S1": 18.2397,
+   "vence": null,
+   "motivo": "stop",
+   "atr": 0.08159,
+   "ret_pct": -1.6084,
+   "pnl": -3233.57
   }
  }
 }
