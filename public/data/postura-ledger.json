@@ -921,12 +921,12 @@
       "band": "CONSTRUCTIVE",
       "band_cuts": "32/49/67/100",
       "condicion": "Regreso al sesgo al dólar si el USD/MXN recupera y cierra de nuevo arriba de 18.30.",
-      "spot_t0": null,
-      "mxn5": null,
-      "verdict": null,
+      "spot_t0": 18.314340591430664,
+      "mxn5": -0.2208,
+      "verdict": true,
       "mxn5_fred": null,
       "verdict_fred": null,
-      "evaluated_at": null
+      "evaluated_at": "2026-10-09T12:54:10.592Z"
     },
     "2026-10-05": {
       "slug": "2026-10-05",
@@ -978,6 +978,21 @@
       "bias": "pro-dolar",
       "prior": null,
       "score": 42,
+      "band": "DEFENSIVE",
+      "band_cuts": "32/49/67/100",
+      "condicion": "Suelto el sesgo al dólar si el USD/MXN cierra de vuelta debajo de 18.00.",
+      "spot_t0": null,
+      "mxn5": null,
+      "verdict": null,
+      "mxn5_fred": null,
+      "verdict_fred": null,
+      "evaluated_at": null
+    },
+    "2026-10-09": {
+      "slug": "2026-10-09",
+      "bias": "pro-dolar",
+      "prior": null,
+      "score": 49,
       "band": "DEFENSIVE",
       "band_cuts": "32/49/67/100",
       "condicion": "Suelto el sesgo al dólar si el USD/MXN cierra de vuelta debajo de 18.00.",
